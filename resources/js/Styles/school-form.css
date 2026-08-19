@@ -1,0 +1,334 @@
+.sf-preview-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    background: #fff;
+    border: 1px solid #c5c5c5;
+    border-bottom: 3px solid #c9a227;
+    padding: 0.65rem 0.85rem;
+    margin-bottom: 0.75rem;
+}
+
+.sf-preview-title {
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #003366;
+}
+
+.sf-preview-note {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: #555;
+}
+
+.sf-preview-actions {
+    display: flex;
+    gap: 0.45rem;
+}
+
+.sf-preview-bar .sf-btn {
+    background: #003366;
+    color: #fff;
+    border-color: #003366;
+}
+
+.sf-preview-bar .sf-btn.ghost {
+    background: #fff;
+    color: #003366;
+}
+
+.sf-preview-canvas {
+    overflow: auto;
+    background: #dcdcdc;
+    border: 1px solid #c5c5c5;
+    padding: 1rem 0 1.5rem;
+}
+
+.sf-btn {
+    border: 1px solid #fff;
+    background: #fff;
+    color: #003366;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.sf-btn.ghost {
+    background: transparent;
+    color: #fff;
+}
+
+.sf-sheet-wrap {
+    padding: 1rem 0 2rem;
+}
+
+.sf-sheet {
+    width: 210mm;
+    min-height: 297mm;
+    margin: 0 auto 1rem;
+    background: #fff;
+    color: #000;
+    padding: 10mm 12mm;
+    box-shadow: 0 0 0 1px #bbb;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 10.5px;
+    line-height: 1.35;
+}
+
+.sf-sheet.landscape {
+    width: 297mm;
+    min-height: 210mm;
+    padding: 8mm 8mm;
+}
+
+.sf-letterhead {
+    display: grid;
+    grid-template-columns: 18mm 1fr 28mm;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 6px;
+}
+
+.sf-seal {
+    width: 16mm;
+    height: 16mm;
+    object-fit: contain;
+}
+
+.sf-letterhead-text {
+    text-align: center;
+}
+
+.sf-rp {
+    font-size: 10px;
+    letter-spacing: 0.3px;
+}
+
+.sf-deped {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sf-office {
+    font-size: 10px;
+}
+
+.sf-school-name {
+    margin-top: 2px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sf-form-badge {
+    border: 1px solid #000;
+    text-align: center;
+    padding: 4px 2px;
+    font-weight: 700;
+    font-size: 11px;
+    line-height: 1.2;
+}
+
+.sf-form-title {
+    margin: 6px 0 2px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sf-form-sub {
+    margin: 0 0 8px;
+    text-align: center;
+    font-size: 9.5px;
+}
+
+.sf-fill-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 14px;
+    row-gap: 5px;
+    margin: 0 0 10px;
+}
+
+.sf-fill {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+}
+
+.sf-fill.wide {
+    grid-column: 1 / -1;
+}
+
+.sf-fill-label {
+    flex: 0 0 auto;
+    font-size: 10px;
+    white-space: nowrap;
+}
+
+.sf-fill-value {
+    flex: 1 1 auto;
+    min-width: 0;
+    border-bottom: 1px solid #000;
+    font-weight: 700;
+    font-size: 10.5px;
+    line-height: 1.35;
+    padding: 0 2px 1px;
+    min-height: 13px;
+}
+
+.sf-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.sf-table th,
+.sf-table td {
+    border: 1px solid #000;
+    padding: 3px 5px;
+    vertical-align: top;
+}
+
+.sf-table th {
+    font-weight: 700;
+    text-align: center;
+    background: #f3f3f3;
+}
+
+.sf-compact th,
+.sf-compact td {
+    padding: 2px 3px;
+    font-size: 8px;
+}
+
+.sf-meta td {
+    width: 50%;
+}
+
+.sf-label {
+    font-size: 8.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+}
+
+.sf-value {
+    font-weight: 700;
+}
+
+.sf-section-title {
+    margin: 8px 0 3px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.sf-center {
+    text-align: center;
+}
+
+.sf-right {
+    text-align: right;
+}
+
+.sf-muted {
+    color: #333;
+    font-weight: 400;
+}
+
+.sf-note {
+    margin: 6px 0 0;
+    font-size: 8.5px;
+}
+
+.sf-legend {
+    width: 100%;
+    margin-top: 6px;
+}
+
+.sf-sign-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin-top: 14px;
+}
+
+.sf-sign {
+    text-align: center;
+}
+
+.sf-sign-line {
+    margin-top: 28px;
+    border-top: 1px solid #000;
+    padding-top: 3px;
+    font-size: 9.5px;
+    font-weight: 700;
+}
+
+.sf-sign-role {
+    font-size: 8.5px;
+}
+
+.sf-seal-box {
+    border: 1px solid #000;
+    min-height: 22mm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 8.5px;
+    text-transform: uppercase;
+}
+
+.sf-page-break {
+    page-break-before: always;
+    break-before: page;
+}
+
+.sf-avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+}
+
+@media print {
+    .sidebar,
+    .dashboard-header,
+    .mobile-overlay,
+    .sf-preview-bar,
+    .sf-toolbar {
+        display: none !important;
+    }
+
+    .main-wrapper {
+        margin-left: 0 !important;
+    }
+
+    .dashboard-main {
+        padding: 0 !important;
+    }
+
+    .sf-preview-canvas,
+    .sf-page,
+    .sf-sheet-wrap {
+        background: #fff !important;
+        border: none !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .sf-sheet {
+        width: auto;
+        min-height: 0;
+        margin: 0;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    @page {
+        size: A4;
+        margin: 10mm 12mm;
+    }
+}
