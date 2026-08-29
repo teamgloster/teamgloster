@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\StudentRequirement;
 use App\Models\Enrollment;
-use App\Models\YearLevel;
-use App\Models\Section;
-use App\Models\Subject;
-use App\Models\User;
-use App\Models\TeacherSubject;
-use App\Models\SectionSubjectTeacher;
 use App\Models\Grade;
 use App\Models\SchoolSetting;
+use App\Models\Section;
+use App\Models\SectionSubjectTeacher;
+use App\Models\StudentRequirement;
+use App\Models\Subject;
+use App\Models\TeacherSubject;
+use App\Models\User;
+use App\Models\YearLevel;
+use App\Services\StudentPromotionService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -20,7 +21,7 @@ class DashboardController extends Controller
     public function administrator()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         // Get statistics
         $totalStudents = User::where('role', 'student')->count();
         $totalTeachers = User::where('role', 'teacher')->count();
@@ -32,48 +33,48 @@ class DashboardController extends Controller
             ->count();
         $totalSubjects = Subject::count();
         $totalSections = Section::where('school_year', $currentSchoolYear)->count();
-        
+
         // Get recent enrollments
         $recentEnrollments = Enrollment::with(['user', 'yearLevel', 'section'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
-        
+
         // Get enrollment by year level
         $enrollmentByYearLevel = YearLevel::withCount(['enrollments' => function ($query) use ($currentSchoolYear) {
             $query->where('school_year', $currentSchoolYear)
                 ->where('status', 'enrolled');
         }])
-        ->ordered()
-        ->get();
-        
+            ->ordered()
+            ->get();
+
         // Get all data for management
         $students = User::where('role', 'student')
             ->orderBy('last_name')
             ->get();
-        
+
         $teachers = User::where('role', 'teacher')
             ->orderBy('last_name')
             ->get();
-        
+
         $yearLevels = YearLevel::withCount(['sections' => function ($query) use ($currentSchoolYear) {
             $query->where('school_year', $currentSchoolYear);
         }, 'subjects'])
             ->ordered()
             ->get();
-        
+
         $sections = Section::with(['yearLevel', 'adviser'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $subjects = Subject::with('yearLevel')
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $enrollments = Enrollment::with(['user', 'yearLevel', 'section', 'approvedBy'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('created_at', 'desc')
@@ -94,12 +95,12 @@ class DashboardController extends Controller
             ->with(['teachableSubjects'])
             ->orderBy('last_name')
             ->get();
-        
+
         // Get all student requirements with user info
         $studentRequirements = StudentRequirement::with('user')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         return Inertia::render('Dashboard/Administrator', [
             'user' => auth()->user(),
             'stats' => [
@@ -132,7 +133,7 @@ class DashboardController extends Controller
     public function adminDashboard()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $stats = [
             'totalStudents' => User::where('role', 'student')->count(),
             'totalTeachers' => User::where('role', 'teacher')->count(),
@@ -142,17 +143,17 @@ class DashboardController extends Controller
             'totalSubjects' => Subject::count(),
             'totalSections' => Section::where('school_year', $currentSchoolYear)->count(),
         ];
-        
+
         $recentEnrollments = Enrollment::with(['user', 'yearLevel', 'section'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('created_at', 'desc')
             ->take(10)
             ->get();
-        
+
         $enrollmentByYearLevel = YearLevel::withCount(['enrollments' => function ($query) use ($currentSchoolYear) {
             $query->where('school_year', $currentSchoolYear)->where('status', 'enrolled');
         }])->ordered()->get();
-        
+
         return Inertia::render('Dashboard/Admin/Index', [
             'user' => auth()->user(),
             'stats' => $stats,
@@ -165,7 +166,7 @@ class DashboardController extends Controller
     /**
      * Admin Students Management Page
      */
-    public function adminStudents()
+    public function adminStudents(StudentPromotionService $promotionService)
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
@@ -185,6 +186,8 @@ class DashboardController extends Controller
         $students->each(function (User $student) use ($enrollments) {
             $student->setRelation('currentEnrollment', $enrollments->get($student->id));
         });
+
+        $promotionService->attachSummaries($students, $currentSchoolYear);
 
         $sections = Section::with('yearLevel')
             ->where('school_year', $currentSchoolYear)
@@ -212,12 +215,12 @@ class DashboardController extends Controller
             ->with(['teachableSubjects'])
             ->orderBy('last_name')
             ->get();
-        
+
         $subjects = Subject::with('yearLevel')
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         return Inertia::render('Dashboard/Admin/Teachers', [
             'user' => auth()->user(),
             'teachers' => $teachers,
@@ -231,20 +234,20 @@ class DashboardController extends Controller
     public function adminEnrollments()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $enrollments = Enrollment::with(['user', 'yearLevel', 'section', 'approvedBy'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         $sections = Section::with(['yearLevel'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $yearLevels = YearLevel::ordered()->get();
-        
+
         return Inertia::render('Dashboard/Admin/Enrollments', [
             'user' => auth()->user(),
             'enrollments' => $enrollments,
@@ -277,7 +280,7 @@ class DashboardController extends Controller
     public function adminSections()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $sections = Section::with(['yearLevel', 'adviser'])
             ->withCount(['enrollments' => function ($query) {
                 $query->where('status', 'enrolled');
@@ -286,13 +289,13 @@ class DashboardController extends Controller
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $yearLevels = YearLevel::ordered()->get();
-        
+
         $teachers = User::where('role', 'teacher')
             ->orderBy('last_name')
             ->get();
-        
+
         return Inertia::render('Dashboard/Admin/Sections', [
             'user' => auth()->user(),
             'sections' => $sections,
@@ -311,9 +314,9 @@ class DashboardController extends Controller
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $yearLevels = YearLevel::ordered()->get();
-        
+
         return Inertia::render('Dashboard/Admin/Subjects', [
             'user' => auth()->user(),
             'subjects' => $subjects,
@@ -327,13 +330,13 @@ class DashboardController extends Controller
     public function adminYearLevels()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $yearLevels = YearLevel::withCount(['sections' => function ($query) use ($currentSchoolYear) {
             $query->where('school_year', $currentSchoolYear);
         }, 'subjects', 'enrollments' => function ($query) use ($currentSchoolYear) {
             $query->where('school_year', $currentSchoolYear)->where('status', 'enrolled');
         }])->ordered()->get();
-        
+
         return Inertia::render('Dashboard/Admin/YearLevels', [
             'user' => auth()->user(),
             'yearLevels' => $yearLevels,
@@ -347,15 +350,15 @@ class DashboardController extends Controller
     public function adminTeacherAssignments()
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $teacherSubjects = TeacherSubject::with(['teacher', 'subject.yearLevel'])
             ->get();
-        
+
         $sectionSubjectTeachers = SectionSubjectTeacher::with(['section.yearLevel', 'subject', 'teacher'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('section_id')
             ->get();
-        
+
         // Get teachers with their teachable subjects - map to 'subjects' for frontend
         $teachersWithSubjects = User::where('role', 'teacher')
             ->with(['teachableSubjects.yearLevel'])
@@ -364,22 +367,23 @@ class DashboardController extends Controller
             ->map(function ($teacher) {
                 $teacherArray = $teacher->toArray();
                 $teacherArray['subjects'] = $teacher->teachableSubjects;
+
                 return $teacherArray;
             });
-        
+
         $subjects = Subject::with('yearLevel')
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $sections = Section::with(['yearLevel'])
             ->where('school_year', $currentSchoolYear)
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
-        
+
         $yearLevels = YearLevel::ordered()->get();
-        
+
         return Inertia::render('Dashboard/Admin/TeacherAssignments', [
             'user' => auth()->user(),
             'teacherSubjects' => $teacherSubjects,
@@ -402,10 +406,11 @@ class DashboardController extends Controller
         $requirements = StudentRequirement::with('user')
             ->orderBy('created_at', 'desc')
             ->get();
-        
+
         // Group requirements by user_id
         $studentRequirements = $requirements->groupBy('user_id')->map(function ($userRequirements) {
             $firstReq = $userRequirements->first();
+
             return [
                 'user_id' => $firstReq->user_id,
                 'user' => $firstReq->user,
@@ -423,7 +428,7 @@ class DashboardController extends Controller
                 })->values()->toArray(),
             ];
         })->values()->toArray();
-        
+
         return Inertia::render('Dashboard/Admin/Requirements', [
             'user' => auth()->user(),
             'studentRequirements' => $studentRequirements,
@@ -456,7 +461,7 @@ class DashboardController extends Controller
                 ->where('status', 'enrolled')
                 ->with('user')
                 ->get()
-                ->map(fn($enrollment) => $enrollment->user)
+                ->map(fn ($enrollment) => $enrollment->user)
             : collect();
 
         // Get teacher's assigned subjects (what they CAN teach)
@@ -483,32 +488,36 @@ class DashboardController extends Controller
         // Get student grades for this teacher's classes
         $studentGrades = collect();
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         // Get all existing grades for this school year
         $existingGrades = Grade::where('school_year', $currentSchoolYear)
             ->get()
             ->keyBy(function ($grade) {
-                return $grade->student_id . '-' . $grade->subject_id;
+                return $grade->student_id.'-'.$grade->subject_id;
             });
-        
+
         // If teacher has section assignments, use those
         if ($sectionSubjectAssignments->count() > 0) {
             foreach ($sectionSubjectAssignments as $assignment) {
                 $section = $assignment->section;
                 $subject = $assignment->subject;
-                
-                if (!$section || !$subject) continue;
-                
+
+                if (! $section || ! $subject) {
+                    continue;
+                }
+
                 $enrollments = $section->enrollments ?? collect();
-                
+
                 foreach ($enrollments as $enrollment) {
-                    if ($enrollment->status !== 'enrolled' || !$enrollment->user) continue;
-                    
-                    $gradeKey = $enrollment->user->id . '-' . $subject->id;
+                    if ($enrollment->status !== 'enrolled' || ! $enrollment->user) {
+                        continue;
+                    }
+
+                    $gradeKey = $enrollment->user->id.'-'.$subject->id;
                     $existingGrade = $existingGrades->get($gradeKey);
-                    
+
                     $studentGrades->push([
-                        'id' => $enrollment->id . '-' . $subject->id,
+                        'id' => $enrollment->id.'-'.$subject->id,
                         'student' => $enrollment->user,
                         'section' => $section,
                         'subject' => $subject,
@@ -524,22 +533,26 @@ class DashboardController extends Controller
         } else {
             // Fallback: Get students based on subject's year level
             foreach ($teacherSubjects as $subject) {
-                if (!$subject->year_level_id) continue;
-                
+                if (! $subject->year_level_id) {
+                    continue;
+                }
+
                 // Get all enrollments for this year level
                 $enrollments = Enrollment::where('year_level_id', $subject->year_level_id)
                     ->where('status', 'enrolled')
                     ->with(['user', 'section'])
                     ->get();
-                
+
                 foreach ($enrollments as $enrollment) {
-                    if (!$enrollment->user) continue;
-                    
-                    $gradeKey = $enrollment->user->id . '-' . $subject->id;
+                    if (! $enrollment->user) {
+                        continue;
+                    }
+
+                    $gradeKey = $enrollment->user->id.'-'.$subject->id;
                     $existingGrade = $existingGrades->get($gradeKey);
-                    
+
                     $studentGrades->push([
-                        'id' => $enrollment->id . '-' . $subject->id,
+                        'id' => $enrollment->id.'-'.$subject->id,
                         'student' => $enrollment->user,
                         'section' => $enrollment->section,
                         'subject' => $subject,
@@ -569,10 +582,10 @@ class DashboardController extends Controller
     public function student()
     {
         $user = auth()->user();
-        
+
         // Get or create student requirements
         $requirementTypes = ['form_137', 'picture_2x2', 'birth_certificate', 'good_moral_certificate'];
-        
+
         foreach ($requirementTypes as $type) {
             StudentRequirement::firstOrCreate(
                 [
@@ -581,13 +594,13 @@ class DashboardController extends Controller
                 ]
             );
         }
-        
+
         // Get all requirements for the user
         $requirements = StudentRequirement::where('user_id', $user->id)
             ->get()
             ->map(function ($req) {
                 return [
-                    'id' => match($req->requirement_type) {
+                    'id' => match ($req->requirement_type) {
                         'form_137' => 1,
                         'picture_2x2' => 2,
                         'birth_certificate' => 3,
@@ -600,26 +613,26 @@ class DashboardController extends Controller
                     'status' => $req->status,
                 ];
             });
-        
+
         // Get enrollment data
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $currentEnrollment = Enrollment::where('user_id', $user->id)
             ->where('school_year', $currentSchoolYear)
             ->with(['yearLevel', 'section', 'section.adviser'])
             ->first();
-        
+
         $yearLevels = YearLevel::active()->ordered()->get();
-        
+
         $enrollmentHistory = Enrollment::where('user_id', $user->id)
             ->with(['yearLevel', 'section'])
             ->orderBy('school_year', 'desc')
             ->get();
-        
+
         // Get enrolled subjects based on current enrollment
         $enrolledSubjects = [];
         $schedule = [];
-        
+
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
                 ->active()
@@ -638,7 +651,7 @@ class DashboardController extends Controller
                         'semester' => $subject->semester,
                     ];
                 });
-            
+
             // Get schedule from section_subject_teachers if student has a section
             if ($currentEnrollment->section_id) {
                 $schedule = SectionSubjectTeacher::where('section_id', $currentEnrollment->section_id)
@@ -651,8 +664,8 @@ class DashboardController extends Controller
                             'id' => $assignment->id,
                             'subject_code' => $assignment->subject->code,
                             'subject_name' => $assignment->subject->name,
-                            'teacher_name' => $assignment->teacher 
-                                ? $assignment->teacher->first_name . ' ' . $assignment->teacher->last_name 
+                            'teacher_name' => $assignment->teacher
+                                ? $assignment->teacher->first_name.' '.$assignment->teacher->last_name
                                 : 'TBA',
                             'schedule' => $assignment->schedule ?? 'TBA',
                             'room' => $assignment->room ?? 'TBA',
@@ -661,7 +674,7 @@ class DashboardController extends Controller
                     });
             }
         }
-        
+
         return Inertia::render('Dashboard/Student', [
             'user' => $user,
             'requirements' => $requirements,
@@ -683,22 +696,22 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $currentEnrollment = Enrollment::where('user_id', $user->id)
             ->where('school_year', $currentSchoolYear)
             ->with(['yearLevel', 'section', 'section.adviser'])
             ->first();
-        
+
         $enrolledSubjects = [];
         $schedule = [];
-        
+
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
                 ->active()
                 ->orderBy('subject_type')
                 ->orderBy('name')
                 ->get();
-            
+
             if ($currentEnrollment->section_id) {
                 $schedule = SectionSubjectTeacher::where('section_id', $currentEnrollment->section_id)
                     ->where('school_year', $currentSchoolYear)
@@ -710,8 +723,8 @@ class DashboardController extends Controller
                             'id' => $assignment->id,
                             'subject_code' => $assignment->subject->code,
                             'subject_name' => $assignment->subject->name,
-                            'teacher_name' => $assignment->teacher 
-                                ? $assignment->teacher->first_name . ' ' . $assignment->teacher->last_name 
+                            'teacher_name' => $assignment->teacher
+                                ? $assignment->teacher->first_name.' '.$assignment->teacher->last_name
                                 : 'TBA',
                             'schedule' => $assignment->schedule ?? 'TBA',
                             'room' => $assignment->room ?? 'TBA',
@@ -720,7 +733,7 @@ class DashboardController extends Controller
                     });
             }
         }
-        
+
         return Inertia::render('Dashboard/Student/Index', [
             'user' => $user,
             'enrollment' => [
@@ -799,21 +812,21 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $currentEnrollment = Enrollment::where('user_id', $user->id)
             ->where('school_year', $currentSchoolYear)
             ->with(['yearLevel', 'section', 'section.adviser'])
             ->first();
-        
+
         $yearLevels = YearLevel::active()->ordered()->get();
-        
+
         $enrollmentHistory = Enrollment::where('user_id', $user->id)
             ->with(['yearLevel', 'section'])
             ->orderBy('school_year', 'desc')
             ->get();
 
         $previousYearLevel = $user->previousYearLevel($currentSchoolYear);
-        
+
         return Inertia::render('Dashboard/Student/Enrollment', [
             'user' => $user,
             'enrollment' => [
@@ -834,14 +847,14 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         $currentEnrollment = Enrollment::where('user_id', $user->id)
             ->where('school_year', $currentSchoolYear)
             ->with(['yearLevel', 'section'])
             ->first();
-        
+
         $enrolledSubjects = [];
-        
+
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
                 ->active()
@@ -861,7 +874,7 @@ class DashboardController extends Controller
                     ];
                 });
         }
-        
+
         return Inertia::render('Dashboard/Student/Subjects', [
             'user' => $user,
             'enrollment' => [
@@ -879,15 +892,15 @@ class DashboardController extends Controller
     {
         $user = auth()->user();
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        
+
         // Get current enrollment
         $currentEnrollment = Enrollment::where('user_id', $user->id)
             ->where('school_year', $currentSchoolYear)
             ->with(['yearLevel', 'section'])
             ->first();
-        
+
         $grades = collect();
-        
+
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             // Get all subjects for the student's year level
             $subjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
@@ -895,17 +908,17 @@ class DashboardController extends Controller
                 ->orderBy('subject_type')
                 ->orderBy('name')
                 ->get();
-            
+
             // Get all grades for the student
             $studentGrades = Grade::where('student_id', $user->id)
                 ->where('school_year', $currentSchoolYear)
                 ->get()
                 ->keyBy('subject_id');
-            
+
             // Map all subjects with their grades (if they exist)
             $grades = $subjects->map(function ($subject) use ($studentGrades) {
                 $grade = $studentGrades->get($subject->id);
-                
+
                 return [
                     'id' => $grade ? $grade->id : null,
                     'subject_id' => $subject->id,
@@ -918,7 +931,7 @@ class DashboardController extends Controller
                 ];
             });
         }
-        
+
         return Inertia::render('Dashboard/Student/Grades', [
             'user' => $user,
             'grades' => $grades,
@@ -932,37 +945,37 @@ class DashboardController extends Controller
     public function studentRequirements()
     {
         $user = auth()->user();
-        
+
         // Get or create student requirements
         $requirementTypes = ['form_137', 'picture_2x2', 'birth_certificate', 'good_moral_certificate'];
-        
+
         foreach ($requirementTypes as $type) {
             StudentRequirement::firstOrCreate([
                 'user_id' => $user->id,
                 'requirement_type' => $type,
             ]);
         }
-        
+
         // Get all requirements for the user
         $requirements = StudentRequirement::where('user_id', $user->id)
             ->get()
             ->map(function ($req) {
                 return [
-                    'id' => match($req->requirement_type) {
+                    'id' => match ($req->requirement_type) {
                         'form_137' => 1,
                         'picture_2x2' => 2,
                         'birth_certificate' => 3,
                         'good_moral_certificate' => 4,
                         default => 0,
                     },
-                    'name' => match($req->requirement_type) {
+                    'name' => match ($req->requirement_type) {
                         'form_137' => 'Form 137',
                         'picture_2x2' => '2x2 ID Picture',
                         'birth_certificate' => 'Birth Certificate (PSA)',
                         'good_moral_certificate' => 'Good Moral Certificate',
                         default => $req->requirement_type,
                     },
-                    'description' => match($req->requirement_type) {
+                    'description' => match ($req->requirement_type) {
                         'form_137' => 'Academic records from previous school',
                         'picture_2x2' => 'Recent 2x2 ID photo with white background',
                         'birth_certificate' => 'Original PSA/NSO certified birth certificate',
@@ -976,7 +989,7 @@ class DashboardController extends Controller
                     'status' => $req->status,
                 ];
             });
-        
+
         return Inertia::render('Dashboard/Student/Requirements', [
             'user' => $user,
             'requirements' => $requirements,
@@ -1027,4 +1040,3 @@ class DashboardController extends Controller
         return SchoolSetting::currentSchoolYear();
     }
 }
-

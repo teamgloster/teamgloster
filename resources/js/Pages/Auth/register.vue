@@ -209,14 +209,32 @@
                                 </div>
 
                                 <div class="form-group">
-                                    <label for="lrn">LRN</label>
+                                    <label for="lrn"
+                                        >LRN (Learner Reference Number)</label
+                                    >
                                     <input
                                         id="lrn"
                                         v-model="form.lrn"
                                         type="text"
+                                        required
                                         placeholder="123456789012"
                                         class="form-input"
+                                        :class="{ 'input-error': errors.lrn }"
+                                        maxlength="12"
+                                        pattern="[0-9]{12}"
+                                        inputmode="numeric"
+                                        autocomplete="off"
+                                        @input="onLrnInput"
+                                        @keydown="onLrnKeydown"
                                     />
+                                    <span class="field-hint"
+                                        >Must be a unique 12-digit LRN.</span
+                                    >
+                                    <span
+                                        v-if="errors.lrn"
+                                        class="error-message"
+                                        >{{ errors.lrn }}</span
+                                    >
                                 </div>
                             </div>
 
@@ -1437,6 +1455,34 @@ watch(
 );
 
 // Step Navigation Functions
+const onLrnInput = (event) => {
+    const digits = event.target.value.replace(/\D/g, "").slice(0, 12);
+    form.value.lrn = digits;
+    event.target.value = digits;
+};
+
+const onLrnKeydown = (event) => {
+    const allowedKeys = [
+        "Backspace",
+        "Delete",
+        "Tab",
+        "Escape",
+        "Enter",
+        "ArrowLeft",
+        "ArrowRight",
+        "Home",
+        "End",
+    ];
+
+    if (allowedKeys.includes(event.key) || event.ctrlKey || event.metaKey) {
+        return;
+    }
+
+    if (!/^\d$/.test(event.key)) {
+        event.preventDefault();
+    }
+};
+
 const nextStep = () => {
     if (currentStep.value < 3) {
         // Validate current step before proceeding
@@ -1446,9 +1492,12 @@ const nextStep = () => {
                 !form.value.first_name ||
                 !form.value.last_name ||
                 !form.value.email ||
-                !form.value.password
+                !form.value.password ||
+                !/^\d{12}$/.test(form.value.lrn)
             ) {
-                toast.error("Please fill in all required fields");
+                toast.error(
+                    "Please fill in all required fields, including a unique 12-digit LRN.",
+                );
                 return;
             }
         }
@@ -2016,6 +2065,12 @@ const downloadAsPDF = async () => {
 };
 
 const submit = () => {
+    if (!/^\d{12}$/.test(form.value.lrn)) {
+        currentStep.value = 1;
+        toast.error("LRN must be exactly 12 digits and unique.");
+        return;
+    }
+
     processing.value = true;
 
     const payload = {
@@ -2072,6 +2127,9 @@ const submit = () => {
         },
         onError: (errors) => {
             processing.value = false;
+            if (errors.lrn) {
+                currentStep.value = 1;
+            }
             const errorMessages = Object.values(errors).flat();
             if (errorMessages.length > 0) {
                 toast.error(errorMessages[0]);
@@ -2213,6 +2271,13 @@ const submit = () => {
 .error-message {
     display: block;
     color: #9b1c1c;
+    font-size: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+.field-hint {
+    display: block;
+    color: #555;
     font-size: 0.75rem;
     margin-top: 0.2rem;
 }

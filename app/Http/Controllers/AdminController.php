@@ -2,16 +2,18 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\YearLevel;
-use App\Models\Section;
-use App\Models\Subject;
+use App\Exceptions\StudentPromotionException;
 use App\Models\Enrollment;
-use App\Models\TeacherSubject;
+use App\Models\SchoolSetting;
+use App\Models\Section;
 use App\Models\SectionSubjectTeacher;
 use App\Models\StudentRequirement;
-use App\Models\SchoolSetting;
+use App\Models\Subject;
+use App\Models\TeacherSubject;
+use App\Models\User;
+use App\Models\YearLevel;
 use App\Services\SectionAssignmentService;
+use App\Services\StudentPromotionService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -20,7 +22,7 @@ use Illuminate\Validation\Rule;
 class AdminController extends Controller
 {
     // ==================== STUDENT MANAGEMENT ====================
-    
+
     public function storeStudent(Request $request)
     {
         $validated = $request->validate([
@@ -32,7 +34,7 @@ class AdminController extends Controller
             'phone_no' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|in:male,female',
-            'lrn' => 'required|string|size:12|unique:users,lrn',
+            'lrn' => ['required', 'digits:12', Rule::unique('users', 'lrn')],
             'guardian_full_name' => 'nullable|string|max:255',
             'guardian_contact_no' => 'nullable|string|max:20',
             'password' => 'required|string|min:8',
@@ -60,7 +62,7 @@ class AdminController extends Controller
             'phone_no' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|in:male,female',
-            'lrn' => ['required', 'string', 'size:12', Rule::unique('users')->ignore($student->id)],
+            'lrn' => ['required', 'digits:12', Rule::unique('users', 'lrn')->ignore($student->id)],
             'guardian_full_name' => 'nullable|string|max:255',
             'guardian_contact_no' => 'nullable|string|max:20',
         ]);
@@ -80,7 +82,7 @@ class AdminController extends Controller
     }
 
     // ==================== TEACHER MANAGEMENT ====================
-    
+
     public function storeTeacher(Request $request)
     {
         $validated = $request->validate([
@@ -174,7 +176,7 @@ class AdminController extends Controller
     }
 
     // ==================== ENROLLMENT MANAGEMENT ====================
-    
+
     public function approveEnrollment(Enrollment $enrollment)
     {
         if (! $this->markApproved($enrollment)) {
@@ -371,8 +373,84 @@ class AdminController extends Controller
         return back()->with('success', $message);
     }
 
+    // ==================== YEAR LEVEL PROMOTION ====================
+
+    public function promoteStudent(Request $request, User $student, StudentPromotionService $promotionService)
+    {
+        if ($student->role !== 'student') {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $enrollment = $promotionService->promote($student, $validated['remarks'] ?? null);
+        } catch (StudentPromotionException $exception) {
+            return back()->withErrors([
+                'promotion' => $exception->getMessage(),
+            ]);
+        }
+
+        $yearLevelName = $enrollment->yearLevel?->name ?? 'the next year level';
+
+        return back()->with('success', $student->first_name.' '.$student->last_name.' was promoted to '.$yearLevelName.'.');
+    }
+
+    public function changeStudentYearLevel(Request $request, User $student, StudentPromotionService $promotionService)
+    {
+        if ($student->role !== 'student') {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'year_level_id' => 'required|exists:year_levels,id',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $enrollment = $promotionService->changeYearLevel(
+                $student,
+                (int) $validated['year_level_id'],
+                $validated['remarks'] ?? null,
+            );
+        } catch (StudentPromotionException $exception) {
+            return back()->withErrors([
+                'promotion' => $exception->getMessage(),
+            ]);
+        }
+
+        $yearLevelName = $enrollment->yearLevel?->name ?? 'the selected year level';
+
+        return back()->with('success', $student->first_name.' '.$student->last_name.' was moved to '.$yearLevelName.'.');
+    }
+
+    public function promoteSelected(Request $request, StudentPromotionService $promotionService)
+    {
+        $validated = $request->validate([
+            'student_ids' => 'required|array|min:1',
+            'student_ids.*' => 'integer|exists:users,id',
+        ]);
+
+        $students = User::query()
+            ->where('role', 'student')
+            ->whereIn('id', $validated['student_ids'])
+            ->get();
+
+        $result = $promotionService->promoteMany($students);
+
+        if ($result['promoted'] === 0) {
+            return back()->withErrors([
+                'promotion' => 'None of the selected students could be promoted. Students must have passing final grades in all subjects of their current year level.',
+            ]);
+        }
+
+        return back()->with('success', $result['message']);
+    }
+
     // ==================== YEAR LEVEL MANAGEMENT ====================
-    
+
     public function storeYearLevel(Request $request)
     {
         $validated = $request->validate([
@@ -416,7 +494,7 @@ class AdminController extends Controller
     }
 
     // ==================== SECTION MANAGEMENT ====================
-    
+
     public function storeSection(Request $request)
     {
         $validated = $request->validate([
@@ -463,7 +541,7 @@ class AdminController extends Controller
     }
 
     // ==================== SUBJECT MANAGEMENT ====================
-    
+
     public function storeSubject(Request $request)
     {
         $validated = $request->validate([
@@ -510,7 +588,7 @@ class AdminController extends Controller
     }
 
     // ==================== RESET PASSWORD ====================
-    
+
     public function resetPassword(Request $request, User $user)
     {
         $validated = $request->validate([
@@ -526,7 +604,7 @@ class AdminController extends Controller
 
     // ==================== TEACHER SUBJECT ASSIGNMENTS ====================
     // (What subjects a teacher CAN teach)
-    
+
     public function storeTeacherSubject(Request $request)
     {
         $validated = $request->validate([
@@ -538,8 +616,8 @@ class AdminController extends Controller
         $teacher = User::where('id', $validated['teacher_id'])
             ->where('role', 'teacher')
             ->first();
-        
-        if (!$teacher) {
+
+        if (! $teacher) {
             return back()->with('error', 'Invalid teacher selected.');
         }
 
@@ -560,6 +638,7 @@ class AdminController extends Controller
     public function deleteTeacherSubject(TeacherSubject $teacherSubject)
     {
         $teacherSubject->delete();
+
         return back()->with('success', 'Subject removed from teacher successfully.');
     }
 
@@ -574,8 +653,8 @@ class AdminController extends Controller
         $teacher = User::where('id', $validated['teacher_id'])
             ->where('role', 'teacher')
             ->first();
-        
-        if (!$teacher) {
+
+        if (! $teacher) {
             return back()->with('error', 'Invalid teacher selected.');
         }
 
@@ -596,7 +675,7 @@ class AdminController extends Controller
 
     // ==================== SECTION SUBJECT TEACHER ASSIGNMENTS ====================
     // (Which teacher teaches which subject in which section)
-    
+
     public function storeSectionSubjectTeacher(Request $request)
     {
         $validated = $request->validate([
@@ -615,7 +694,7 @@ class AdminController extends Controller
             ->where('subject_id', $validated['subject_id'])
             ->exists();
 
-        if (!$canTeach) {
+        if (! $canTeach) {
             return back()->withErrors(['teacher_id' => 'This teacher is not assigned to teach this subject. Please assign the subject to the teacher first.']);
         }
 
@@ -649,7 +728,7 @@ class AdminController extends Controller
             ->where('subject_id', $assignment->subject_id)
             ->exists();
 
-        if (!$canTeach) {
+        if (! $canTeach) {
             return back()->with('error', 'This teacher is not assigned to teach this subject.');
         }
 
@@ -661,6 +740,7 @@ class AdminController extends Controller
     public function deleteSectionSubjectTeacher(SectionSubjectTeacher $assignment)
     {
         $assignment->delete();
+
         return back()->with('success', 'Teacher assignment removed successfully.');
     }
 

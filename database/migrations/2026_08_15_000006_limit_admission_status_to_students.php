@@ -10,7 +10,9 @@ return new class extends Migration
      */
     public function up(): void
     {
-        DB::statement('ALTER TABLE users MODIFY admission_status VARCHAR(20) NULL DEFAULT NULL');
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement('ALTER TABLE users MODIFY admission_status VARCHAR(20) NULL DEFAULT NULL');
+        }
 
         DB::table('users')
             ->where('role', '!=', 'student')
@@ -31,6 +33,8 @@ return new class extends Migration
             ->whereNull('admission_status')
             ->update(['admission_status' => 'pending']);
 
-        DB::statement("ALTER TABLE users MODIFY admission_status VARCHAR(20) NOT NULL DEFAULT 'pending'");
+        if (DB::getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE users MODIFY admission_status VARCHAR(20) NOT NULL DEFAULT 'pending'");
+        }
     }
 };

@@ -1,10 +1,12 @@
 <?php
 
+use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
-use App\Http\Controllers\StudentEnrollmentController;
-use App\Http\Controllers\AdminController;
+use App\Http\Controllers\RegistrarController;
 use App\Http\Controllers\SchoolFormController;
+use App\Http\Controllers\StudentEnrollmentController;
+use App\Http\Controllers\TranscriptionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -15,7 +17,7 @@ Route::get('/', function () {
 
 // Authentication routes
 Route::get('/login/{role}', [AuthController::class, 'showLogin'])
-    ->where('role', 'administrator|teacher|student')
+    ->where('role', 'administrator|registrar|teacher|student')
     ->name('login');
 
 Route::get('/register/student', [AuthController::class, 'showRegister'])
@@ -34,7 +36,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/administrator', function () {
         return redirect()->route('admin.dashboard');
     })->middleware('role:administrator');
-    
+
     // New Admin Routes
     Route::middleware('role:administrator')->prefix('admin')->group(function () {
         Route::get('/', [DashboardController::class, 'adminDashboard'])->name('admin.dashboard');
@@ -54,7 +56,22 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'adminSf9'])->name('admin.students.sf9');
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'adminSf10'])->name('admin.students.sf10');
     });
-    
+
+    Route::get('/dashboard/registrar', function () {
+        return redirect()->route('registrar.dashboard');
+    })->middleware('role:registrar');
+
+    Route::middleware('role:registrar')->prefix('registrar')->group(function () {
+        Route::get('/', [RegistrarController::class, 'dashboard'])->name('registrar.dashboard');
+        Route::get('/year-levels', [RegistrarController::class, 'yearLevels'])->name('registrar.year-levels');
+        Route::get('/sections', [RegistrarController::class, 'sections'])->name('registrar.sections');
+        Route::get('/grades', [RegistrarController::class, 'grades'])->name('registrar.grades');
+        Route::get('/students', [RegistrarController::class, 'students'])->name('registrar.students');
+        Route::post('/students/promote-selected', [RegistrarController::class, 'promoteSelected']);
+        Route::post('/students/{student}/promote', [RegistrarController::class, 'promoteStudent']);
+        Route::put('/students/{student}/year-level', [RegistrarController::class, 'changeStudentYearLevel']);
+    });
+
     Route::get('/dashboard/teacher', [DashboardController::class, 'teacher'])
         ->middleware('role:teacher');
 
@@ -64,12 +81,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'teacherSf9'])->name('teacher.students.sf9');
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'teacherSf10'])->name('teacher.students.sf10');
     });
-    
+
     // Legacy student route - redirect to new dashboard
     Route::get('/dashboard/student', function () {
         return redirect()->route('student.dashboard');
     })->middleware('role:student');
-    
+
     // New Student Routes
     Route::middleware('role:student')->prefix('student')->group(function () {
         Route::get('/', [DashboardController::class, 'studentDashboard'])->name('student.dashboard');
@@ -85,6 +102,11 @@ Route::middleware(['auth'])->group(function () {
     // Teacher grade update route
     Route::put('/teacher/grades/{studentId}/{subjectId}', [DashboardController::class, 'updateGrade'])
         ->middleware('role:teacher');
+
+    // Teacher voice transcription (Groq Whisper)
+    Route::post('/teacher/transcribe', [TranscriptionController::class, 'transcribe'])
+        ->middleware('role:teacher')
+        ->name('teacher.transcribe');
 
     // Profile update routes
     Route::put('/profile/update', [AuthController::class, 'updateProfile']);
@@ -107,14 +129,17 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware('role:administrator')->prefix('admin')->group(function () {
         // Student management
         Route::post('/students', [AdminController::class, 'storeStudent']);
+        Route::post('/students/promote-selected', [AdminController::class, 'promoteSelected']);
         Route::put('/students/{student}', [AdminController::class, 'updateStudent']);
         Route::delete('/students/{student}', [AdminController::class, 'deleteStudent']);
-        
+        Route::post('/students/{student}/promote', [AdminController::class, 'promoteStudent']);
+        Route::put('/students/{student}/year-level', [AdminController::class, 'changeStudentYearLevel']);
+
         // Teacher management
         Route::post('/teachers', [AdminController::class, 'storeTeacher']);
         Route::put('/teachers/{teacher}', [AdminController::class, 'updateTeacher']);
         Route::delete('/teachers/{teacher}', [AdminController::class, 'deleteTeacher']);
-        
+
         // Admission management
         Route::post('/admissions/{student}/approve', [AdminController::class, 'approveAdmission']);
         Route::post('/admissions/{student}/reject', [AdminController::class, 'rejectAdmission']);
@@ -127,37 +152,37 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/enrollments/enroll-selected', [AdminController::class, 'enrollSelected']);
         Route::post('/enrollments/{enrollment}/assign-section', [AdminController::class, 'assignSection']);
         Route::post('/enrollments/auto-assign-sections', [AdminController::class, 'autoAssignSections']);
-        
+
         // Year level management
         Route::post('/year-levels', [AdminController::class, 'storeYearLevel']);
         Route::put('/year-levels/{yearLevel}', [AdminController::class, 'updateYearLevel']);
         Route::delete('/year-levels/{yearLevel}', [AdminController::class, 'deleteYearLevel']);
-        
+
         // Section management
         Route::post('/sections', [AdminController::class, 'storeSection']);
         Route::put('/sections/{section}', [AdminController::class, 'updateSection']);
         Route::delete('/sections/{section}', [AdminController::class, 'deleteSection']);
-        
+
         // Subject management
         Route::post('/subjects', [AdminController::class, 'storeSubject']);
         Route::put('/subjects/{subject}', [AdminController::class, 'updateSubject']);
         Route::delete('/subjects/{subject}', [AdminController::class, 'deleteSubject']);
-        
+
         // Teacher Subject Assignments (what subjects a teacher can teach)
         Route::post('/teacher-subjects', [AdminController::class, 'storeTeacherSubject']);
         Route::delete('/teacher-subjects/{teacherSubject}', [AdminController::class, 'deleteTeacherSubject']);
         Route::post('/teacher-subjects/bulk', [AdminController::class, 'bulkAssignTeacherSubjects']);
-        
+
         // Section Subject Teacher Assignments (which teacher teaches what subject in which section)
         Route::post('/section-subject-teachers', [AdminController::class, 'storeSectionSubjectTeacher']);
         Route::put('/section-subject-teachers/{assignment}', [AdminController::class, 'updateSectionSubjectTeacher']);
         Route::delete('/section-subject-teachers/{assignment}', [AdminController::class, 'deleteSectionSubjectTeacher']);
         Route::get('/subjects/{subject}/teachers', [AdminController::class, 'getTeachersForSubject']);
-        
+
         // Student Requirements management
         Route::put('/requirements/{requirement}/verify', [AdminController::class, 'verifyRequirement']);
         Route::put('/requirements/{requirement}/reject', [AdminController::class, 'rejectRequirement']);
-        
+
         // Password reset
         Route::post('/users/{user}/reset-password', [AdminController::class, 'resetPassword']);
 

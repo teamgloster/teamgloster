@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\User;
-use App\Models\StudentRequirement;
 use App\Models\SchoolSetting;
+use App\Models\StudentRequirement;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AuthController extends Controller
@@ -17,8 +18,9 @@ class AuthController extends Controller
     {
         $pages = [
             'administrator' => 'Auth/AdministratorLogin',
+            'registrar' => 'Auth/RegistrarLogin',
             'teacher' => 'Auth/TeacherLogin',
-            'student' => 'Auth/StudentLogin'
+            'student' => 'Auth/StudentLogin',
         ];
 
         return Inertia::render($pages[$role] ?? 'Auth/Login');
@@ -40,17 +42,18 @@ class AuthController extends Controller
             $credentials = $request->validate([
                 'lrn' => 'required|string|size:12',
                 'password' => 'required',
-                'role' => 'required|in:student'
+                'role' => 'required|in:student',
             ]);
 
             // Find user by LRN
             $user = User::where('lrn', $credentials['lrn'])
-                        ->where('role', 'student')
-                        ->first();
+                ->where('role', 'student')
+                ->first();
 
             if ($user && Hash::check($credentials['password'], $user->password)) {
                 Auth::login($user, $request->remember);
                 $request->session()->regenerate();
+
                 return redirect()->intended('/dashboard/student');
             }
 
@@ -62,14 +65,15 @@ class AuthController extends Controller
             $credentials = $request->validate([
                 'email' => 'required|email',
                 'password' => 'required',
-                'role' => 'required|in:administrator,teacher'
+                'role' => 'required|in:administrator,teacher,registrar',
             ]);
 
             if (Auth::attempt(['email' => $credentials['email'], 'password' => $credentials['password'], 'role' => $credentials['role']], $request->remember)) {
                 $request->session()->regenerate();
 
-                return match($credentials['role']) {
+                return match ($credentials['role']) {
                     'administrator' => redirect()->intended('/dashboard/administrator'),
+                    'registrar' => redirect()->intended('/dashboard/registrar'),
                     'teacher' => redirect()->intended('/dashboard/teacher'),
                     default => redirect()->intended('/dashboard')
                 };
@@ -95,7 +99,11 @@ class AuthController extends Controller
             'province' => 'nullable|string|max:255',
             'municipality' => 'nullable|string|max:255',
             'barangay' => 'nullable|string|max:255',
-            'lrn' => 'nullable|string|max:20',
+            'lrn' => [
+                'required',
+                'digits:12',
+                Rule::unique('users', 'lrn'),
+            ],
             'previous_gwa' => 'nullable|string|max:10',
             'guardian_full_name' => 'nullable|string|max:255',
             'guardian_contact_no' => 'nullable|string|max:30',
@@ -116,6 +124,10 @@ class AuthController extends Controller
             'previous_school' => 'nullable|string|max:255',
             'school_year_applying' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
+        ], [
+            'lrn.required' => 'LRN is required.',
+            'lrn.digits' => 'LRN must be exactly 12 digits.',
+            'lrn.unique' => 'This LRN is already registered. Each learner must have a unique LRN.',
         ]);
 
         $gender = $validated['gender'] ?? null;
@@ -123,7 +135,7 @@ class AuthController extends Controller
             $gender = ucfirst(strtolower($gender));
         }
 
-        $user = new User();
+        $user = new User;
         $user->forceFill([
             'first_name' => $validated['first_name'],
             'middle_name' => $this->nullableString($request, $validated, 'middle_name'),
@@ -136,7 +148,7 @@ class AuthController extends Controller
             'province' => $this->nullableString($request, $validated, 'province'),
             'municipality' => $this->nullableString($request, $validated, 'municipality'),
             'barangay' => $this->nullableString($request, $validated, 'barangay'),
-            'lrn' => $this->nullableString($request, $validated, 'lrn'),
+            'lrn' => $validated['lrn'],
             'previous_gwa' => $this->nullableString($request, $validated, 'previous_gwa'),
             'guardian_full_name' => $this->nullableString($request, $validated, 'guardian_full_name'),
             'guardian_contact_no' => $this->nullableString($request, $validated, 'guardian_contact_no'),
@@ -195,7 +207,7 @@ class AuthController extends Controller
             }
 
             $file = $request->file($key);
-            $path = $file->store('requirements/' . $user->id, 'public');
+            $path = $file->store('requirements/'.$user->id, 'public');
 
             StudentRequirement::updateOrCreate(
                 [
@@ -230,11 +242,16 @@ class AuthController extends Controller
             'last_name' => 'required|string|max:255',
             'middle_name' => 'nullable|string|max:255',
             'suffix' => 'nullable|string|max:10',
-            'email' => 'required|string|email|max:255|unique:users,email,' . $user->id,
+            'email' => 'required|string|email|max:255|unique:users,email,'.$user->id,
             'phone_no' => 'nullable|string|max:20',
             'date_of_birth' => 'nullable|date',
             'gender' => 'nullable|in:Male,Female',
-            'lrn' => 'nullable|string|max:20',
+            'lrn' => [
+                Rule::requiredIf($user->role === 'student'),
+                'nullable',
+                'digits:12',
+                Rule::unique('users', 'lrn')->ignore($user->id),
+            ],
             'previous_gwa' => 'nullable|string|max:10',
             'guardian_full_name' => 'nullable|string|max:255',
             'guardian_contact_no' => 'nullable|string|max:20',
@@ -285,7 +302,7 @@ class AuthController extends Controller
             1 => 'pdf',           // Form 137 - PDF only
             2 => 'jpeg,png,jpg',  // 2x2 Picture - Images only
             3 => 'pdf',           // Birth Certificate - PDF only
-            4 => 'pdf'            // Good Moral Certificate - PDF only
+            4 => 'pdf',            // Good Moral Certificate - PDF only
         ];
 
         $requirementId = $request->requirement_id;
@@ -293,20 +310,20 @@ class AuthController extends Controller
 
         $request->validate([
             'requirement_id' => 'required|integer|in:1,2,3,4',
-            'file' => 'required|file|mimes:' . $allowedMimes . '|max:5120',
+            'file' => 'required|file|mimes:'.$allowedMimes.'|max:5120',
         ], [
             'file.mimes' => 'Invalid file type for this requirement. Please check the accepted file format.',
         ]);
 
         $user = Auth::user();
         $file = $request->file('file');
-        
+
         // Define requirement types
         $requirementTypes = [
             1 => 'form_137',
             2 => 'picture_2x2',
             3 => 'birth_certificate',
-            4 => 'good_moral_certificate'
+            4 => 'good_moral_certificate',
         ];
 
         $requirementType = $requirementTypes[$request->requirement_id];
@@ -325,7 +342,7 @@ class AuthController extends Controller
             // Allow tolerance of ±50 pixels (570-630)
             if ($width < 570 || $width > 630 || $height < 570 || $height > 630) {
                 return response()->json([
-                    'error' => 'Image dimensions must be 2x2 inches (approximately 600x600 pixels). Current size: ' . $width . 'x' . $height . ' pixels'
+                    'error' => 'Image dimensions must be 2x2 inches (approximately 600x600 pixels). Current size: '.$width.'x'.$height.' pixels',
                 ], 422);
             }
 
@@ -333,7 +350,7 @@ class AuthController extends Controller
             $aspectRatio = abs($width - $height) / max($width, $height);
             if ($aspectRatio > 0.05) {
                 return response()->json([
-                    'error' => 'Image must be square (2x2). Current aspect ratio: ' . round($width / $height, 2)
+                    'error' => 'Image must be square (2x2). Current aspect ratio: '.round($width / $height, 2),
                 ], 422);
             }
         }
@@ -348,7 +365,7 @@ class AuthController extends Controller
         }
 
         // Store new file
-        $path = $file->store('requirements/' . $user->id, 'public');
+        $path = $file->store('requirements/'.$user->id, 'public');
 
         // Update or create requirement record
         StudentRequirement::updateOrCreate(
@@ -379,7 +396,7 @@ class AuthController extends Controller
             1 => 'form_137',
             2 => 'picture_2x2',
             3 => 'birth_certificate',
-            4 => 'good_moral_certificate'
+            4 => 'good_moral_certificate',
         ];
 
         $requirementType = $requirementTypes[$request->requirement_id];

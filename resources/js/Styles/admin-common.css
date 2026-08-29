@@ -303,7 +303,8 @@
 .btn-icon.delete,
 .btn-icon.approve,
 .btn-icon.enroll,
-.btn-icon.reject {
+.btn-icon.reject,
+.btn-icon.promote {
     background: #fff;
     color: #003366;
     border: 1px solid #003366;
@@ -318,7 +319,8 @@
 .btn-icon.view:hover,
 .btn-icon.edit:hover,
 .btn-icon.approve:hover,
-.btn-icon.enroll:hover {
+.btn-icon.enroll:hover,
+.btn-icon.promote:hover {
     background: #003366;
     color: #fff;
 }

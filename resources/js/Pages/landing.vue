@@ -88,6 +88,13 @@
                 <button
                     type="button"
                     class="role-btn"
+                    @click="navigateToLogin('registrar')"
+                >
+                    Registrar
+                </button>
+                <button
+                    type="button"
+                    class="role-btn"
                     @click="navigateToLogin('student')"
                 >
                     Student

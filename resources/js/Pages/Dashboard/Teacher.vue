@@ -830,12 +830,12 @@
                             v-if="voiceTranscript"
                             class="table-voice-transcript"
                         >
-                            "{{ voiceTranscript }}"
+                            {{ voiceTranscript }}
                         </div>
                         <div class="table-voice-commands">
                             <span class="command-tag">Say student name</span>
-                            <span class="command-tag">"Edit"</span>
-                            <span class="command-tag">"Cancel"</span>
+                            <span class="command-tag">Edit</span>
+                            <span class="command-tag">Cancel</span>
                         </div>
                     </div>
 
@@ -990,428 +990,247 @@
                     class="modal-overlay"
                     @click.self="closeGradeModal"
                 >
-                    <div class="modal-container grade-modal">
-                        <!-- Professional Header with Gradient -->
-                        <div class="modal-header grade-modal-header">
-                            <div class="grade-header-content">
-                                <div class="grade-header-icon">
-                                    <ClipboardList :size="24" />
-                                </div>
-                                <div class="grade-header-text">
-                                    <h3>Grade Entry</h3>
-                                    <p>
-                                        Enter trimester grades for this student
-                                    </p>
-                                </div>
-                            </div>
-                            <button class="close-btn" @click="closeGradeModal">
-                                <X :size="20" />
-                            </button>
-                        </div>
-
-                        <div class="modal-body grade-modal-body">
-                            <div class="grade-modal-layout">
-                                <!-- Left Column: Student Info & Voice Control -->
-                                <div class="grade-left-column">
-                                    <!-- Student Info Card -->
-                                    <div class="student-info-card">
-                                        <div class="student-avatar-section">
-                                            <div class="student-avatar-large">
-                                                <img
-                                                    v-if="
-                                                        selectedGrade?.student
-                                                            ?.profile_photo
-                                                    "
-                                                    :src="`/storage/${selectedGrade.student.profile_photo}`"
-                                                    alt="Profile"
-                                                    class="avatar-img"
-                                                />
-                                                <span
-                                                    v-else
-                                                    class="avatar-initials"
-                                                >
-                                                    {{
-                                                        selectedGrade?.student?.first_name?.charAt(
-                                                            0,
-                                                        )
-                                                    }}{{
-                                                        selectedGrade?.student?.last_name?.charAt(
-                                                            0,
-                                                        )
-                                                    }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                        <div class="student-details-section">
-                                            <h4 class="student-full-name">
-                                                {{
-                                                    selectedGrade?.student
-                                                        ?.last_name
-                                                }},
-                                                {{
-                                                    selectedGrade?.student
-                                                        ?.first_name
-                                                }}
-                                            </h4>
-                                            <div class="student-meta-badges">
-                                                <span
-                                                    class="meta-badge subject-badge"
-                                                >
-                                                    <BookOpen :size="14" />
-                                                    {{
-                                                        selectedGrade?.subject
-                                                            ?.name
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="meta-badge section-badge"
-                                                    v-if="
-                                                        selectedGrade?.section
-                                                    "
-                                                >
-                                                    <Layers :size="14" />
-                                                    {{
-                                                        selectedGrade?.section
-                                                            ?.name
-                                                    }}
-                                                </span>
-                                                <span
-                                                    class="meta-badge lrn-meta-badge"
-                                                    v-if="
-                                                        selectedGrade?.student
-                                                            ?.lrn
-                                                    "
-                                                >
-                                                    <Hash :size="14" />
-                                                    {{
-                                                        selectedGrade?.student
-                                                            ?.lrn
-                                                    }}
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <!-- Voice Control Section -->
-                                    <div
-                                        v-if="voiceModeEnabled"
-                                        class="voice-control-section"
-                                    >
-                                        <div class="voice-mode-indicator">
-                                            <Mic
-                                                :size="20"
-                                                class="mic-icon-active"
-                                            />
-                                            <span class="voice-mode-label"
-                                                >Voice Mode Active</span
-                                            >
-                                            <button
-                                                type="button"
-                                                class="voice-disable-btn"
-                                                @click="toggleVoiceRecognition"
-                                            >
-                                                <X :size="16" />
-                                                Turn Off
-                                            </button>
-                                        </div>
-                                        <div
-                                            v-if="isVoiceActive"
-                                            class="voice-status-container"
-                                        >
-                                            <div class="voice-indicator">
-                                                <span class="pulse-dot"></span>
-                                                <span class="voice-label"
-                                                    >Listening...</span
-                                                >
-                                            </div>
-                                            <div class="current-quarter-badge">
-                                                T{{ currentVoiceQuarter }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div
-                                        v-else
-                                        class="voice-control-section voice-off"
-                                    >
-                                        <button
-                                            type="button"
-                                            class="voice-toggle-btn"
-                                            @click="toggleVoiceRecognition"
-                                        >
-                                            <Mic :size="20" />
-                                            <span>Enable Voice Input</span>
-                                        </button>
-                                    </div>
-
-                                    <!-- Voice Status Bar -->
-                                    <div
-                                        v-if="isVoiceActive"
-                                        class="voice-status-bar"
-                                    >
-                                        <div class="voice-status-text">
-                                            {{ voiceStatus }}
-                                        </div>
-                                        <div
-                                            v-if="voiceTranscript"
-                                            class="voice-transcript"
-                                        >
-                                            "{{ voiceTranscript }}"
-                                        </div>
-                                        <div class="voice-commands">
-                                            <span class="command-hint"
-                                                >Commands: "Term 1-3" |
-                                                "Next" | "Back" | "Clear" |
-                                                "Save"</span>
-                                            >
-                                        </div>
-                                    </div>
-
-                                    <!-- Final Grade Display -->
-                                    <div class="final-grade-section">
-                                        <div
-                                            class="final-grade-card"
-                                            :class="
-                                                getGradeClass(
-                                                    computedFinalGrade,
-                                                )
-                                            "
-                                        >
-                                            <div class="final-grade-label">
-                                                Final Grade
-                                            </div>
-                                            <div class="final-grade-value">
-                                                {{ computedFinalGrade || "--" }}
-                                            </div>
-                                            <div
-                                                class="final-grade-status"
-                                                v-if="computedFinalGrade"
-                                            >
-                                                {{
-                                                    getGradeLabel(
-                                                        computedFinalGrade,
-                                                    )
-                                                }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Right Column: Trimester Grades -->
-                                <div class="grade-right-column">
-                                    <div class="grades-section">
-                                        <div class="section-title">
-                                            <span class="title-text"
-                                                >Trimester Grades</span
-                                            >
-                                            <span class="title-hint"
-                                                >Enter grades from 60-100</span
-                                            >
-                                        </div>
-
-                                        <div
-                                            class="quarter-grades-grid-vertical"
-                                        >
-                                            <div
-                                                class="quarter-card-horizontal"
-                                                :class="{
-                                                    active:
-                                                        voiceModeEnabled &&
-                                                        currentVoiceQuarter ===
-                                                            1,
-                                                    'has-grade': gradeForm.term_1,
-                                                }"
-                                            >
-                                                <div class="quarter-info">
-                                                    <span class="quarter-label"
-                                                        >T1</span
-                                                    >
-                                                    <span class="quarter-title"
-                                                        >1st Term</span
-                                                    >
-                                                </div>
-                                                <div
-                                                    class="quarter-input-wrapper"
-                                                >
-                                                    <input
-                                                        id="voice-term-1-input"
-                                                        v-model="gradeForm.term_1"
-                                                        type="number"
-                                                        min="60"
-                                                        max="100"
-                                                        step="0.01"
-                                                        placeholder="--"
-                                                        class="quarter-input"
-                                                    />
-                                                </div>
-                                                <div
-                                                    class="grade-indicator"
-                                                    :class="
-                                                        getGradeClass(
-                                                            gradeForm.term_1,
-                                                        )
-                                                    "
-                                                    v-if="gradeForm.term_1"
-                                                >
-                                                    {{
-                                                        getGradeLabel(
-                                                            gradeForm.term_1,
-                                                        )
-                                                    }}
-                                                </div>
-                                                <div
-                                                    class="grade-indicator empty"
-                                                    v-else
-                                                >
-                                                    Not Set
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                class="quarter-card-horizontal"
-                                                :class="{
-                                                    active:
-                                                        voiceModeEnabled &&
-                                                        currentVoiceQuarter ===
-                                                            2,
-                                                    'has-grade': gradeForm.term_2,
-                                                }"
-                                            >
-                                                <div class="quarter-info">
-                                                    <span class="quarter-label"
-                                                        >T2</span
-                                                    >
-                                                    <span class="quarter-title"
-                                                        >2nd Term</span
-                                                    >
-                                                </div>
-                                                <div
-                                                    class="quarter-input-wrapper"
-                                                >
-                                                    <input
-                                                        id="voice-term-2-input"
-                                                        v-model="gradeForm.term_2"
-                                                        type="number"
-                                                        min="60"
-                                                        max="100"
-                                                        step="0.01"
-                                                        placeholder="--"
-                                                        class="quarter-input"
-                                                    />
-                                                </div>
-                                                <div
-                                                    class="grade-indicator"
-                                                    :class="
-                                                        getGradeClass(
-                                                            gradeForm.term_2,
-                                                        )
-                                                    "
-                                                    v-if="gradeForm.term_2"
-                                                >
-                                                    {{
-                                                        getGradeLabel(
-                                                            gradeForm.term_2,
-                                                        )
-                                                    }}
-                                                </div>
-                                                <div
-                                                    class="grade-indicator empty"
-                                                    v-else
-                                                >
-                                                    Not Set
-                                                </div>
-                                            </div>
-
-                                            <div
-                                                class="quarter-card-horizontal"
-                                                :class="{
-                                                    active:
-                                                        voiceModeEnabled &&
-                                                        currentVoiceQuarter ===
-                                                            3,
-                                                    'has-grade': gradeForm.term_3,
-                                                }"
-                                            >
-                                                <div class="quarter-info">
-                                                    <span class="quarter-label"
-                                                        >T3</span
-                                                    >
-                                                    <span class="quarter-title"
-                                                        >3rd Term</span
-                                                    >
-                                                </div>
-                                                <div
-                                                    class="quarter-input-wrapper"
-                                                >
-                                                    <input
-                                                        id="voice-term-3-input"
-                                                        v-model="gradeForm.term_3"
-                                                        type="number"
-                                                        min="60"
-                                                        max="100"
-                                                        step="0.01"
-                                                        placeholder="--"
-                                                        class="quarter-input"
-                                                    />
-                                                </div>
-                                                <div
-                                                    class="grade-indicator"
-                                                    :class="
-                                                        getGradeClass(
-                                                            gradeForm.term_3,
-                                                        )
-                                                    "
-                                                    v-if="gradeForm.term_3"
-                                                >
-                                                    {{
-                                                        getGradeLabel(
-                                                            gradeForm.term_3,
-                                                        )
-                                                    }}
-                                                </div>
-                                                <div
-                                                    class="grade-indicator empty"
-                                                    v-else
-                                                >
-                                                    Not Set
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <!-- Saving Indicator -->
-                                        <div
-                                            v-if="isSubmitting"
-                                            class="saving-indicator"
-                                        >
-                                            <Loader2 :size="18" class="spin" />
-                                            <span>Saving grades...</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div
-                            v-if="!voiceModeEnabled"
-                            class="modal-footer grade-modal-footer"
-                        >
+                    <div class="modal-container grade-modal-clean">
+                        <div class="grade-clean-header">
+                            <h3>
+                                <ClipboardList :size="20" />
+                                Grade Entry
+                            </h3>
                             <button
-                                class="btn-secondary"
+                                class="grade-clean-close"
                                 @click="closeGradeModal"
                             >
                                 <X :size="18" />
+                            </button>
+                        </div>
+
+                        <div class="grade-clean-body">
+                            <div class="grade-detail-header">
+                                <div class="grade-detail-avatar">
+                                    <img
+                                        v-if="
+                                            selectedGrade?.student
+                                                ?.profile_photo
+                                        "
+                                        :src="`/storage/${selectedGrade.student.profile_photo}`"
+                                        alt="Profile"
+                                    />
+                                    <span v-else>
+                                        {{
+                                            selectedGrade?.student?.first_name?.charAt(
+                                                0,
+                                            )
+                                        }}{{
+                                            selectedGrade?.student?.last_name?.charAt(
+                                                0,
+                                            )
+                                        }}
+                                    </span>
+                                </div>
+                                <div class="grade-detail-title">
+                                    <h4>
+                                        {{
+                                            selectedGrade?.student?.last_name
+                                        }},
+                                        {{
+                                            selectedGrade?.student?.first_name
+                                        }}
+                                    </h4>
+                                    <span
+                                        v-if="selectedGrade?.student?.lrn"
+                                        class="grade-lrn-badge"
+                                    >
+                                        LRN: {{ selectedGrade.student.lrn }}
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div
+                                v-if="voiceModeEnabled"
+                                class="grade-voice-panel"
+                            >
+                                <div class="grade-voice-row">
+                                    <span class="grade-voice-label">
+                                        <span class="pulse-dot"></span>
+                                        Voice Mode Active
+                                    </span>
+                                    <span class="grade-voice-status">{{
+                                        voiceStatus
+                                    }}</span>
+                                    <button
+                                        type="button"
+                                        class="grade-voice-off"
+                                        @click="toggleVoiceRecognition"
+                                    >
+                                        <X :size="12" />
+                                        Turn Off
+                                    </button>
+                                </div>
+                                <div
+                                    v-if="voiceTranscript"
+                                    class="grade-voice-transcript"
+                                >
+                                    {{ voiceTranscript }}
+                                </div>
+                                <div class="grade-voice-hint">
+                                    Say a grade (60–100), or: Term 1 · Term 2
+                                    · Term 3 · Next · Back · Clear · Save
+                                </div>
+                            </div>
+                            <div v-else class="grade-voice-toggle-row">
+                                <button
+                                    type="button"
+                                    class="grade-voice-toggle-btn"
+                                    @click="toggleVoiceRecognition"
+                                >
+                                    <Mic :size="14" />
+                                    Enable Voice Input
+                                </button>
+                            </div>
+
+                            <div class="grade-detail-grid">
+                                <div class="grade-detail-item full-width">
+                                    <label>Subject</label>
+                                    <span>
+                                        {{
+                                            selectedGrade?.subject?.name || "—"
+                                        }}
+                                    </span>
+                                </div>
+                                <div class="grade-detail-item">
+                                    <label>Section</label>
+                                    <span>
+                                        {{
+                                            selectedGrade?.section?.name || "—"
+                                        }}
+                                    </span>
+                                </div>
+                                <div class="grade-detail-item">
+                                    <label>Final Grade</label>
+                                    <span
+                                        v-if="computedFinalGrade"
+                                        class="grade-value-box"
+                                        :class="
+                                            getGradeClass(computedFinalGrade)
+                                        "
+                                    >
+                                        {{ computedFinalGrade }}
+                                    </span>
+                                    <span v-else class="grade-muted">—</span>
+                                </div>
+
+                                <div
+                                    class="grade-detail-item"
+                                    :class="{
+                                        'active-term':
+                                            voiceModeEnabled &&
+                                            currentVoiceQuarter === 1,
+                                    }"
+                                >
+                                    <label>1st Term</label>
+                                    <input
+                                        id="voice-term-1-input"
+                                        v-model="gradeForm.term_1"
+                                        type="number"
+                                        min="60"
+                                        max="100"
+                                        step="0.01"
+                                        placeholder="—"
+                                        class="grade-term-input"
+                                    />
+                                    <span
+                                        v-if="gradeForm.term_1"
+                                        class="grade-term-status"
+                                        :class="getGradeClass(gradeForm.term_1)"
+                                    >
+                                        {{ getGradeLabel(gradeForm.term_1) }}
+                                    </span>
+                                    <span v-else class="grade-muted">
+                                        Not Set
+                                    </span>
+                                </div>
+                                <div
+                                    class="grade-detail-item"
+                                    :class="{
+                                        'active-term':
+                                            voiceModeEnabled &&
+                                            currentVoiceQuarter === 2,
+                                    }"
+                                >
+                                    <label>2nd Term</label>
+                                    <input
+                                        id="voice-term-2-input"
+                                        v-model="gradeForm.term_2"
+                                        type="number"
+                                        min="60"
+                                        max="100"
+                                        step="0.01"
+                                        placeholder="—"
+                                        class="grade-term-input"
+                                    />
+                                    <span
+                                        v-if="gradeForm.term_2"
+                                        class="grade-term-status"
+                                        :class="getGradeClass(gradeForm.term_2)"
+                                    >
+                                        {{ getGradeLabel(gradeForm.term_2) }}
+                                    </span>
+                                    <span v-else class="grade-muted">
+                                        Not Set
+                                    </span>
+                                </div>
+                                <div
+                                    class="grade-detail-item"
+                                    :class="{
+                                        'active-term':
+                                            voiceModeEnabled &&
+                                            currentVoiceQuarter === 3,
+                                    }"
+                                >
+                                    <label>3rd Term</label>
+                                    <input
+                                        id="voice-term-3-input"
+                                        v-model="gradeForm.term_3"
+                                        type="number"
+                                        min="60"
+                                        max="100"
+                                        step="0.01"
+                                        placeholder="—"
+                                        class="grade-term-input"
+                                    />
+                                    <span
+                                        v-if="gradeForm.term_3"
+                                        class="grade-term-status"
+                                        :class="getGradeClass(gradeForm.term_3)"
+                                    >
+                                        {{ getGradeLabel(gradeForm.term_3) }}
+                                    </span>
+                                    <span v-else class="grade-muted">
+                                        Not Set
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="grade-clean-footer">
+                            <button
+                                type="button"
+                                class="grade-btn-secondary"
+                                @click="closeGradeModal"
+                            >
                                 Cancel
                             </button>
                             <button
-                                class="btn-primary btn-save-grades"
-                                @click="submitGrades"
+                                type="button"
+                                class="grade-btn-primary"
                                 :disabled="isSubmitting"
+                                @click="submitGrades"
                             >
                                 <Loader2
                                     v-if="isSubmitting"
-                                    :size="18"
+                                    :size="16"
                                     class="spin"
                                 />
-                                <span v-else>💾</span>
                                 {{ isSubmitting ? "Saving..." : "Save Grades" }}
                             </button>
                         </div>
@@ -1744,7 +1563,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from "vue";
+import { ref, computed, onMounted, onUnmounted, watch } from "vue";
 import { router, Head } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import SchoolFormsHub from "@/Pages/Dashboard/SchoolForms/SchoolFormsHub.vue";
@@ -1830,13 +1649,48 @@ const gradeForm = ref({
     term_3: null,
 });
 
-// Voice Recognition State
+// Voice Recognition State (Groq Whisper via backend)
 const voiceModeEnabled = ref(false); // Persistent toggle - stays on across edits
 const isVoiceActive = ref(false);
 const currentVoiceQuarter = ref(1);
 const voiceTranscript = ref("");
-const speechRecognition = ref(null);
 const voiceStatus = ref("Voice mode off");
+
+// Groq audio streaming internals
+const groqStream = ref(null); // MediaStream from getUserMedia
+const groqRecorder = ref(null); // current MediaRecorder
+const groqActive = ref(false); // recording loop is running
+let groqLastTranscript = ""; // last dispatched text to avoid duplicates
+let groqLastTranscriptAt = 0; // ms timestamp of last dispatch
+// After this many ms since a duplicate was seen, we allow re-processing.
+// Keeps grade double-entry protection while letting the teacher retry a
+// short command (like "edit") without waiting forever between attempts.
+const GROQ_DEDUP_WINDOW_MS = 1200;
+// Generation counter — every time we start/stop the stream, switch modes, or
+// speak a TTS prompt we bump this. Each recorder cycle captures the current
+// value; if a transcript comes back with a stale value we drop it. This
+// prevents late uploads (e.g. from student-select mode) from being treated as
+// grade-modal input, and prevents the app from hearing its own voice prompts.
+let groqGeneration = 0;
+// Which command pipeline is currently active: "modal" (grade entry) or
+// "table" (student selection). Captured per-recorder-cycle so a late
+// transcript is only dispatched to the pipeline that was active when the
+// audio was recorded.
+let currentVoiceMode = "table";
+
+// Track last announced term so the TTS only fires on actual changes.
+let lastSpokenTerm = 1;
+
+// Speak the term name whenever the highlighted term changes while the grade
+// modal is open. This makes the flow feel like a two-way conversation.
+watch(currentVoiceQuarter, (newTerm) => {
+    if (!showGradeModal.value) return;
+    if (!voiceModeEnabled.value) return;
+    if (newTerm === lastSpokenTerm) return;
+    lastSpokenTerm = newTerm;
+    const phrases = { 1: "Term one", 2: "Term two", 3: "Term three" };
+    speakPrompt(phrases[newTerm] || `Term ${newTerm}`, { wait: false });
+});
 
 // Table Voice Mode State
 const tableVoiceActive = ref(false);
@@ -2061,6 +1915,12 @@ const handleNavClick = (nav) => {
     isMobileMenuOpen.value = false;
 };
 
+const studentSpokenName = (student) => {
+    const first = (student?.first_name || "").toString().trim();
+    const last = (student?.last_name || "").toString().trim();
+    return [first, last].filter(Boolean).join(" ");
+};
+
 const getInitials = (user) => {
     const first = user?.first_name?.charAt(0) || "";
     const last = user?.last_name?.charAt(0) || "";
@@ -2110,15 +1970,20 @@ const openGradeModal = (grade) => {
     };
     showGradeModal.value = true;
 
-    // Stop table voice recognition first
-    stopTableVoiceRecognition();
+    // Flip the voice pipeline to modal. Keep the microphone running — killing
+    // and re-requesting getUserMedia is why the first grade after opening
+    // the modal used to take 2–3 repeats.
+    currentVoiceMode = "modal";
+    groqGeneration++;
+    clearPendingTens();
+
+    cancelSpeech();
+    tableVoiceActive.value = false;
+    tablePromptCount = 0;
     focusedGradeRow.value = null;
 
-    // Auto-start modal voice recognition if voice mode is enabled
     if (voiceModeEnabled.value) {
-        setTimeout(() => {
-            startVoiceRecognition();
-        }, 100);
+        startVoiceRecognition();
     }
 };
 
@@ -2130,6 +1995,11 @@ const closeGradeModal = () => {
     selectedGrade.value = null;
     gradeForm.value = { term_1: null, term_2: null, term_3: null };
 
+    // Flip back to table before restarting so any late modal transcripts
+    // get dropped as cross-mode.
+    currentVoiceMode = "table";
+    groqGeneration++;
+
     // Restart table voice recognition if voice mode is still enabled
     if (voiceModeEnabled.value) {
         setTimeout(() => {
@@ -2138,100 +2008,961 @@ const closeGradeModal = () => {
     }
 };
 
-// Voice Recognition Functions
-let lastProcessedTranscript = "";
+// Text-to-Speech helper: makes the app "ask first" so voice mode feels
+// conversational. Returns a Promise that resolves when speech finishes so we
+// can wait before letting the mic listen again.
+//
+// While the app is speaking we prevent Whisper from hearing our own prompt
+// with three coordinated moves:
+//   1. Mute the microphone track so the recorder captures silence.
+//   2. Force-cut the current recorder cycle at TTS start so any pre-TTS
+//      speech is finalized before the mute takes effect.
+//   3. Force-cut again at TTS end so post-TTS audio starts in a FRESH
+//      recorder cycle. If we didn't do this, the recorder that was
+//      already running during TTS would carry a large silent tail into
+//      the post-TTS "edit" utterance, making Groq slow AND the cycle's
+//      generation stamp would go stale if we bumped groqGeneration here.
+let ttsSpeaking = false;
 
-const initVoiceRecognition = () => {
-    const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        toast.error("Voice recognition is not supported in your browser");
-        return null;
+// Force-cut helper used by speakPrompt to boundary TTS. Stops the current
+// recorder if any — the recorder cycle's own onstop handler will schedule a
+// new cycle so we never leave the stream without an active recorder.
+const forceCutRecorder = () => {
+    const rec = groqRecorder.value;
+    if (!rec) return;
+    try {
+        if (rec.state === "recording") rec.stop();
+    } catch (e) {}
+};
+
+const speakPrompt = (text, { wait = true } = {}) => {
+    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+        return Promise.resolve();
     }
 
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.maxAlternatives = 3; // More alternatives for better accuracy
+    // Mute mic tracks so Whisper cannot hear the prompt.
+    const tracks = groqStream.value ? groqStream.value.getAudioTracks() : [];
+    tracks.forEach((t) => (t.enabled = false));
+    ttsSpeaking = true;
+    // Cut the current recorder cycle so pre-TTS speech is finalized
+    // immediately. A fresh cycle will start (and record muted silence).
+    forceCutRecorder();
 
-    // Track which commands have been processed to prevent duplicates
-    let lastProcessedCommand = "";
-
-    recognition.onresult = (event) => {
-        const result = event.results[event.results.length - 1];
-        const fullTranscript = result[0].transcript.toLowerCase().trim();
-
-        // Get last word and last two words for command processing
-        const words = fullTranscript.split(/\s+/);
-        const lastWord = words[words.length - 1];
-        const lastTwoWords = words.slice(-2).join(" ");
-
-        // Show transcript (last two words for context)
-        voiceTranscript.value = `"${words.slice(-2).join(" ")}"`;
-
-        // Create a command key to prevent duplicate processing
-        const commandKey = `${lastWord}-${currentVoiceQuarter.value}`;
-
-        // Only process if this exact command hasn't been processed yet
-        if (
-            commandKey !== lastProcessedCommand &&
-            lastTwoWords !== lastProcessedTranscript
-        ) {
-            const processed = tryProcessCommand(
-                lastWord,
-                lastTwoWords,
-                result.isFinal,
-            );
-            if (processed) {
-                lastProcessedCommand = commandKey;
-                lastProcessedTranscript = lastTwoWords;
-                // Clear transcript quickly after processing
-                setTimeout(() => {
-                    voiceTranscript.value = "";
-                }, 800);
-            }
-        }
-
-        // Reset for next command on final result
-        if (result.isFinal) {
-            lastProcessedTranscript = "";
-            lastProcessedCommand = "";
-        }
+    let cleaned = false;
+    const cleanup = () => {
+        if (cleaned) return;
+        cleaned = true;
+        ttsSpeaking = false;
+        tracks.forEach((t) => (t.enabled = true));
+        // Cut the (TTS-time, mostly-silent) recorder cycle so the very next
+        // thing the user says is captured in a fresh cycle. We deliberately
+        // do NOT bump groqGeneration here — doing so would invalidate the
+        // post-TTS transcript of the recorder cycle that captures the
+        // user's next utterance.
+        forceCutRecorder();
     };
 
-    recognition.onerror = (event) => {
-        console.error("Voice recognition error:", event.error);
-        if (event.error === "no-speech") {
-            // Don't show error, just keep listening
-        } else if (event.error === "audio-capture") {
-            voiceStatus.value = "No microphone found.";
-            stopVoiceRecognition();
-        } else if (event.error === "not-allowed") {
+    const speechDone = new Promise((resolve) => {
+        try {
+            window.speechSynthesis.cancel();
+            const utter = new SpeechSynthesisUtterance(text);
+            utter.lang = "en-US";
+            utter.rate = 1.05;
+            utter.pitch = 1.0;
+            utter.volume = 1.0;
+            let done = false;
+            const finish = () => {
+                if (done) return;
+                done = true;
+                cleanup();
+                resolve();
+            };
+            utter.onend = finish;
+            utter.onerror = finish;
+            // Safety timeout in case onend never fires (some Chrome bug).
+            setTimeout(finish, 8000);
+            window.speechSynthesis.speak(utter);
+        } catch (e) {
+            cleanup();
+            resolve();
+        }
+    });
+
+    return wait ? speechDone : Promise.resolve();
+};
+
+const cancelSpeech = () => {
+    try {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+    } catch (e) {}
+    // If cancel() was called mid-speech, force mic tracks back on so the
+    // stream doesn't stay muted.
+    if (ttsSpeaking) {
+        ttsSpeaking = false;
+        if (groqStream.value) {
+            groqStream.value
+                .getAudioTracks()
+                .forEach((t) => (t.enabled = true));
+        }
+        forceCutRecorder();
+    }
+};
+
+// Voice Recognition Functions (Groq Whisper backed with VAD)
+//
+// We keep a MediaRecorder always running and use a Web Audio AnalyserNode to
+// detect when the teacher is speaking. As soon as we see a sustained pause
+// after speech, we cut the current recording, ship the complete utterance to
+// Groq, and immediately start recording again. This gives Whisper a full
+// phrase for context, which dramatically improves accuracy compared with
+// fixed-length chunks.
+
+const MIN_UPLOAD_BYTES = 2000; // skip nearly-empty blobs
+// RMS of int8 samples that counts as speech.
+//   - Command/grade mode: 8 (very sensitive because user is prompted).
+//   - Table-name mode: 14 (stricter — a full name should be spoken clearly;
+//     this cuts down on background hum / air-con / typing tripping Whisper
+//     into hallucinating a random name).
+const VAD_SPEECH_THRESHOLD_CMD = 8;
+const VAD_SPEECH_THRESHOLD_NAME = 14;
+// Silence-after-speech timeout. Kept low in grade-entry mode where the
+// teacher is saying a single two-digit number so the recorder cuts almost
+// as soon as the number is finished. Longer in table mode because a full
+// Filipino name can have a natural pause between first and last name.
+// 650ms keeps "eighty five" in one utterance. 400ms was cutting between
+// the tens and the ones, so Whisper only heard "eighty" and the ones
+// digit was thrown away — teacher had to repeat 2–3 times.
+const VAD_SILENCE_MS_GRADE = 650;
+const VAD_SILENCE_MS_CMD = 280; // next / save / edit — cut as soon as the word ends
+const VAD_SILENCE_MS_NAME = 700;
+const VAD_MIN_SPEECH_MS_CMD = 120; // grade / focused-command mode
+const VAD_MIN_SPEECH_MS_NAME = 350; // full-name utterance in table mode
+const VAD_MAX_UTTERANCE_MS = 6000; // hard cap per utterance
+const VAD_MAX_IDLE_MS = 4000; // recycle recorder every N ms if no speech
+const VAD_TICK_MS = 50;
+
+const isNameListenMode = () =>
+    currentVoiceMode === "table" && !focusedGradeRow.value;
+
+const currentSilenceMs = () => {
+    // After a grade is already in the current term, the next utterance is
+    // almost always "next" / "back" / "save" — a single short word. Use a
+    // tight silence window so the highlight moves immediately.
+    if (currentVoiceMode === "modal") {
+        const termKey = `term_${currentVoiceQuarter.value}`;
+        const filled = gradeForm.value?.[termKey] != null;
+        return filled ? VAD_SILENCE_MS_CMD : VAD_SILENCE_MS_GRADE;
+    }
+    if (focusedGradeRow.value) return VAD_SILENCE_MS_CMD;
+    return VAD_SILENCE_MS_NAME;
+};
+
+const currentSpeechThreshold = () =>
+    isNameListenMode() ? VAD_SPEECH_THRESHOLD_NAME : VAD_SPEECH_THRESHOLD_CMD;
+
+const currentMinSpeechMs = () =>
+    isNameListenMode() ? VAD_MIN_SPEECH_MS_NAME : VAD_MIN_SPEECH_MS_CMD;
+
+// Known Whisper "hallucinations" on silence / breath / music / short pops.
+// Whisper's training data includes lots of YouTube subtitles, so on silence
+// it commonly emits phrases like "thanks for watching", "please subscribe",
+// "the end", "you", etc. We drop these outright so they never reach the
+// name matcher and randomly select a student.
+const GROQ_NOISE_TRANSCRIPTS = new Set([
+    "you",
+    "thank you",
+    "thanks",
+    "thanks for watching",
+    "thank you for watching",
+    "thank you very much",
+    "thanks for listening",
+    "please subscribe",
+    "subscribe",
+    "like and subscribe",
+    "bye",
+    "bye bye",
+    "goodbye",
+    "the end",
+    "hmm",
+    "hm",
+    "uh",
+    "um",
+    "the",
+    "a",
+    "an",
+    "and",
+    "so",
+    "is",
+    "it",
+    "it's",
+    "its",
+    "well",
+    "oh",
+    "ah",
+    "eh",
+    "huh",
+    "tester",
+    "test",
+    "testing",
+    "beep",
+    "beep beep",
+    "cheep",
+    "cheep cheep",
+    "la la",
+    "la la la",
+    "mm hmm",
+    "mm",
+    "yeah",
+    "okay",
+    "ok",
+    "hello",
+    "hi",
+    "amen",
+    "amara",
+    "amara org",
+    "www",
+    ".",
+    "",
+]);
+
+// Additional partial-match noise phrases (checked as substrings).
+const GROQ_NOISE_SUBSTRINGS = [
+    "beep",
+    "cheep",
+    "tester",
+    "la la",
+    "mm hmm",
+    "amara",
+    "subscribe",
+    "thanks for watching",
+    "thank you for watching",
+];
+
+// Internal VAD state (module-scoped so multiple invocations reuse)
+let vadAudioCtx = null;
+let vadAnalyser = null;
+let vadRafHandle = null;
+
+const getCsrfToken = () => {
+    const el = document.querySelector('meta[name="csrf-token"]');
+    return el ? el.getAttribute("content") || "" : "";
+};
+
+const pickAudioMime = () => {
+    const candidates = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+    ];
+    if (typeof MediaRecorder === "undefined") return "";
+    for (const m of candidates) {
+        try {
+            if (MediaRecorder.isTypeSupported(m)) return m;
+        } catch (e) {}
+    }
+    return "";
+};
+
+const stripPunctuation = (s) =>
+    (s || "")
+        .toLowerCase()
+        .replace(/[.,!?;:"'()\[\]]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+// Build a prompt hint that biases Whisper toward the vocabulary we expect.
+// Whisper's `prompt` is limited to ~224 tokens (~1000 chars); cap length.
+const PROMPT_MAX_CHARS = 900;
+const buildTranscriptionPrompt = () => {
+    // Two very different prompts: numeric grade mode vs. student-name mode.
+    if (showGradeModal.value) {
+        // Numeric bias: front-load the prompt with concrete two-digit
+        // examples so Whisper's decoder assigns higher probability to
+        // digit tokens. The plain-English sentence at the end gives it
+        // context but the digit examples do the real work.
+        // Whisper's prompt is previous-transcript context, not instructions.
+        // A short run of real grades works better than listing 60–100
+        // (that list was leaking into the output as hallucinations).
+        return "85. 90. 75. 88. 92. 80. 95. 70. 78. 100. next. save.";
+    }
+
+    const baseNames =
+        "The teacher will say a student's Filipino name (first and last name). Also possible commands: edit, cancel.";
+    try {
+        const seen = new Set();
+        const names = [];
+        for (const g of filteredGrades.value || []) {
+            const f = (g.student?.first_name || "").trim();
+            const l = (g.student?.last_name || "").trim();
+            const full = `${f} ${l}`.trim();
+            if (!full) continue;
+            const key = full.toLowerCase();
+            if (seen.has(key)) continue;
+            seen.add(key);
+            names.push(full);
+        }
+        if (names.length === 0) return baseNames;
+        let hint = baseNames + " Names: ";
+        const room = PROMPT_MAX_CHARS - hint.length - 1;
+        let acc = "";
+        for (const n of names) {
+            const next = acc ? `${acc}, ${n}` : n;
+            if (next.length > room) break;
+            acc = next;
+        }
+        return acc ? `${hint}${acc}.` : baseNames;
+    } catch (e) {
+        return baseNames;
+    }
+};
+
+const uploadAudioChunk = async (blob, recordedMode = null) => {
+    if (!blob || blob.size < MIN_UPLOAD_BYTES) return null;
+    // Tell the backend whether this chunk is a grade digit or a student
+    // name so it can pick the fastest suitable Whisper model. Use the mode
+    // that was active when the audio was RECORDED, not the current one.
+    // If a student is already focused we're waiting for a short command
+    // ("edit"/"cancel"), so treat it like a grade chunk and use turbo.
+    const effectiveMode = recordedMode || currentVoiceMode;
+    const modeForServer =
+        effectiveMode === "modal" || focusedGradeRow.value ? "grade" : "name";
+    const fd = new FormData();
+    fd.append("audio", blob, "chunk.webm");
+    fd.append("language", "en");
+    fd.append("prompt", buildTranscriptionPrompt());
+    fd.append("mode", modeForServer);
+    try {
+        const res = await fetch("/teacher/transcribe", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: {
+                "X-CSRF-TOKEN": getCsrfToken(),
+                "X-Requested-With": "XMLHttpRequest",
+                Accept: "application/json",
+            },
+            body: fd,
+        });
+        if (!res.ok) return null;
+        const data = await res.json();
+        return data && typeof data.text === "string" ? data.text : null;
+    } catch (e) {
+        console.error("Groq transcription request failed", e);
+        return null;
+    }
+};
+
+const startGroqStream = async () => {
+    if (groqActive.value) return true;
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        toast.error("Microphone is not available in this browser.");
+        return false;
+    }
+    try {
+        groqStream.value = await navigator.mediaDevices.getUserMedia({
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+            },
+        });
+        // If TTS is already playing (we start the mic during the prompt so
+        // it is hot the instant speech ends), mute immediately so Whisper
+        // does not transcribe our own voice.
+        if (ttsSpeaking) {
+            groqStream.value.getAudioTracks().forEach((t) => (t.enabled = false));
+        }
+    } catch (e) {
+        console.error("Microphone access failed", e);
+        if (showGradeModal.value) {
             voiceStatus.value = "Microphone access denied.";
-            stopVoiceRecognition();
-        } else if (event.error === "aborted") {
-            // Silently restart
+        } else {
+            tableVoiceStatus.value = "Microphone access denied.";
+        }
+        return false;
+    }
+
+    // Set up Web Audio analyser for VAD
+    try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        vadAudioCtx = new Ctx();
+        if (vadAudioCtx.state === "suspended") {
+            // Chrome sometimes creates the context in a suspended state
+            try {
+                await vadAudioCtx.resume();
+            } catch (e) {}
+        }
+        const source = vadAudioCtx.createMediaStreamSource(groqStream.value);
+        vadAnalyser = vadAudioCtx.createAnalyser();
+        vadAnalyser.fftSize = 512;
+        vadAnalyser.smoothingTimeConstant = 0.3;
+        source.connect(vadAnalyser);
+        // Keep the graph "live" without producing sound by piping through a
+        // muted gain node into the destination. Some browsers require the
+        // graph to reach the destination for the analyser to receive data.
+        const silentGain = vadAudioCtx.createGain();
+        silentGain.gain.value = 0;
+        vadAnalyser.connect(silentGain);
+        silentGain.connect(vadAudioCtx.destination);
+    } catch (e) {
+        console.error("Failed to init AudioContext", e);
+    }
+
+    groqActive.value = true;
+    const mime = pickAudioMime();
+    const analyserBuffer = vadAnalyser
+        ? new Uint8Array(vadAnalyser.fftSize)
+        : null;
+
+    // State that resets each utterance
+    let chunks = [];
+    let recorder = null;
+    let recordingStartedAt = 0;
+    let firstSpeechAt = 0;
+    let lastSpeechAt = 0;
+    let speechDetected = false;
+    let stopping = false;
+
+    const startRecorder = () => {
+        if (!groqActive.value || !groqStream.value) return;
+        try {
+            recorder = mime
+                ? new MediaRecorder(groqStream.value, { mimeType: mime })
+                : new MediaRecorder(groqStream.value);
+        } catch (e) {
+            console.error("MediaRecorder init failed", e);
+            groqActive.value = false;
+            return;
+        }
+        groqRecorder.value = recorder;
+        chunks = [];
+        speechDetected = false;
+        firstSpeechAt = 0;
+        lastSpeechAt = 0;
+        stopping = false;
+
+        // Snapshot the app state that this recorder cycle "belongs to". When
+        // the transcript comes back we make sure both are still current so
+        // late results don't leak across mode switches or TTS prompts.
+        const myGen = groqGeneration;
+        const myMode = currentVoiceMode;
+
+        recorder.ondataavailable = (e) => {
+            if (e.data && e.data.size > 0) chunks.push(e.data);
+        };
+        recorder.onstop = async () => {
+            const hadSpeech = speechDetected;
+            const speechDuration =
+                firstSpeechAt && lastSpeechAt
+                    ? lastSpeechAt - firstSpeechAt
+                    : 0;
+            const blobType = recorder.mimeType || mime || "audio/webm";
+            const blob = new Blob(chunks, { type: blobType });
+
+            // Immediately start next recorder so we don't miss the next word
+            if (groqActive.value) {
+                setTimeout(startRecorder, 0);
+            }
+
+            if (!hadSpeech || speechDuration < currentMinSpeechMs()) return;
+            if (blob.size < MIN_UPLOAD_BYTES) return;
+
+            // Cheap guard: if the app started speaking / switched modes while
+            // we were still holding the blob, skip the upload entirely.
+            if (myGen !== groqGeneration) return;
+
+            const text = await uploadAudioChunk(blob, myMode);
+            if (!text) return;
+            // Late-arrival guard: state may have changed while the request
+            // was in flight (mode switch, TTS spoke, stream stopped, etc.).
+            if (myGen !== groqGeneration) {
+                if (typeof console !== "undefined") {
+                    console.log(
+                        "[voice] dropped stale transcript:",
+                        text,
+                        "(gen mismatch)",
+                    );
+                }
+                return;
+            }
+            if (myMode !== currentVoiceMode) {
+                if (typeof console !== "undefined") {
+                    console.log(
+                        "[voice] dropped cross-mode transcript:",
+                        text,
+                        `(recorded as ${myMode}, now ${currentVoiceMode})`,
+                    );
+                }
+                return;
+            }
+            const clean = stripPunctuation(text);
+            if (!clean || GROQ_NOISE_TRANSCRIPTS.has(clean)) return;
+            // Extra hallucination filter: if the transcript contains a
+            // known Whisper garbage phrase, drop it.
+            //   - In grade mode we only drop if there are also no digits.
+            //   - In table mode we drop unconditionally, because we don't
+            //     want a phrase like "thanks for watching" to fuzzy-match
+            //     a student name on quiet-mic silence.
+            if (
+                GROQ_NOISE_SUBSTRINGS.some((sub) => clean.includes(sub)) &&
+                (myMode !== "modal" || !/\d/.test(clean))
+            ) {
+                if (typeof console !== "undefined") {
+                    console.log(
+                        "[voice] dropped hallucination:",
+                        clean,
+                        "mode:",
+                        myMode,
+                    );
+                }
+                return;
+            }
+            // Duplicate guard: drop only if we saw the exact same text
+            // recently. After GROQ_DEDUP_WINDOW_MS ms we allow it again so
+            // a teacher can retry the same short command (e.g., "edit")
+            // without having to wait indefinitely.
+            const now = Date.now();
+            if (
+                clean === groqLastTranscript &&
+                now - groqLastTranscriptAt < GROQ_DEDUP_WINDOW_MS
+            ) {
+                return;
+            }
+            groqLastTranscript = clean;
+            groqLastTranscriptAt = now;
+            dispatchGroqTranscript(clean, myMode);
+        };
+
+        try {
+            recorder.start();
+            recordingStartedAt = performance.now();
+        } catch (e) {
+            console.error("MediaRecorder start failed", e);
+            groqActive.value = false;
         }
     };
 
-    recognition.onend = () => {
-        if (isVoiceActive.value) {
-            // Restart immediately without delay
-            try {
-                recognition.start();
-            } catch (e) {
-                // Retry after tiny delay if immediate start fails
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e2) {}
-                }, 50);
+    const cutHere = () => {
+        if (stopping || !recorder) return;
+        if (recorder.state !== "recording") return;
+        stopping = true;
+        try {
+            recorder.stop();
+        } catch (e) {
+            stopping = false;
+        }
+    };
+
+    const tick = () => {
+        if (!groqActive.value) return;
+        if (analyserBuffer && vadAnalyser) {
+            // While the app is speaking a prompt, pretend the mic is silent.
+            // This prevents the VAD from cutting on our own TTS echo and
+            // wipes any partial "speech" state we captured before muting.
+            if (ttsSpeaking) {
+                speechDetected = false;
+                firstSpeechAt = 0;
+                lastSpeechAt = 0;
+                recordingStartedAt = performance.now();
+                vadRafHandle = setTimeout(tick, VAD_TICK_MS);
+                return;
+            }
+            vadAnalyser.getByteTimeDomainData(analyserBuffer);
+            // RMS around 128 baseline
+            let sumSq = 0;
+            for (let i = 0; i < analyserBuffer.length; i++) {
+                const v = analyserBuffer[i] - 128;
+                sumSq += v * v;
+            }
+            const rms = Math.sqrt(sumSq / analyserBuffer.length);
+            const now = performance.now();
+            const isSpeech = rms > currentSpeechThreshold();
+
+            if (isSpeech) {
+                if (!speechDetected) {
+                    speechDetected = true;
+                    firstSpeechAt = now;
+                }
+                lastSpeechAt = now;
+            }
+
+            const elapsed = now - recordingStartedAt;
+            const silenceDur = lastSpeechAt ? now - lastSpeechAt : elapsed;
+
+            const silenceCutoff = currentSilenceMs();
+            if (
+                speechDetected &&
+                silenceDur >= silenceCutoff &&
+                elapsed - silenceDur >= currentMinSpeechMs()
+            ) {
+                cutHere();
+            } else if (elapsed >= VAD_MAX_UTTERANCE_MS) {
+                cutHere();
+            } else if (!speechDetected && elapsed >= VAD_MAX_IDLE_MS) {
+                // No speech captured; recycle recorder to keep it healthy
+                cutHere();
             }
         }
+        vadRafHandle = setTimeout(tick, VAD_TICK_MS);
     };
 
-    return recognition;
+    startRecorder();
+    tick();
+    return true;
+};
+
+const stopGroqStream = () => {
+    groqActive.value = false;
+    // Any in-flight upload from the previous cycle should be discarded when
+    // it returns. Bumping the generation is enough — the onstop handler
+    // compares against groqGeneration before dispatching.
+    groqGeneration++;
+    if (vadRafHandle) {
+        clearTimeout(vadRafHandle);
+        vadRafHandle = null;
+    }
+    if (groqRecorder.value) {
+        try {
+            if (groqRecorder.value.state === "recording") {
+                groqRecorder.value.stop();
+            }
+        } catch (e) {}
+        groqRecorder.value = null;
+    }
+    if (groqStream.value) {
+        try {
+            groqStream.value.getTracks().forEach((t) => t.stop());
+        } catch (e) {}
+        groqStream.value = null;
+    }
+    if (vadAudioCtx) {
+        try {
+            vadAudioCtx.close();
+        } catch (e) {}
+        vadAudioCtx = null;
+    }
+    vadAnalyser = null;
+    groqLastTranscript = "";
+};
+
+const dispatchGroqTranscript = (text, recordedMode = null) => {
+    // Helpful for debugging: shows exactly what Whisper heard.
+    // Open DevTools > Console to see the raw transcripts while you test.
+    if (typeof console !== "undefined") {
+        console.log("[voice] heard:", text, "mode:", recordedMode);
+    }
+
+    // Route based on the mode that was active when the audio was recorded,
+    // not the current mode. This is critical: without it, a chunk captured
+    // during student selection could be dispatched into the grade modal after
+    // the user clicks a row, and vice versa.
+    const routeMode = recordedMode || currentVoiceMode;
+
+    if (routeMode === "modal") {
+        // Sanity check — if the modal is somehow closed by the time we
+        // dispatch, drop instead of falling through to table mode.
+        if (!showGradeModal.value) return;
+        processGroqModalTranscript(text);
+        return;
+    }
+
+    // Table (student selection) mode
+    if (showGradeModal.value) return; // guard: modal took over while we waited
+    voiceTranscript.value = `"${text}"`;
+    const processed = processTableVoiceCommand(text, true);
+    if (processed) {
+        setTimeout(() => {
+            voiceTranscript.value = "";
+        }, 800);
+    }
+    // If we didn't match, keep the transcript on screen so the teacher
+    // can see what was heard and adjust.
+};
+
+const WORD_ONES = {
+    zero: 0,
+    oh: 0,
+    o: 0,
+    one: 1,
+    won: 1,
+    wan: 1,
+    two: 2,
+    to: 2,
+    too: 2,
+    three: 3,
+    tree: 3,
+    free: 3,
+    four: 4,
+    for: 4,
+    five: 5,
+    fife: 5,
+    six: 6,
+    seven: 7,
+    eight: 8,
+    ate: 8,
+    nine: 9,
+    niner: 9,
+};
+
+const WORD_TENS = {
+    sixty: 60,
+    seventy: 70,
+    eighty: 80,
+    aighty: 80,
+    ninty: 90,
+    ninety: 90,
+};
+
+const WORD_TEENS = {
+    ten: 10,
+    eleven: 11,
+    twelve: 12,
+    thirteen: 13,
+    fourteen: 14,
+    fifteen: 15,
+    sixteen: 16,
+    seventeen: 17,
+    eighteen: 18,
+    nineteen: 19,
+};
+
+// "eighty" then a pause then "five" is a common VAD split. Hold the tens
+// digit briefly so the ones digit can complete the grade.
+let pendingTens = null;
+let pendingTensTimer = null;
+
+const clearPendingTens = () => {
+    pendingTens = null;
+    if (pendingTensTimer) {
+        clearTimeout(pendingTensTimer);
+        pendingTensTimer = null;
+    }
+};
+
+const applyGradeToCurrentTerm = (grade) => {
+    clearPendingTens();
+    const term = currentVoiceQuarter.value;
+    gradeForm.value[`term_${term}`] = grade;
+    if (term < 3) {
+        showStatus(`Term ${term} = ${grade} — say next`);
+    } else {
+        showStatus(`Term 3 = ${grade} — say save`);
+    }
+};
+
+const extractOnesDigit = (rawText) => {
+    if (!rawText) return null;
+    const text = rawText
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!text) return null;
+    const spoken = parseSpokenNumber(text);
+    if (spoken !== null && spoken >= 0 && spoken <= 9) return spoken;
+    const m = text.match(/\b(\d)\b/);
+    if (m) {
+        const n = parseInt(m[1], 10);
+        if (n >= 0 && n <= 9) return n;
+    }
+    const words = text.split(/\s+/);
+    for (const w of words) {
+        if (WORD_ONES[w] !== undefined) return WORD_ONES[w];
+    }
+    return null;
+};
+
+// Best-effort extraction of a grade (60-100) from a messy Whisper transcript.
+// Handles cases like "the b-8", "eighty five", "the 85 point", "it's 90",
+// "one hundred", "80.", "e.g. 88", etc.
+const extractGrade = (rawText) => {
+    if (!rawText) return null;
+
+    // Normalize: lowercase, drop punctuation, collapse whitespace.
+    let text = rawText
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!text) return null;
+
+    // Common Whisper garbage prefixes / filler
+    const NOISE = new Set([
+        "the",
+        "a",
+        "an",
+        "uh",
+        "um",
+        "hmm",
+        "so",
+        "ok",
+        "okay",
+        "is",
+        "it",
+        "s",
+        "that",
+        "this",
+        "point",
+        "grade",
+        "percent",
+        "percentage",
+    ]);
+    const tokens = text.split(" ").filter((t) => t && !NOISE.has(t));
+    if (tokens.length === 0) return null;
+    text = tokens.join(" ");
+
+    // 1) Direct digit sequences in valid range (prefer first match)
+    const digitMatches = text.match(/\d{2,3}/g);
+    if (digitMatches) {
+        for (const m of digitMatches) {
+            const n = parseInt(m, 10);
+            if (n >= 60 && n <= 100) return n;
+        }
+    }
+
+    // 2) Two isolated digits ("8 5" / "8  5") → 85
+    const singleDigits = text.match(/\b\d\b/g);
+    if (singleDigits && singleDigits.length >= 2) {
+        const n = parseInt(singleDigits[0] + singleDigits[1], 10);
+        if (n >= 60 && n <= 100) return n;
+    }
+
+    // 3) Spoken tens + ones in the same utterance ("eighty five")
+    const words = text.split(/\s+/);
+    for (let i = 0; i < words.length; i++) {
+        const tens = WORD_TENS[words[i]];
+        if (tens === undefined) continue;
+        const onesWord = words[i + 1];
+        if (onesWord && WORD_ONES[onesWord] !== undefined) {
+            return tens + WORD_ONES[onesWord];
+        }
+        const onesDigit = onesWord && /^\d$/.test(onesWord) ? parseInt(onesWord, 10) : null;
+        if (onesDigit !== null && onesDigit >= 0 && onesDigit <= 9) {
+            return tens + onesDigit;
+        }
+    }
+
+    // 4) Try parseSpokenNumber on the whole cleaned text
+    const spoken = parseSpokenNumber(text);
+    if (spoken !== null && spoken >= 60 && spoken <= 100) return spoken;
+
+    // 5) Fallback: reconstruct two-digit numbers from leftover digits
+    const digitsOnly = text.replace(/[^0-9]/g, "");
+    if (digitsOnly.length >= 2) {
+        for (let len = 3; len >= 2; len--) {
+            for (let i = 0; i + len <= digitsOnly.length; i++) {
+                const n = parseInt(digitsOnly.slice(i, i + len), 10);
+                if (n >= 60 && n <= 100) return n;
+            }
+        }
+    }
+
+    // 6) Letter-digit substitutions: Whisper occasionally writes a single
+    //    digit as a letter (b/8, g/9, o/0).
+    const substitutions = { b: "8", g: "9", o: "0", l: "1", s: "5", z: "2" };
+    const normalizedTokens = text.split(" ").map((t) => {
+        let out = "";
+        for (const ch of t) {
+            out += substitutions[ch] !== undefined ? substitutions[ch] : ch;
+        }
+        return out;
+    });
+    const rejoined = normalizedTokens.join("");
+    const substMatches = rejoined.match(/\d{2,3}/g);
+    if (substMatches) {
+        for (const m of substMatches) {
+            const n = parseInt(m, 10);
+            if (n >= 60 && n <= 100) return n;
+        }
+    }
+
+    return null;
+};
+
+const processGroqModalTranscript = (text) => {
+    voiceTranscript.value = `"${text}"`;
+    const words = text.split(/\s+/).filter(Boolean);
+    if (words.length === 0) return;
+
+    const clearTranscriptSoon = () => {
+        setTimeout(() => {
+            voiceTranscript.value = "";
+        }, 800);
+    };
+
+    // 1) Two-word quarter/term jumps first (so "term one" wins over parsing
+    //    "one" as a number)
+    for (let i = 0; i < words.length - 1; i++) {
+        const pair = `${words[i]} ${words[i + 1]}`;
+        if (tryProcessCommand(words[i + 1], pair, true)) {
+            clearPendingTens();
+            clearTranscriptSoon();
+            return;
+        }
+    }
+
+    // 1b) next / back / save / clear BEFORE grade extraction so a leftover
+    //     number in the transcript cannot steal the navigation command.
+    for (let i = 0; i < words.length; i++) {
+        if (
+            isNextCommand(words[i]) ||
+            isBackCommand(words[i]) ||
+            isSaveCommand(words[i]) ||
+            isClearCommand(words[i])
+        ) {
+            if (tryProcessCommand(words[i], words[i], true)) {
+                clearPendingTens();
+                clearTranscriptSoon();
+                return;
+            }
+        }
+    }
+
+    // 2) Aggressive grade extraction (handles messy Whisper output)
+    const grade = extractGrade(text);
+    if (grade !== null) {
+        // Bare tens (80) may be the first half of "eighty five". Wait a
+        // beat for a ones digit before committing.
+        if (grade === 60 || grade === 70 || grade === 80 || grade === 90) {
+            clearPendingTens();
+            pendingTens = grade;
+            showStatus(`Heard ${grade}...`);
+            pendingTensTimer = setTimeout(() => {
+                if (pendingTens === grade) {
+                    applyGradeToCurrentTerm(grade);
+                }
+            }, 900);
+            clearTranscriptSoon();
+            return;
+        }
+        applyGradeToCurrentTerm(grade);
+        clearTranscriptSoon();
+        return;
+    }
+
+    // 2b) Ones digit completing a pending tens ("five" after "eighty")
+    if (pendingTens !== null) {
+        const ones = extractOnesDigit(text);
+        if (ones !== null) {
+            applyGradeToCurrentTerm(pendingTens + ones);
+            clearTranscriptSoon();
+            return;
+        }
+    }
+
+    // 3) Single-word commands (save / next / back / clear / edit / t1..t3)
+    for (let i = words.length - 1; i >= 0; i--) {
+        if (tryProcessCommand(words[i], words[i], true)) {
+            clearPendingTens();
+            clearTranscriptSoon();
+            return;
+        }
+    }
+
+    // 4) Nothing matched: keep the transcript on screen so the teacher can
+    //    see what Whisper heard (helps them adjust their phrasing).
 };
 
 // Helper to show status and auto-clear after 1 second
@@ -2240,13 +2971,145 @@ const showStatus = (message) => {
     voiceStatus.value = message;
     if (statusTimeout) clearTimeout(statusTimeout);
     statusTimeout = setTimeout(() => {
-        voiceStatus.value = `🎤 T${currentVoiceQuarter.value} - Listening...`;
-    }, 800); // Faster status clear
+        voiceStatus.value = `Listening — Term ${currentVoiceQuarter.value}`;
+    }, 800);
 };
 
 // Track last navigation command to prevent double-triggering
 let lastNavCommand = "";
 let lastNavTime = 0;
+
+// Whisper mishears "save" as a huge variety of short S-words. Recognize any
+// of them so the teacher can always submit by voice. The check has three
+// layers:
+//   1. An explicit whitelist covering the user-reported variants.
+//   2. A regex covering the phonetic shape: starts with S, one vowel, and
+//      an optional trailing consonant (v/f/b/m/y/p).
+//   3. A Levenshtein distance <= 1 from "save" or "safe" for anything the
+//      regex might miss (e.g. "sabe", "seef").
+// The check is intentionally conservative on length (<= 5 chars) so it
+// can't accidentally match longer real words.
+const SAVE_EXACT_WORDS = new Set([
+    "save",
+    "saved",
+    "saves",
+    "safe",
+    "safes",
+    "sabe",
+    "sav",
+    "sef",
+    "seif",
+    "seef",
+    "say",
+    "says",
+    "same",
+    "sane",
+    "sey",
+    "seyb",
+    "siy",
+    "siyb",
+    "sayb",
+    "sub",
+    "sup",
+    "sib",
+    "sob",
+    "seb",
+    "sabb",
+    "sebb",
+    "sep",
+    "sap",
+    "sav",
+    "seyv",
+    "seyf",
+    "sayf",
+    "sayv",
+    // Whisper occasionally hears "save" as an affirmative or a C-word.
+    // Teacher explicitly requested these variants — trade-off: a stray
+    // "yes" from background chatter could auto-submit, but that only
+    // happens while the grade modal is open and the mic is actively
+    // listening for a command.
+    "yes",
+    "yeah",
+    "yep",
+    "ced",
+    "cib",
+    "seb",
+    "sed",
+    "cev",
+    "seve",
+    "seb",
+]);
+
+const NEXT_WORDS = new Set([
+    "next",
+    "nexts",
+    "necks",
+    "neks",
+    "niks",
+    "nix",
+    "nicks",
+    "nick",
+    "text",
+    "texts",
+    "nest",
+    "nests",
+    "nx",
+    "nks",
+    "necs",
+    "nyx",
+]);
+
+const BACK_WORDS = new Set(["back", "bag", "beck", "bak"]);
+const CLEAR_WORDS = new Set(["clear", "claire", "klir", "kleer"]);
+
+const isNextCommand = (word) => {
+    if (!word) return false;
+    const w = word.toLowerCase().replace(/[^a-z]/g, "");
+    return NEXT_WORDS.has(w);
+};
+
+const isBackCommand = (word) => {
+    if (!word) return false;
+    const w = word.toLowerCase().replace(/[^a-z]/g, "");
+    return BACK_WORDS.has(w);
+};
+
+const isClearCommand = (word) => {
+    if (!word) return false;
+    const w = word.toLowerCase().replace(/[^a-z]/g, "");
+    return CLEAR_WORDS.has(w);
+};
+
+const goToTerm = (term) => {
+    const t = Math.min(3, Math.max(1, term));
+    // Set lastSpokenTerm first so the watcher does not speak "Term two"
+    // and mute the mic — that mute is what made "next" feel delayed.
+    lastSpokenTerm = t;
+    currentVoiceQuarter.value = t;
+    showStatus(`Term ${t}`);
+    const input = document.querySelector(`#voice-term-${t}-input`);
+    if (input) input.focus();
+};
+
+const isSaveCommand = (word) => {
+    if (!word) return false;
+    const w = word.toLowerCase().replace(/[^a-z]/g, "");
+    if (!w) return false;
+    if (SAVE_EXACT_WORDS.has(w)) return true;
+    // Shape check: short S-word ending in a save-family consonant
+    // (v/f/b only — the actual consonants in "save"/"safe"). Requiring the
+    // trailing consonant kills the false positives that came from common
+    // English fillers Whisper hallucinates ("so", "sea", "see", "sam",
+    // "sim", "some", "sum", "sap") which used to slip through when we
+    // allowed m/y/p endings or no ending at all.
+    if (w.length >= 3 && w.length <= 5 && /^s[aeiouy]{1,2}[vfb]e?$/.test(w)) {
+        return true;
+    }
+    // Levenshtein fallback: distance 1 from "save" or "safe".
+    if (levenshtein(w, "save") <= 1) return true;
+    if (levenshtein(w, "safe") <= 1) return true;
+    return false;
+};
 
 // Try to process command - returns true if a command was recognized
 // Receives the last word AND last two words for multi-word commands
@@ -2288,111 +3151,78 @@ const tryProcessCommand = (word, twoWords, isFinal) => {
     };
 
     if (quarterTwoWordPatterns[twoWords]) {
-        // Prevent double-trigger within 1 second
-        if (lastNavCommand === twoWords && now - lastNavTime < 1000) {
+        if (lastNavCommand === twoWords && now - lastNavTime < 400) {
             return false;
         }
         lastNavCommand = twoWords;
         lastNavTime = now;
-        currentVoiceQuarter.value = quarterTwoWordPatterns[twoWords];
-        showStatus(`→ T${quarterTwoWordPatterns[twoWords]}`);
-        focusQuarterInput(quarterTwoWordPatterns[twoWords]);
+        goToTerm(quarterTwoWordPatterns[twoWords]);
         return true;
     }
 
     // Check if word is a grade number (60-100)
     const gradeNumber = parseSpokenNumber(word);
     if (gradeNumber !== null && gradeNumber >= 60 && gradeNumber <= 100) {
-        const termKey = `term_${currentVoiceQuarter.value}`;
-        gradeForm.value[termKey] = gradeNumber;
-        showStatus(`✓ T${currentVoiceQuarter.value} = ${gradeNumber}`);
-        // Reset nav tracking when grade is entered
+        applyGradeToCurrentTerm(gradeNumber);
         lastNavCommand = "";
         return true;
     }
 
-    // Navigation: NEXT - move to next term (with debounce)
-    const nextWords = ["next", "necks", "text", "nest"];
-    if (nextWords.includes(word)) {
-        // Prevent double-trigger within 1 second
-        if (lastNavCommand === "next" && now - lastNavTime < 1000) {
+    if (isNextCommand(word)) {
+        if (lastNavCommand === "next" && now - lastNavTime < 400) {
             return false;
         }
         lastNavCommand = "next";
         lastNavTime = now;
 
         if (currentVoiceQuarter.value < 3) {
-            currentVoiceQuarter.value++;
-            showStatus(`→ T${currentVoiceQuarter.value}`);
-            focusQuarterInput(currentVoiceQuarter.value);
+            goToTerm(currentVoiceQuarter.value + 1);
         } else {
-            showStatus("At T3. Say 'save'");
+            showStatus("Last term — say save");
         }
         return true;
     }
 
-    // Navigation: BACK - move to previous term (with debounce)
-    const backWords = ["back", "bag", "beck", "bak"];
-    if (backWords.includes(word)) {
-        // Prevent double-trigger within 1 second
-        if (lastNavCommand === "back" && now - lastNavTime < 1000) {
+    if (isBackCommand(word)) {
+        if (lastNavCommand === "back" && now - lastNavTime < 400) {
             return false;
         }
         lastNavCommand = "back";
         lastNavTime = now;
 
         if (currentVoiceQuarter.value > 1) {
-            currentVoiceQuarter.value--;
-            showStatus(`→ T${currentVoiceQuarter.value}`);
-            focusQuarterInput(currentVoiceQuarter.value);
+            goToTerm(currentVoiceQuarter.value - 1);
         }
         return true;
     }
 
-    // CLEAR - clear current term
-    if (
-        word === "clear" ||
-        word === "claire" ||
-        word === "klir" ||
-        word === "kleer"
-    ) {
+    if (isClearCommand(word)) {
         const termKey = `term_${currentVoiceQuarter.value}`;
         gradeForm.value[termKey] = null;
-        showStatus(`✓ Cleared T${currentVoiceQuarter.value}`);
+        showStatus(`Term ${currentVoiceQuarter.value} cleared`);
         return true;
     }
 
-    // SAVE - submit grades
-    const saveWords = ["save", "safe", "saved", "sabe", "seif", "sayb", "sef"];
-    if (saveWords.includes(word)) {
-        voiceStatus.value = "💾 Saving...";
+    if (isSaveCommand(word)) {
+        voiceStatus.value = "Saving...";
         submitGrades();
         return true;
     }
 
-    // Term jump - single word "t1", "q1", etc.
     if (word === "t1" || word === "q1" || word === "queue1") {
-        currentVoiceQuarter.value = 1;
-        showStatus("→ T1");
-        focusQuarterInput(1);
+        goToTerm(1);
         return true;
     }
     if (word === "t2" || word === "q2" || word === "queue2") {
-        currentVoiceQuarter.value = 2;
-        showStatus("→ T2");
-        focusQuarterInput(2);
+        goToTerm(2);
         return true;
     }
     if (word === "t3" || word === "q3" || word === "queue3") {
-        currentVoiceQuarter.value = 3;
-        showStatus("→ T3");
-        focusQuarterInput(3);
+        goToTerm(3);
         return true;
     }
     if (word === "q4" || word === "queue4") {
-        currentVoiceQuarter.value = 3;
-        showStatus("→ T3");
-        focusQuarterInput(3);
+        goToTerm(3);
         return true;
     }
 
@@ -2429,8 +3259,12 @@ const parseSpokenNumber = (transcript) => {
         sixty: 60,
         seventy: 70,
         eighty: 80,
+        aighty: 80,
         ninety: 90,
+        ninty: 90,
         hundred: 100,
+        ate: 8,
+        fife: 5,
     };
 
     // First, try to find a direct number in the transcript
@@ -2473,19 +3307,17 @@ const toggleVoiceModeGlobal = () => {
         // Start table voice recognition when enabled from header
         startTableVoiceRecognition();
     } else {
-        // Stop all voice recognition
-        stopTableVoiceRecognition();
-        if (speechRecognition.value) {
-            try {
-                speechRecognition.value.stop();
-            } catch (e) {}
-        }
+        // Stop all voice recognition (Groq stream is shared)
+        cancelSpeech();
+        stopGroqStream();
         isVoiceActive.value = false;
         tableVoiceActive.value = false;
         voiceTranscript.value = "";
         voiceStatus.value = "Voice mode off";
         tableVoiceStatus.value = "Say a student name to select...";
         focusedGradeRow.value = null;
+        tablePromptCount = 0;
+        voiceGreetingSpoken = false;
     }
 };
 
@@ -2500,41 +3332,40 @@ const toggleVoiceRecognition = () => {
     }
 };
 
-const startVoiceRecognition = () => {
-    // Always reinitialize for fresh start
-    speechRecognition.value = initVoiceRecognition();
+const startVoiceRecognition = async () => {
+    // Reuse the Groq audio stream. Transcripts recorded from now on are
+    // stamped as "modal" so late-arriving results can be routed correctly.
+    currentVoiceMode = "modal";
+    currentVoiceQuarter.value = 1;
+    lastSpokenTerm = 1;
+    focusQuarterInput(1);
+    clearPendingTens();
 
-    if (speechRecognition.value) {
-        try {
-            setTimeout(() => {
-                try {
-                    speechRecognition.value.start();
-                    isVoiceActive.value = true;
-                    currentVoiceQuarter.value = 1;
-                    voiceStatus.value =
-                        "🎤 Listening... Say a grade or term.";
-                    focusQuarterInput(1);
-                } catch (e) {
-                    console.error("Failed to start recognition:", e);
-                    voiceStatus.value = "Failed to start voice. Try again.";
-                }
-            }, 100);
-        } catch (e) {
-            console.error("Failed to start recognition:", e);
-        }
+    const studentName = studentSpokenName(selectedGrade.value?.student);
+    const prompt = studentName ? `${studentName}. Term one.` : "Term one.";
+    voiceStatus.value = studentName
+        ? `Entering grades for ${studentName}`
+        : "Listening — Term 1";
+
+    // Start the mic BEFORE speaking so it is already open (muted) while
+    // TTS plays. Previously we awaited TTS then called getUserMedia, and
+    // the teacher's first grade was spoken into a dead mic.
+    ttsSpeaking = true;
+    const ok = await startGroqStream();
+    if (!ok) {
+        ttsSpeaking = false;
+        voiceStatus.value = "Failed to start voice. Try again.";
+        return;
     }
+    isVoiceActive.value = true;
+    await speakPrompt(prompt);
+    voiceStatus.value = "Listening — say a grade or term";
 };
 
 // Fully disable voice mode
 const stopVoiceRecognition = () => {
-    if (speechRecognition.value) {
-        try {
-            speechRecognition.value.stop();
-        } catch (e) {
-            console.log("Recognition stop failed");
-        }
-        speechRecognition.value = null;
-    }
+    cancelSpeech();
+    stopGroqStream();
     isVoiceActive.value = false;
     voiceModeEnabled.value = false;
     voiceTranscript.value = "";
@@ -2543,118 +3374,93 @@ const stopVoiceRecognition = () => {
 
 // Pause voice (for modal close) without disabling mode
 const pauseVoiceRecognition = () => {
-    if (speechRecognition.value) {
-        try {
-            speechRecognition.value.stop();
-        } catch (e) {}
-    }
+    cancelSpeech();
+    clearPendingTens();
+    stopGroqStream();
     isVoiceActive.value = false;
     voiceTranscript.value = "";
 };
 
-// Table Voice Recognition for student selection
-const tableVoiceRecognition = ref(null);
-let lastTableTranscript = "";
+// Table voice recognition (student selection) is powered by the same shared
+// Groq audio stream. Transcripts are routed to processTableVoiceCommand when
+// no grade modal is open.
 
-const initTableVoiceRecognition = () => {
-    const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-        toast.error("Voice recognition is not supported in your browser");
-        return null;
+// Whisper mishears "edit" as any of: "at it", "add it", "added", "adit",
+// "edited", "editing", "it it", "eddie", "at ed", "att it". We accept a
+// broad set of variants + a per-word fuzzy match so the teacher never has
+// to repeat themselves to open the modal.
+const EDIT_EXACT_WORDS = new Set([
+    "edit",
+    "edits",
+    "edited",
+    "editing",
+    "adit",
+    "adet",
+    "aded",
+    "added",
+    "add",
+    "adds",
+    "adding",
+    "eddie",
+    "eddy",
+    "editor",
+    "audit",
+    "add-it",
+    "it-it",
+    "atit",
+    "addit",
+    "attit",
+    "eddit",
+    "atid",
+    "addid",
+]);
+const EDIT_PHRASES = [
+    "edit",
+    "at it",
+    "add it",
+    "at ed",
+    "add ed",
+    "it it",
+    "att it",
+    "ad it",
+    "et it",
+    "open",
+    "enter",
+];
+
+const isEditCommand = (transcript) => {
+    if (!transcript) return false;
+    const t = transcript.toLowerCase();
+    // Phrase substring check - catches multi-word mishearings
+    for (const p of EDIT_PHRASES) {
+        if (t.includes(p)) return true;
     }
-
-    const recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-US";
-    recognition.maxAlternatives = 3; // More alternatives for better accuracy
-
-    recognition.onresult = (event) => {
-        const result = event.results[event.results.length - 1];
-        const fullTranscript = result[0].transcript.toLowerCase().trim();
-
-        // Extract only the last few words (most recent speech)
-        const words = fullTranscript.split(/\s+/);
-        const recentWords = words.slice(-4).join(" "); // Only last 4 words for names
-        const transcript = recentWords;
-
-        voiceTranscript.value = `"${recentWords}"`;
-
-        // Process table commands immediately
-        if (transcript !== lastTableTranscript) {
-            const processed = processTableVoiceCommand(
-                transcript,
-                result.isFinal,
-            );
-            if (processed) {
-                lastTableTranscript = transcript;
-                // Clear transcript quickly
-                setTimeout(() => {
-                    voiceTranscript.value = "";
-                }, 800);
-            }
+    // Per-word exact / fuzzy check
+    const words = t.replace(/[^a-z\s]/g, " ").split(/\s+/).filter(Boolean);
+    for (const w of words) {
+        if (EDIT_EXACT_WORDS.has(w)) return true;
+        // Fuzzy: distance <= 1 from "edit" for anything short (<= 6 chars)
+        if (w.length >= 3 && w.length <= 6 && levenshtein(w, "edit") <= 1) {
+            return true;
         }
-
-        // Reset for next command on final result
-        if (result.isFinal) {
-            lastTableTranscript = "";
-        }
-    };
-
-    recognition.onerror = (event) => {
-        console.error("Table voice recognition error:", event.error);
-        if (event.error === "no-speech") {
-            // Silent - keep listening
-        } else if (event.error === "audio-capture") {
-            tableVoiceStatus.value = "No microphone found.";
-            stopTableVoiceRecognition();
-        } else if (event.error === "not-allowed") {
-            tableVoiceStatus.value = "Microphone access denied.";
-            stopTableVoiceRecognition();
-        } else if (event.error === "aborted") {
-            // Silently restart
-        }
-    };
-
-    recognition.onend = () => {
-        if (
-            tableVoiceActive.value &&
-            voiceModeEnabled.value &&
-            !showGradeModal.value
-        ) {
-            // Restart immediately without delay
-            try {
-                recognition.start();
-            } catch (e) {
-                // Retry after tiny delay
-                setTimeout(() => {
-                    try {
-                        recognition.start();
-                    } catch (e2) {}
-                }, 50);
-            }
-        }
-    };
-
-    return recognition;
+    }
+    return false;
 };
 
 const processTableVoiceCommand = (transcript, isFinal) => {
-    // Check for "edit" command - process immediately for snappy response
-    if (
-        transcript.includes("edit") ||
-        transcript.includes("open") ||
-        transcript.includes("enter")
-    ) {
+    // Check for "edit" command - process immediately for snappy response.
+    // Whisper mishears the short word "edit" as "at it", "added", "add it",
+    // "adit", "editing", etc., so match on any of these variants and also
+    // do a per-word fuzzy check.
+    if (isEditCommand(transcript)) {
         if (focusedGradeRow.value) {
-            tableVoiceStatus.value = `✓ Opening ${focusedGradeRow.value.student?.first_name}'s grades...`;
+            tableVoiceStatus.value = `Opening ${studentSpokenName(focusedGradeRow.value.student)}'s grades...`;
             // Stop table voice and open modal immediately
             stopTableVoiceRecognition();
             openGradeModal(focusedGradeRow.value);
             return true;
         } else {
-            tableVoiceStatus.value = "⚠ No student selected. Say a name first.";
+            tableVoiceStatus.value = "No student selected. Say a name first.";
             return true;
         }
     }
@@ -2673,98 +3479,229 @@ const processTableVoiceCommand = (transcript, isFinal) => {
     // Try to find a matching student - immediate on interim
     const matchedGrade = findStudentByVoice(transcript);
     if (matchedGrade) {
+        const previouslyFocused = focusedGradeRow.value;
         focusedGradeRow.value = matchedGrade;
-        tableVoiceStatus.value = `✓ ${matchedGrade.student?.first_name} ${matchedGrade.student?.last_name} - Say "edit"`;
+        tableVoiceStatus.value = `${studentSpokenName(matchedGrade.student)} — say "edit" to open`;
         // Scroll to the focused row
         scrollToFocusedRow(matchedGrade);
+        // Confirm first and last name so the teacher can hear which student
+        // was matched before saying "edit".
+        if (
+            !previouslyFocused ||
+            previouslyFocused.student?.id !== matchedGrade.student?.id
+        ) {
+            const spoken = studentSpokenName(matchedGrade.student) || "Selected";
+            speakPrompt(spoken, { wait: false });
+        }
         return true;
     }
 
     return false;
 };
 
+// Levenshtein distance (small strings only) for fuzzy name matching.
+const levenshtein = (a, b) => {
+    if (a === b) return 0;
+    const al = a.length,
+        bl = b.length;
+    if (al === 0) return bl;
+    if (bl === 0) return al;
+    const prev = new Array(bl + 1);
+    const curr = new Array(bl + 1);
+    for (let j = 0; j <= bl; j++) prev[j] = j;
+    for (let i = 1; i <= al; i++) {
+        curr[0] = i;
+        for (let j = 1; j <= bl; j++) {
+            const cost = a.charCodeAt(i - 1) === b.charCodeAt(j - 1) ? 0 : 1;
+            curr[j] = Math.min(
+                curr[j - 1] + 1,
+                prev[j] + 1,
+                prev[j - 1] + cost,
+            );
+        }
+        for (let j = 0; j <= bl; j++) prev[j] = curr[j];
+    }
+    return prev[bl];
+};
+
+// Allowed edit distance for a name of length `len`.
+const allowedDistance = (len) => {
+    if (len <= 3) return 1;
+    if (len <= 6) return 2;
+    return 3;
+};
+
+const normalizeName = (s) =>
+    (s || "")
+        .toLowerCase()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "") // strip diacritics
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+// Common short English fillers that Whisper emits on quiet audio. If the
+// ENTIRE transcript is one of these we won't attempt a name match — this
+// stops "you" / "so" / "well" / "one" from randomly triggering a fuzzy
+// match against a student's name.
+const NAME_MATCH_STOPWORDS = new Set([
+    "you", "your", "yours", "so", "well", "one", "two", "three",
+    "the", "a", "an", "and", "or", "but", "is", "it", "its",
+    "this", "that", "these", "those", "here", "there",
+    "he", "she", "him", "her", "his", "hers", "they", "them",
+    "yes", "no", "yeah", "nope", "ok", "okay", "hi", "hello",
+    "bye", "goodbye", "please", "sorry", "thanks",
+    "in", "on", "at", "of", "to", "for", "with", "by",
+    "very", "much", "quite", "just",
+]);
+
 const findStudentByVoice = (transcript) => {
     const grades = filteredGrades.value;
+    if (!grades || grades.length === 0) return null;
+
+    const normalizedTranscript = normalizeName(transcript);
+    // Require at least 3 characters — a 1-2 char transcript is almost
+    // always a hallucination and can only fuzzy-match trivially.
+    if (normalizedTranscript.length < 3) return null;
+    const transcriptWords = normalizedTranscript.split(/\s+/).filter(Boolean);
+
+    // If EVERY word in the transcript is a common English stopword, this is
+    // Whisper hallucinating on silence — refuse to match anything.
+    const anyNameLike = transcriptWords.some(
+        (w) => w.length >= 3 && !NAME_MATCH_STOPWORDS.has(w),
+    );
+    if (!anyNameLike) {
+        if (typeof console !== "undefined") {
+            console.log(
+                "[voice] name match refused (stopwords only):",
+                normalizedTranscript,
+            );
+        }
+        return null;
+    }
+
+    // Precompute normalized names + counts of each name across the visible
+    // list so we can allow "first-name only" or "last-name only" when they're
+    // unique among the students currently on screen. The visible list has one
+    // row per subject, so dedupe by student id before counting.
+    const firstCounts = new Map();
+    const lastCounts = new Map();
+    const students = [];
+    const seenStudentIds = new Set();
+    for (const grade of grades) {
+        const first = normalizeName(grade.student?.first_name);
+        const last = normalizeName(grade.student?.last_name);
+        if (!first && !last) continue;
+        const sid = grade.student?.id ?? `${first}|${last}`;
+        if (!seenStudentIds.has(sid)) {
+            seenStudentIds.add(sid);
+            firstCounts.set(first, (firstCounts.get(first) || 0) + 1);
+            lastCounts.set(last, (lastCounts.get(last) || 0) + 1);
+        }
+        students.push({ grade, first, last });
+    }
+
     let bestMatch = null;
     let bestScore = 0;
 
-    // Normalize transcript
-    const normalizedTranscript = transcript.toLowerCase().trim();
-    const transcriptWords = normalizedTranscript.split(/\s+/);
-
-    for (const grade of grades) {
-        const firstName = (grade.student?.first_name || "")
-            .toLowerCase()
-            .trim();
-        const lastName = (grade.student?.last_name || "").toLowerCase().trim();
-        const fullName = `${firstName} ${lastName}`;
-        const reverseName = `${lastName} ${firstName}`;
-        const fullNameNoSpace = `${firstName}${lastName}`;
-        const reverseNameNoSpace = `${lastName}${firstName}`;
+    for (const { grade, first, last } of students) {
+        const fullName = `${first} ${last}`.trim();
+        const reverseName = `${last} ${first}`.trim();
+        const fullNameNoSpace = `${first}${last}`;
+        const reverseNameNoSpace = `${last}${first}`;
 
         let score = 0;
 
-        // ONLY match if BOTH first and last name are present
-
-        // Full name match (first last)
         if (
-            normalizedTranscript.includes(fullName) ||
-            normalizedTranscript === fullName
+            fullName &&
+            (normalizedTranscript.includes(fullName) ||
+                normalizedTranscript === fullName)
         ) {
             score = 100;
-        }
-        // Reverse name match (last first)
-        else if (
-            normalizedTranscript.includes(reverseName) ||
-            normalizedTranscript === reverseName
+        } else if (
+            reverseName &&
+            (normalizedTranscript.includes(reverseName) ||
+                normalizedTranscript === reverseName)
         ) {
             score = 100;
-        }
-        // Both names as separate words anywhere in transcript
-        else if (
-            transcriptWords.includes(firstName) &&
-            transcriptWords.includes(lastName)
+        } else if (
+            first &&
+            last &&
+            transcriptWords.includes(first) &&
+            transcriptWords.includes(last)
         ) {
             score = 95;
-        }
-        // Names said together without space (speech recognition sometimes merges)
-        else if (
-            normalizedTranscript.includes(fullNameNoSpace) ||
-            normalizedTranscript.includes(reverseNameNoSpace)
+        } else if (
+            (fullNameNoSpace &&
+                normalizedTranscript.includes(fullNameNoSpace)) ||
+            (reverseNameNoSpace &&
+                normalizedTranscript.includes(reverseNameNoSpace))
         ) {
             score = 90;
-        }
-        // Fuzzy: first name exact + last name starts with OR last name exact + first name starts with
-        else {
-            let hasFirstName = transcriptWords.includes(firstName);
-            let hasLastName = transcriptWords.includes(lastName);
+        } else {
+            // Fuzzy full-name via Levenshtein against 2-word windows in the
+            // transcript (handles "Ballagtas Raffael" -> "Balagtas Rafael").
+            let fuzzyScore = 0;
+            for (let i = 0; i < transcriptWords.length - 1; i++) {
+                const pair = `${transcriptWords[i]} ${transcriptWords[i + 1]}`;
+                const revPair = `${transcriptWords[i + 1]} ${transcriptWords[i]}`;
+                const distFwd = levenshtein(pair, fullName);
+                const distRev = levenshtein(revPair, fullName);
+                const allowed = allowedDistance(fullName.length);
+                const best = Math.min(distFwd, distRev);
+                if (best <= allowed) {
+                    fuzzyScore = Math.max(fuzzyScore, 88 - best * 2);
+                }
+            }
 
-            // Check for partial matches of the other name
-            if (hasFirstName && !hasLastName) {
-                for (const word of transcriptWords) {
-                    if (word !== firstName && word.length >= 3) {
-                        if (
-                            lastName.startsWith(word) ||
-                            word.startsWith(lastName)
-                        ) {
-                            score = 80;
-                            break;
-                        }
+            // Single-name match: unique first/last name on screen, or fuzzy
+            // match against any transcript word.
+            let singleScore = 0;
+            for (const word of transcriptWords) {
+                if (word.length < 3) continue;
+
+                // Exact single-name match (only valid if that name is
+                // unique among visible students — otherwise we'd pick a
+                // random namesake).
+                if (word === first && firstCounts.get(first) === 1) {
+                    singleScore = Math.max(singleScore, 82);
+                }
+                if (word === last && lastCounts.get(last) === 1) {
+                    singleScore = Math.max(singleScore, 82);
+                }
+
+                // Prefix / suffix match on either name
+                if (
+                    first &&
+                    first.length >= 4 &&
+                    (first.startsWith(word) || word.startsWith(first))
+                ) {
+                    singleScore = Math.max(singleScore, 76);
+                }
+                if (
+                    last &&
+                    last.length >= 4 &&
+                    (last.startsWith(word) || word.startsWith(last))
+                ) {
+                    singleScore = Math.max(singleScore, 76);
+                }
+
+                // Fuzzy single-name via Levenshtein
+                if (first && first.length >= 3) {
+                    const d = levenshtein(word, first);
+                    if (d <= allowedDistance(first.length)) {
+                        singleScore = Math.max(singleScore, 80 - d * 2);
                     }
                 }
-            } else if (hasLastName && !hasFirstName) {
-                for (const word of transcriptWords) {
-                    if (word !== lastName && word.length >= 3) {
-                        if (
-                            firstName.startsWith(word) ||
-                            word.startsWith(firstName)
-                        ) {
-                            score = 80;
-                            break;
-                        }
+                if (last && last.length >= 3) {
+                    const d = levenshtein(word, last);
+                    if (d <= allowedDistance(last.length)) {
+                        singleScore = Math.max(singleScore, 80 - d * 2);
                     }
                 }
             }
+
+            score = Math.max(fuzzyScore, singleScore);
         }
 
         if (score > bestScore) {
@@ -2773,14 +3710,16 @@ const findStudentByVoice = (transcript) => {
         }
     }
 
-    // Only return match if we have a strong full-name match
+    // Acceptance threshold: 80 for real matches. Prevents Whisper's
+    // hallucinated 1-word transcripts on silence from fuzzy-matching a
+    // real student (that was scoring in the 72-79 range and randomly
+    // selecting students when the mic was idle).
     if (bestScore >= 80) {
         return bestMatch;
     }
 
-    // If no full name match, show helpful message
     if (transcript.length > 2) {
-        tableVoiceStatus.value = `Say full name (e.g., "Balagtas Rafael")`;
+        tableVoiceStatus.value = `Heard "${transcript}" — say the student's name again`;
     }
 
     return null;
@@ -2794,38 +3733,70 @@ const scrollToFocusedRow = (grade) => {
     }
 };
 
-const startTableVoiceRecognition = () => {
-    // Always reinitialize for fresh start
-    tableVoiceRecognition.value = initTableVoiceRecognition();
+// Track how many times we've prompted so the wording feels natural on repeat.
+let tablePromptCount = 0;
+// One-time greeting per voice-mode session (resets when voice is turned off).
+let voiceGreetingSpoken = false;
 
-    if (tableVoiceRecognition.value) {
-        try {
-            setTimeout(() => {
-                try {
-                    tableVoiceRecognition.value.start();
-                    tableVoiceActive.value = true;
-                    tableVoiceStatus.value =
-                        "🎤 Listening... Say a student name to select.";
-                } catch (e) {
-                    console.error("Failed to start table recognition:", e);
-                    tableVoiceStatus.value =
-                        "Failed to start voice. Try again.";
-                }
-            }, 100);
-        } catch (e) {
-            console.error("Failed to start table recognition:", e);
-        }
+const timeOfDayGreeting = () => {
+    const h = new Date().getHours();
+    if (h < 12) return "Good morning";
+    if (h < 18) return "Good afternoon";
+    return "Good evening";
+};
+
+const buildTeacherGreeting = () => {
+    const rawTitle = (props.user?.title || props.user?.gender || "").toString();
+    let title = "Teacher";
+    const t = rawTitle.toLowerCase();
+    if (t === "male" || t === "m" || t.includes("sir") || t.includes("mr")) {
+        title = "Sir";
+    } else if (
+        t === "female" ||
+        t === "f" ||
+        t.includes("ma'am") ||
+        t.includes("ms") ||
+        t.includes("mrs")
+    ) {
+        title = "Ma'am";
     }
+    const last = (props.user?.last_name || "").toString().trim();
+    const first = (props.user?.first_name || "").toString().trim();
+    const name = last || first;
+    const address = name ? `${title} ${name}` : "teacher";
+    return `${timeOfDayGreeting()}, ${address}! Voice mode is now active. Let's enter some grades.`;
+};
+
+const startTableVoiceRecognition = async () => {
+    // Any transcript recorded from here on is student-selection input.
+    currentVoiceMode = "table";
+    let prompt;
+    if (!voiceGreetingSpoken) {
+        voiceGreetingSpoken = true;
+        prompt = `${buildTeacherGreeting()} What is the student's name?`;
+    } else if (tablePromptCount === 0) {
+        prompt = "What is the student's name?";
+    } else {
+        prompt = "Next student, please.";
+    }
+    tablePromptCount++;
+    tableVoiceStatus.value = prompt;
+    await speakPrompt(prompt);
+
+    const ok = await startGroqStream();
+    if (!ok) {
+        tableVoiceStatus.value = "Failed to start voice. Try again.";
+        return;
+    }
+    tableVoiceActive.value = true;
+    tableVoiceStatus.value = "Listening — say a student name";
 };
 
 const stopTableVoiceRecognition = () => {
-    if (tableVoiceRecognition.value) {
-        try {
-            tableVoiceRecognition.value.stop();
-        } catch (e) {}
-        tableVoiceRecognition.value = null;
-    }
+    cancelSpeech();
+    stopGroqStream();
     tableVoiceActive.value = false;
+    tablePromptCount = 0;
 };
 
 const openStudentModal = (student) => {
@@ -2901,12 +3872,100 @@ const formatDate = (date) => {
     });
 };
 
+// Find the next grade row in the table that still has an empty term. When
+// the teacher is doing bulk voice entry we want to jump straight into the
+// next student's modal instead of dumping them back on the student picker.
+// Preference order:
+//   1. Same subject, appearing AFTER the current row (natural top-to-bottom).
+//   2. Same subject, appearing BEFORE the current row (wraparound).
+//   3. Any subject, incomplete (last resort, in case the current subject
+//      is finished).
+const findNextIncompleteGrade = (currentGrade) => {
+    const rows = filteredGrades.value || [];
+    if (rows.length === 0) return null;
+    const currentSubjectId = currentGrade?.subject_id ?? null;
+    const currentStudentId = currentGrade?.student?.id ?? null;
+    const isIncomplete = (g) =>
+        !g.term_1 || !g.term_2 || !g.term_3 || !g.final_grade;
+
+    const currentIndex = rows.findIndex(
+        (g) =>
+            g.student?.id === currentStudentId &&
+            g.subject_id === currentSubjectId,
+    );
+
+    const sameSubject = (g) =>
+        currentSubjectId == null || g.subject_id === currentSubjectId;
+
+    if (currentIndex >= 0) {
+        for (let i = currentIndex + 1; i < rows.length; i++) {
+            const g = rows[i];
+            if (sameSubject(g) && isIncomplete(g)) return g;
+        }
+        for (let i = 0; i < currentIndex; i++) {
+            const g = rows[i];
+            if (sameSubject(g) && isIncomplete(g)) return g;
+        }
+    }
+
+    for (const g of rows) {
+        if (g.student?.id === currentStudentId && g.subject_id === currentSubjectId) {
+            continue;
+        }
+        if (isIncomplete(g)) return g;
+    }
+    return null;
+};
+
+// Smooth transition from the current grade modal into another one without
+// bouncing through the table voice picker in between.
+const switchToGradeModal = (nextGrade) => {
+    if (!nextGrade) return;
+    // Keep the mic hot across students so the next "Term one" prompt is
+    // already listening when it finishes speaking.
+    cancelSpeech();
+    clearPendingTens();
+    isVoiceActive.value = false;
+    voiceTranscript.value = "";
+    showGradeModal.value = false;
+    selectedGrade.value = null;
+    gradeForm.value = { term_1: null, term_2: null, term_3: null };
+    currentVoiceMode = "modal";
+    groqGeneration++;
+    setTimeout(() => {
+        openGradeModal(nextGrade);
+    }, 80);
+};
+
 const submitGrades = () => {
+    // Safety guard: refuse to save when nothing has been entered yet.
+    // A false "save" trigger from a Whisper hallucination on an empty form
+    // would otherwise submit all-null grades and cause the auto-advance to
+    // jump to another student. This makes the voice pipeline robust to
+    // stray words like "so" / "sim" / "sam" that used to trip save.
+    const anyTermFilled =
+        gradeForm.value.term_1 != null ||
+        gradeForm.value.term_2 != null ||
+        gradeForm.value.term_3 != null;
+    if (!anyTermFilled) {
+        if (typeof console !== "undefined") {
+            console.log("[voice] save ignored — no grades entered yet");
+        }
+        voiceStatus.value = "Enter a grade first, then say save";
+        // Speak it too so the teacher doesn't have to look at the screen
+        // to figure out why nothing happened.
+        speakPrompt("Enter a grade first.", { wait: false });
+        return;
+    }
+
     isSubmitting.value = true;
 
     // Get student_id and subject_id from selectedGrade
     const studentId = selectedGrade.value.student?.id;
     const subjectId = selectedGrade.value.subject_id;
+    // Snapshot the grade we're saving so we can locate the next one after
+    // the modal state has been cleared.
+    const savedGrade = selectedGrade.value;
 
     if (!studentId || !subjectId) {
         toast.error("Invalid student or subject");
@@ -2927,6 +3986,24 @@ const submitGrades = () => {
             preserveScroll: true,
             onSuccess: () => {
                 toast.success("Grades updated successfully!");
+                // Auto-advance only if:
+                //   1. Voice mode is on, AND
+                //   2. This save actually completed all three terms for
+                //      the current student. Partial saves shouldn't hop
+                //      to a different student — the teacher probably
+                //      wants to keep filling this one in.
+                const allTermsFilled =
+                    gradeForm.value.term_1 != null &&
+                    gradeForm.value.term_2 != null &&
+                    gradeForm.value.term_3 != null;
+                if (voiceModeEnabled.value && allTermsFilled) {
+                    const next = findNextIncompleteGrade(savedGrade);
+                    if (next) {
+                        switchToGradeModal(next);
+                        return;
+                    }
+                    speakPrompt("All grades complete.", { wait: false });
+                }
                 pauseVoiceRecognition();
                 closeGradeModal();
             },
@@ -4320,67 +5397,77 @@ onUnmounted(() => {
 
 /* Table Voice Bar */
 .table-voice-bar {
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    color: white;
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
+    background: white;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #003366;
+    padding: 0.65rem 0.9rem;
+    border-radius: 10px;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .table-voice-status {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .table-voice-status .voice-indicator {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
+    gap: 0.4rem;
 }
 
 .table-voice-status .pulse-dot {
     width: 8px;
     height: 8px;
-    background: #22c55e;
+    background: #003366;
     border-radius: 50%;
-    animation: pulse 1.5s infinite;
+    animation: pulse-dot 1.6s infinite;
 }
 
 .table-voice-status .mic-icon-active {
-    color: #22c55e;
+    color: #003366;
 }
 
 .table-voice-text {
-    font-weight: 500;
-    font-size: 0.9rem;
+    font-weight: 600;
+    font-size: 0.85rem;
+    color: #003366;
 }
 
 .table-voice-transcript {
     font-style: italic;
-    opacity: 0.85;
-    font-size: 0.85rem;
-    padding: 0.25rem 0.5rem;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 4px;
+    color: #475569;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.6rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    word-break: break-word;
 }
 
 .table-voice-commands {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    flex-wrap: wrap;
 }
 
 .command-tag {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.75rem;
-    font-weight: 500;
+    background: #f1f5f9;
+    color: #475569;
+    border: 1px solid #e2e8f0;
+    padding: 0.2rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
 }
 
 /* Voice Active Table */
@@ -5320,499 +6407,419 @@ onUnmounted(() => {
     background: #f8fafc;
 }
 
-/* Professional Grade Modal Styles */
-.grade-modal {
-    max-width: 900px;
+/* ============================================================
+   Grade Entry Modal — clean design matching Enrollment Details
+   ============================================================ */
+
+.modal-container.grade-modal-clean {
+    max-width: 720px;
     width: 95%;
-    border-radius: 20px;
+    border-radius: 0;
+    background: white;
+    border: 1px solid #c5c5c5;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 92vh;
 }
 
-.grade-modal-header {
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    padding: 1.25rem 1.5rem;
-    border-bottom: none;
+.grade-clean-header {
+    padding: 0.6rem 0.95rem;
+    background: #003366;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 3px solid #c9a227;
 }
 
-.grade-header-content {
+.grade-clean-header h3 {
+    margin: 0;
+    font-size: 0.98rem;
+    font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 0.5rem;
+    letter-spacing: 0.2px;
 }
 
-.grade-header-icon {
+.grade-clean-close {
+    background: none;
+    border: none;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border-radius: 0;
+    transition: color 0.15s ease;
+}
+
+.grade-clean-close:hover {
+    color: #c9a227;
+    background: none;
+}
+
+.grade-clean-body {
+    padding: 1rem 1.15rem;
+    overflow-y: auto;
+    background: white;
+    flex: 1;
+}
+
+/* Student header block (avatar + name + LRN) */
+.grade-detail-header {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding-bottom: 0.85rem;
+    border-bottom: 1px solid #d8d8d8;
+    margin-bottom: 1rem;
+}
+
+.grade-detail-avatar {
     width: 48px;
     height: 48px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 12px;
+    background: #003366;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-}
-
-.grade-header-text h3 {
-    color: white;
-    font-size: 1.25rem;
+    font-size: 1.05rem;
     font-weight: 700;
-    margin: 0;
-}
-
-.grade-header-text p {
-    color: rgba(255, 255, 255, 0.8);
-    font-size: 0.85rem;
-    margin: 0.25rem 0 0 0;
-}
-
-.grade-modal-body {
-    padding: 1.5rem;
-    background: #f8fafc;
-}
-
-/* Landscape Layout */
-.grade-modal-layout {
-    display: grid;
-    grid-template-columns: 1fr 1.2fr;
-    gap: 1.5rem;
-    align-items: start;
-}
-
-.grade-left-column {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-}
-
-.grade-right-column {
-    display: flex;
-    flex-direction: column;
-}
-
-/* Student Info Card */
-.student-info-card {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    background: white;
-    padding: 0.75rem 1rem;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-
-.student-avatar-large {
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
     overflow: hidden;
+    flex-shrink: 0;
+    border-radius: 0;
 }
 
-.student-avatar-large .avatar-img {
+.grade-detail-avatar img {
     width: 100%;
     height: 100%;
     object-fit: cover;
 }
 
-.student-avatar-large .avatar-initials {
-    color: white;
-    font-size: 1.25rem;
+.grade-detail-title h4 {
+    margin: 0 0 0.35rem 0;
+    font-size: 1.02rem;
+    color: #003366;
     font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
 }
 
-.student-details-section {
-    flex: 1;
-    min-width: 0;
+.grade-lrn-badge {
+    display: inline-block;
+    padding: 0.3rem 0.55rem;
+    background: #fff;
+    color: #333;
+    border: 1px solid #ccc;
+    font-size: 0.82rem;
+    font-weight: 600;
+    font-family: monospace;
+    border-radius: 0;
 }
 
-.student-full-name {
-    font-size: 1.1rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin: 0 0 0.5rem 0;
+/* Voice mode compact panel */
+.grade-voice-panel {
+    border: 1px solid #c5c5c5;
+    border-top: 3px solid #c9a227;
+    background: #fdfaf0;
+    padding: 0.6rem 0.75rem;
+    margin-bottom: 1rem;
 }
 
-.student-meta-badges {
+.grade-voice-row {
     display: flex;
+    align-items: center;
+    gap: 0.75rem;
     flex-wrap: wrap;
-    gap: 0.5rem;
 }
 
-.meta-badge {
+.grade-voice-label {
     display: inline-flex;
     align-items: center;
-    gap: 0.3rem;
-    padding: 0.25rem 0.6rem;
-    border-radius: 6px;
-    font-size: 0.75rem;
-    font-weight: 600;
-}
-
-.subject-badge {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.section-badge {
-    background: #f3e8ff;
-    color: #7c3aed;
-}
-
-.lrn-meta-badge {
-    background: #f1f5f9;
-    color: #475569;
-}
-
-/* Grades Section */
-.grades-section {
-    background: white;
-    border-radius: 12px;
-    padding: 1.25rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-    height: 100%;
-}
-
-.section-title {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 1px solid #e2e8f0;
-}
-
-.title-text {
+    gap: 0.4rem;
+    font-size: 0.78rem;
     font-weight: 700;
-    color: #1e293b;
-    font-size: 1rem;
+    color: #003366;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
 }
 
-.title-hint {
-    font-size: 0.75rem;
-    color: #94a3b8;
+.grade-voice-status {
+    flex: 1;
+    font-size: 0.82rem;
+    color: #333;
+    font-style: italic;
 }
 
-.quarter-grades-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 0.75rem;
-}
-
-/* Vertical layout for horizontal cards */
-.quarter-grades-grid-vertical {
-    display: flex;
-    flex-direction: column;
-    gap: 0.75rem;
-}
-
-.quarter-card-horizontal {
-    display: grid;
-    grid-template-columns: 100px 1fr 120px;
+.grade-voice-off {
+    display: inline-flex;
     align-items: center;
-    gap: 1rem;
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    transition: all 0.3s ease;
-}
-
-.quarter-card-horizontal:hover {
-    border-color: #003366;
-    background: #f0f7ff;
-}
-
-.quarter-card-horizontal.active {
-    border-color: #003366;
-    border-width: 3px;
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-    box-shadow:
-        0 0 0 4px rgba(0, 51, 102, 0.25),
-        0 4px 12px rgba(0, 51, 102, 0.2);
-    transform: scale(1.02);
+    gap: 0.25rem;
+    padding: 0.25rem 0.55rem;
+    background: white;
+    border: 1px solid #9b1c1c;
+    color: #9b1c1c;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    border-radius: 0;
     transition: all 0.15s ease;
 }
 
-.quarter-card-horizontal.active .quarter-label {
+.grade-voice-off:hover {
+    background: #9b1c1c;
+    color: white;
+}
+
+.grade-voice-transcript {
+    margin-top: 0.5rem;
+    padding: 0.35rem 0.55rem;
+    background: white;
+    border: 1px solid #e2d9b5;
+    font-size: 0.82rem;
+    font-style: italic;
+    color: #555;
+    word-break: break-word;
+}
+
+.grade-voice-hint {
+    margin-top: 0.5rem;
+    font-size: 0.72rem;
+    color: #64748b;
+    letter-spacing: 0.2px;
+}
+
+.grade-voice-toggle-row {
+    margin-bottom: 1rem;
+}
+
+.grade-voice-toggle-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    background: white;
+    border: 1px solid #003366;
     color: #003366;
-    font-weight: 700;
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    border-radius: 0;
+    transition: all 0.15s ease;
 }
 
-.quarter-card-horizontal.has-grade {
-    border-color: #22c55e;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+.grade-voice-toggle-btn:hover {
+    background: #003366;
+    color: white;
 }
 
-.quarter-card-horizontal.active.has-grade {
-    border-color: #003366;
-    background: linear-gradient(135deg, #bfdbfe 0%, #93c5fd 100%);
-    box-shadow:
-        0 0 0 4px rgba(0, 51, 102, 0.25),
-        0 4px 12px rgba(0, 51, 102, 0.2);
+/* 2-column detail grid */
+.grade-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem 1rem;
 }
 
-.quarter-info {
+.grade-detail-item {
     display: flex;
     flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.35rem 0.5rem;
+    border: 1px solid transparent;
+    transition: border-color 0.15s ease, background 0.15s ease;
 }
 
-.quarter-info .quarter-label {
+.grade-detail-item.full-width {
+    grid-column: 1 / -1;
+}
+
+.grade-detail-item.active-term {
+    border-color: #c9a227;
+    background: #fdfaf0;
+}
+
+.grade-detail-item label {
+    font-size: 0.7rem;
+    color: #555;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.grade-detail-item > span {
+    font-size: 0.92rem;
+    color: #222;
+}
+
+.grade-detail-item .grade-muted {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.82rem;
+}
+
+/* Numeric term input styled like the Enrollment "80.00" outlined box */
+.grade-term-input {
+    width: 100%;
+    max-width: 160px;
+    padding: 0.4rem 0.6rem;
+    border: 1px solid #c9a227;
+    background: white;
     font-size: 1rem;
     font-weight: 700;
     color: #003366;
-}
-
-.quarter-info .quarter-title {
-    font-size: 0.75rem;
-    color: #64748b;
-}
-
-.quarter-input-wrapper {
-    flex: 1;
-}
-
-.quarter-input-wrapper .quarter-input {
-    width: 100%;
-    max-width: 120px;
-}
-
-.quarter-card-horizontal .grade-indicator {
-    margin: 0;
-    text-align: center;
-    min-width: 100px;
-}
-
-.grade-indicator.empty {
-    background: #f1f5f9;
-    color: #94a3b8;
-}
-
-/* Saving Indicator */
-.saving-indicator {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.75rem;
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    color: white;
-    border-radius: 8px;
-    font-weight: 600;
-    font-size: 0.9rem;
-    animation: fadeIn 0.3s ease;
-}
-
-.saving-indicator .spin {
-    animation: spin 1s linear infinite;
-}
-
-@keyframes fadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(5px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.quarter-card {
-    background: #f8fafc;
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.75rem;
-    text-align: center;
-    transition: all 0.3s ease;
-}
-
-.quarter-card:hover {
-    border-color: #003366;
-    background: #f0f7ff;
-}
-
-.quarter-card.active {
-    border-color: #003366;
-    background: linear-gradient(135deg, #e0f2fe 0%, #dbeafe 100%);
-    box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.15);
-}
-
-.quarter-card.has-grade {
-    border-color: #22c55e;
-    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-}
-
-.quarter-header {
-    margin-bottom: 0.5rem;
-}
-
-.quarter-label {
-    display: block;
-    font-size: 0.7rem;
-    font-weight: 700;
-    color: #003366;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.quarter-title {
-    display: block;
-    font-size: 0.65rem;
-    color: #64748b;
-}
-
-.quarter-input {
-    width: 100%;
-    padding: 0.5rem;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 1.25rem;
-    font-weight: 700;
-    text-align: center;
-    color: #1e293b;
-    background: white;
-    transition: all 0.3s ease;
-}
-
-.quarter-input:focus {
+    font-family: monospace;
+    text-align: left;
+    border-radius: 0;
     outline: none;
+    appearance: textfield;
+}
+
+.grade-term-input::-webkit-outer-spin-button,
+.grade-term-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.grade-term-input:focus {
     border-color: #003366;
-    box-shadow: 0 0 0 3px rgba(0, 51, 102, 0.1);
+    box-shadow: inset 0 0 0 1px #003366;
 }
 
-.quarter-input::placeholder {
+.grade-term-input::placeholder {
     color: #cbd5e1;
+    font-weight: 400;
 }
 
-.grade-indicator {
-    margin-top: 0.4rem;
-    font-size: 0.65rem;
-    font-weight: 600;
+.grade-term-status {
+    display: inline-block;
+    margin-top: 0.15rem;
     padding: 0.15rem 0.4rem;
-    border-radius: 4px;
-}
-
-.grade-indicator.excellent {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.grade-indicator.very-good {
-    background: #dbeafe;
-    color: #1e40af;
-}
-
-.grade-indicator.good {
-    background: #fef3c7;
-    color: #92400e;
-}
-
-.grade-indicator.satisfactory {
-    background: #ffedd5;
-    color: #c2410c;
-}
-
-.grade-indicator.needs-improvement {
-    background: #fee2e2;
-    color: #dc2626;
-}
-
-/* Final Grade Section */
-.final-grade-section {
-    margin-top: 0.25rem;
-}
-
-.final-grade-card {
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border: 2px solid #e2e8f0;
-    border-radius: 12px;
-    padding: 0.75rem 1rem;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.final-grade-card.excellent {
-    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
-    border-color: #22c55e;
-}
-
-.final-grade-card.very-good {
-    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
-    border-color: #3b82f6;
-}
-
-.final-grade-card.good {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border-color: #f59e0b;
-}
-
-.final-grade-card.satisfactory {
-    background: linear-gradient(135deg, #ffedd5 0%, #fed7aa 100%);
-    border-color: #f97316;
-}
-
-.final-grade-card.needs-improvement {
-    background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-    border-color: #ef4444;
-}
-
-.final-grade-label {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 0.25rem;
-}
-
-.final-grade-value {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1e293b;
-}
-
-.final-grade-status {
-    font-size: 0.8rem;
-    font-weight: 600;
-    color: #475569;
-    margin-top: 0.25rem;
-}
-
-/* Grade Modal Footer */
-.grade-modal-footer {
+    letter-spacing: 0.3px;
+    border: 1px solid #c5c5c5;
+    color: #003366;
     background: white;
-    padding: 0.75rem 1.5rem;
-    border-top: 1px solid #e2e8f0;
+    width: fit-content;
+    text-transform: uppercase;
+}
+
+.grade-term-status.excellent {
+    border-color: #003366;
+    color: #003366;
+}
+.grade-term-status.very-good {
+    border-color: #003366;
+    color: #003366;
+}
+.grade-term-status.good {
+    border-color: #9a6700;
+    color: #9a6700;
+}
+.grade-term-status.satisfactory {
+    border-color: #9a6700;
+    color: #9a6700;
+}
+.grade-term-status.needs-improvement {
+    border-color: #9b1c1c;
+    color: #9b1c1c;
+}
+
+/* Final Grade value box (mirrors the GWA box in Enrollment Details) */
+.grade-value-box {
+    display: inline-block;
+    padding: 0.35rem 0.6rem;
+    border: 1px solid #c9a227;
+    background: white;
+    color: #003366;
+    font-weight: 700;
+    font-size: 0.95rem;
+    font-family: monospace;
+    width: fit-content;
+    border-radius: 0;
+}
+
+.grade-value-box.needs-improvement {
+    color: #9b1c1c;
+    border-color: #9b1c1c;
+}
+
+.grade-value-box.excellent,
+.grade-value-box.very-good {
+    color: #003366;
+    border-color: #003366;
+}
+
+/* Footer */
+.grade-clean-footer {
+    padding: 0.7rem 1.15rem;
+    background: white;
+    border-top: 1px solid #e0e0e0;
     display: flex;
     justify-content: flex-end;
     gap: 0.5rem;
 }
 
-.grade-modal-footer .btn-secondary {
-    display: flex;
+.grade-btn-secondary {
+    display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.5rem 1rem;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    background: white;
+    color: #333;
+    border: 1px solid #bdbdbd;
+    font-weight: 600;
     font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s ease;
 }
 
-.btn-save-grades {
-    display: flex;
-    align-items: center;
-    gap: 0.35rem;
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    padding: 0.5rem 1rem;
-    font-size: 0.85rem;
+.grade-btn-secondary:hover {
+    background: #f4f4f4;
 }
 
-.btn-save-grades:hover:not(:disabled) {
-    background: linear-gradient(135deg, #002244 0%, #004488 100%);
+.grade-btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.45rem 0.9rem;
+    background: #003366;
+    color: white;
+    border: 1px solid #003366;
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s ease;
+}
+
+.grade-btn-primary:hover:not(:disabled) {
+    background: #00264d;
+}
+
+.grade-btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.grade-btn-primary .spin {
+    animation: spin 1s linear infinite;
+}
+
+@media (max-width: 640px) {
+    .grade-detail-grid {
+        grid-template-columns: 1fr;
+    }
+    .grade-detail-item.full-width {
+        grid-column: 1 / -1;
+    }
 }
 
 .student-grade-info {
@@ -5839,64 +6846,60 @@ onUnmounted(() => {
 .voice-control-section {
     display: flex;
     align-items: center;
+    justify-content: space-between;
     gap: 0.75rem;
     margin-bottom: 0;
-    padding: 0.5rem 0.75rem;
-    background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%);
-    border: 2px solid #22c55e;
-    border-radius: 8px;
+    padding: 0.6rem 0.85rem;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #003366;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .voice-control-section.voice-off {
-    background: #f1f5f9;
-    border: 2px solid transparent;
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #e2e8f0;
+    box-shadow: none;
 }
 
 .voice-mode-indicator {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.6rem;
 }
 
 .mic-icon-active {
-    color: #16a34a;
-    animation: pulse-mic 1.5s infinite;
-}
-
-@keyframes pulse-mic {
-    0%,
-    100% {
-        transform: scale(1);
-    }
-    50% {
-        transform: scale(1.1);
-    }
+    color: #003366;
 }
 
 .voice-mode-label {
     font-weight: 600;
-    color: #16a34a;
-    font-size: 0.9rem;
+    color: #1e293b;
+    font-size: 0.85rem;
+    letter-spacing: 0.2px;
 }
 
 .voice-disable-btn {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 0.25rem;
-    padding: 0.3rem 0.6rem;
+    gap: 0.3rem;
+    padding: 0.3rem 0.65rem;
     background: white;
-    border: 1px solid #dc2626;
-    color: #dc2626;
+    border: 1px solid #cbd5e1;
+    color: #475569;
     border-radius: 6px;
-    font-size: 0.75rem;
+    font-size: 0.72rem;
     font-weight: 600;
+    letter-spacing: 0.2px;
     cursor: pointer;
-    margin-left: 0.5rem;
-    transition: all 0.2s ease;
+    transition: all 0.15s ease;
 }
 
 .voice-disable-btn:hover {
-    background: #dc2626;
+    background: #003366;
+    border-color: #003366;
     color: white;
 }
 
@@ -6161,14 +7164,15 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.6rem 1rem;
-    border: 2px solid #003366;
+    padding: 0.55rem 1rem;
+    border: 1px solid #003366;
     background: white;
     color: #003366;
     border-radius: 8px;
     font-weight: 600;
+    font-size: 0.85rem;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: background 0.15s ease, color 0.15s ease;
 }
 
 .voice-toggle-btn:hover {
@@ -6177,41 +7181,29 @@ onUnmounted(() => {
 }
 
 .voice-toggle-btn.active {
-    background: #dc2626;
-    border-color: #dc2626;
+    background: #003366;
+    border-color: #003366;
     color: white;
-    animation: pulse-bg 2s infinite;
-}
-
-@keyframes pulse-bg {
-    0%,
-    100% {
-        box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.4);
-    }
-    50% {
-        box-shadow: 0 0 0 8px rgba(220, 38, 38, 0);
-    }
 }
 
 .voice-status-container {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    flex: 1;
+    gap: 0.75rem;
 }
 
 .voice-indicator {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 0.5rem;
 }
 
 .pulse-dot {
-    width: 10px;
-    height: 10px;
-    background: #dc2626;
+    width: 8px;
+    height: 8px;
+    background: #003366;
     border-radius: 50%;
-    animation: pulse-dot 1.5s infinite;
+    animation: pulse-dot 1.6s infinite;
 }
 
 @keyframes pulse-dot {
@@ -6221,55 +7213,69 @@ onUnmounted(() => {
         opacity: 1;
     }
     50% {
-        transform: scale(1.3);
-        opacity: 0.7;
+        transform: scale(1.35);
+        opacity: 0.55;
     }
 }
 
 .voice-label {
-    font-size: 0.85rem;
-    color: #dc2626;
+    font-size: 0.8rem;
+    color: #475569;
     font-weight: 500;
 }
 
 .current-quarter-badge {
     background: #003366;
     color: white;
-    padding: 0.3rem 0.75rem;
-    border-radius: 20px;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
     font-weight: 700;
-    font-size: 0.9rem;
+    font-size: 0.75rem;
+    letter-spacing: 0.4px;
 }
 
 .voice-status-bar {
-    background: linear-gradient(135deg, #003366 0%, #0055a4 100%);
-    color: white;
-    padding: 0.5rem 0.75rem;
-    border-radius: 8px;
+    background: white;
+    color: #1e293b;
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #003366;
+    padding: 0.65rem 0.85rem;
+    border-radius: 10px;
     margin-bottom: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 .voice-status-text {
-    font-size: 0.9rem;
-    font-weight: 500;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #003366;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
 }
 
 .voice-transcript {
     font-style: italic;
-    opacity: 0.9;
-    margin-top: 0.25rem;
-    font-size: 0.85rem;
+    color: #475569;
+    margin-top: 0.3rem;
+    font-size: 0.8rem;
+    padding: 0.25rem 0.5rem;
+    background: #f8fafc;
+    border-radius: 6px;
+    border: 1px solid #e2e8f0;
+    word-break: break-word;
 }
 
 .voice-commands {
     margin-top: 0.5rem;
     padding-top: 0.5rem;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    border-top: 1px dashed #e2e8f0;
 }
 
 .command-hint {
-    font-size: 0.75rem;
-    opacity: 0.8;
+    font-size: 0.7rem;
+    color: #64748b;
+    letter-spacing: 0.2px;
 }
 
 .form-group.voice-active-input {

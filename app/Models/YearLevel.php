@@ -75,4 +75,13 @@ class YearLevel extends Model
 
         return (int) $this->id;
     }
+
+    public function nextYearLevel(): ?self
+    {
+        return static::query()
+            ->get()
+            ->filter(fn (self $level) => $level->rank > $this->rank)
+            ->sortBy(fn (self $level) => $level->rank)
+            ->first();
+    }
 }
