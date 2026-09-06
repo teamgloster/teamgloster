@@ -5,616 +5,326 @@
         currentPage="students"
         :user="user"
     >
-        <div class="content-section">
+        <div class="content-section lis-page">
             <div class="gov-pagehead">
                 <p class="gov-kicker">
-                    Tambo National High School — Buhi, Camarines Sur
+                    Tambo National High School — Learner Information
                 </p>
                 <div class="gov-pagehead-row">
                     <h2>Students</h2>
                     <span class="gov-sy"
-                        >School Year {{ currentSchoolYear }}</span
+                        >School Year {{ selectedSchoolYear }}</span
                     >
                 </div>
             </div>
 
-            <div class="gov-stat-row">
-                <div class="gov-stat-box">
-                    <div class="gov-stat-label">Eligible to Promote</div>
-                    <div class="gov-stat-value">{{ eligibleCount }}</div>
-                </div>
-                <div class="gov-stat-box">
-                    <div class="gov-stat-label">Incomplete Grades</div>
-                    <div class="gov-stat-value">{{ incompleteCount }}</div>
-                </div>
-                <div class="gov-stat-box">
-                    <div class="gov-stat-label">Failed Previous Level</div>
-                    <div class="gov-stat-value">{{ failedCount }}</div>
-                </div>
-                <div class="gov-stat-box">
-                    <div class="gov-stat-label">Already Promoted</div>
-                    <div class="gov-stat-value">{{ promotedCount }}</div>
-                </div>
+            <div class="lis-banner" :class="enrollmentOpen ? 'open' : 'closed'">
+                <strong>{{
+                    enrollmentOpen ? "Enrolment is Open" : "End of School Year"
+                }}</strong>
+                <span>Showing enrolment for SY {{ selectedSchoolYear }}</span>
             </div>
+            <p v-if="unassignedCount" class="lis-status">
+                {{ unassignedCount }} learner(s) are not yet assigned to a
+                section.
+            </p>
 
-            <div class="section-header">
-                <div class="header-actions">
-                    <div class="search-box">
-                        <Search :size="18" class="search-icon" />
-                        <input
-                            v-model="studentSearch"
-                            type="text"
-                            placeholder="Search students by name or LRN..."
-                            class="search-input"
-                        />
-                    </div>
-                    <div class="filter-group">
-                        <select v-model="yearLevelFilter" class="filter-select">
-                            <option value="all">All Year Levels</option>
-                            <option
-                                v-for="level in yearLevels"
-                                :key="level.id"
-                                :value="level.id"
-                            >
-                                {{ level.name }}
-                            </option>
-                        </select>
-                        <select v-model="promotionFilter" class="filter-select">
-                            <option value="all">All Promotion Status</option>
-                            <option value="eligible">Eligible to Promote</option>
-                            <option value="incomplete">Incomplete Grades</option>
-                            <option value="failed">Failed</option>
-                            <option value="already_promoted">
-                                Already Promoted
-                            </option>
-                            <option value="completed">Completed</option>
-                            <option value="no_record">No Record</option>
-                        </select>
-                        <button
-                            type="button"
-                            class="btn-success"
-                            :disabled="filteredEligibleStudents.length === 0"
-                            @click="showBulkPromoteModal = true"
-                        >
-                            <TrendingUp :size="18" />
-                            Promote Eligible
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <div class="data-table-container">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Student</th>
-                            <th>LRN</th>
-                            <th>Year Level</th>
-                            <th>Section</th>
-                            <th>Promotion</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr
-                            v-for="student in filteredStudents"
-                            :key="student.id"
-                        >
-                            <td>
-                                {{ student.last_name }},
-                                {{ student.first_name }}
-                            </td>
-                            <td>
-                                <span class="lrn-badge">{{ student.lrn }}</span>
-                            </td>
-                            <td>
-                                <span
-                                    v-if="
-                                        student.current_enrollment?.year_level
-                                            ?.name
-                                    "
-                                    class="year-level-badge"
-                                >
-                                    {{
-                                        student.current_enrollment.year_level
-                                            .name
-                                    }}
-                                </span>
-                                <span v-else class="text-muted">—</span>
-                            </td>
-                            <td>
-                                {{
-                                    student.current_enrollment?.section
-                                        ?.name || "Not assigned"
-                                }}
-                            </td>
-                            <td>
-                                <div class="promotion-cell">
-                                    <span
-                                        class="status-badge"
-                                        :class="
-                                            student.promotion?.status ||
-                                            'no_record'
-                                        "
-                                    >
-                                        {{
-                                            promotionLabel(
-                                                student.promotion?.status,
-                                            )
-                                        }}
-                                    </span>
-                                    <small
-                                        v-if="student.promotion?.gwa != null"
-                                    >
-                                        GWA
-                                        {{
-                                            Number(
-                                                student.promotion.gwa,
-                                            ).toFixed(2)
-                                        }}
-                                    </small>
-                                </div>
-                            </td>
-                            <td>
-                                <div class="action-buttons">
-                                    <button
-                                        class="btn-icon promote"
-                                        :disabled="
-                                            !student.promotion?.can_promote
-                                        "
-                                        @click="openPromoteModal(student)"
-                                        :title="
-                                            student.promotion?.can_promote
-                                                ? 'Promote to next year level'
-                                                : student.promotion?.message ||
-                                                  'Student has not passed the previous year level'
-                                        "
-                                    >
-                                        <TrendingUp :size="16" />
-                                    </button>
-                                    <button
-                                        class="btn-icon edit"
-                                        @click="openYearLevelModal(student)"
-                                        title="Change year level"
-                                    >
-                                        <ArrowUpDown :size="16" />
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr v-if="filteredStudents.length === 0">
-                            <td colspan="6" class="empty-table">
-                                <div class="empty-message">
-                                    <p>No students found</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-
-        <Teleport to="body">
-            <Transition name="modal">
-                <div
-                    v-if="showPromoteModal"
-                    class="modal-overlay"
-                    @click.self="closePromoteModal"
+            <div class="lis-toolbar">
+                <input
+                    v-model="sectionSearch"
+                    type="text"
+                    class="lis-search"
+                    placeholder="Search section..."
+                />
+                <select
+                    class="lis-search lis-year"
+                    :value="selectedSchoolYear"
+                    @change="changeSchoolYear"
                 >
-                    <div class="modal-container small">
-                        <div class="modal-header">
-                            <h3>Promote Student</h3>
-                            <button class="close-btn" @click="closePromoteModal">
-                                <X :size="20" />
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <p>
-                                Promote
-                                <strong>
-                                    {{ studentToPromote?.last_name }},
-                                    {{ studentToPromote?.first_name }}
-                                </strong>
-                                to
-                                <strong>{{
-                                    studentToPromote?.promotion
-                                        ?.next_year_level?.name
-                                }}</strong
-                                >?
-                            </p>
-                            <p
-                                v-if="studentToPromote?.promotion?.message"
-                                class="description-text"
-                            >
-                                {{ studentToPromote.promotion.message }}
-                            </p>
-                        </div>
-                        <div class="modal-footer">
-                            <button
-                                type="button"
-                                class="btn-secondary"
-                                @click="closePromoteModal"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                class="btn-success"
-                                :disabled="isSubmitting"
-                                @click="promoteStudent"
-                            >
-                                Promote Student
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Transition>
-        </Teleport>
+                    <option
+                        v-for="year in availableSchoolYears"
+                        :key="year"
+                        :value="year"
+                    >
+                        SY {{ year }}{{ year === currentSchoolYear ? " (current)" : "" }}
+                    </option>
+                </select>
+            </div>
 
-        <Teleport to="body">
-            <Transition name="modal">
+            <div v-if="gradeColumns.length" class="lis-grid">
                 <div
-                    v-if="showYearLevelModal"
-                    class="modal-overlay"
-                    @click.self="closeYearLevelModal"
+                    v-for="column in gradeColumns"
+                    :key="column.id"
+                    class="lis-column"
                 >
-                    <div class="modal-container">
-                        <div class="modal-header">
-                            <h3>Change Year Level</h3>
-                            <button
-                                class="close-btn"
-                                @click="closeYearLevelModal"
-                            >
-                                <X :size="20" />
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <p class="description-text">
-                                {{
-                                    studentToChange?.promotion?.message ||
-                                    "Select a year level for this student."
-                                }}
-                            </p>
-                            <div class="form-group">
-                                <label>Year Level</label>
-                                <select v-model="yearLevelForm.year_level_id">
-                                    <option value="">Select year level</option>
-                                    <option
-                                        v-for="level in yearLevels"
-                                        :key="level.id"
-                                        :value="String(level.id)"
-                                        :disabled="
-                                            !isYearLevelAllowed(level.id)
-                                        "
-                                    >
-                                        {{ level.name }}
-                                    </option>
-                                </select>
+                    <div class="lis-column-head">
+                        {{ column.label }}
+                    </div>
+                    <div class="lis-column-body">
+                        <div
+                            v-for="section in column.sections"
+                            :key="section.id"
+                            class="lis-section"
+                        >
+                            <div class="lis-section-row">
+                                <span class="lis-section-name">{{
+                                    section.name
+                                }}</span>
+                                <span class="lis-count">{{
+                                    section.enrolled_count || 0
+                                }}</span>
                             </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button
-                                type="button"
-                                class="btn-secondary"
-                                @click="closeYearLevelModal"
+                            <Link
+                                class="lis-view-btn"
+                                :href="`/registrar/sections/${section.id}/enrollment`"
                             >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                class="btn-primary"
-                                :disabled="
-                                    isSubmitting ||
-                                    !yearLevelForm.year_level_id ||
-                                    isSameCurrentYearLevel
-                                "
-                                @click="submitYearLevelChange"
-                            >
-                                Save Year Level
-                            </button>
+                                View Enrolment
+                            </Link>
                         </div>
+                        <p
+                            v-if="column.sections.length === 0"
+                            class="lis-empty"
+                        >
+                            No sections
+                        </p>
                     </div>
                 </div>
-            </Transition>
-        </Teleport>
-
-        <Teleport to="body">
-            <Transition name="modal">
-                <div
-                    v-if="showBulkPromoteModal"
-                    class="modal-overlay"
-                    @click.self="showBulkPromoteModal = false"
-                >
-                    <div class="modal-container small">
-                        <div class="modal-header">
-                            <h3>Promote Eligible Students</h3>
-                            <button
-                                class="close-btn"
-                                @click="showBulkPromoteModal = false"
-                            >
-                                <X :size="20" />
-                            </button>
-                        </div>
-                        <div class="modal-body">
-                            <p>
-                                Promote
-                                <strong>{{
-                                    filteredEligibleStudents.length
-                                }}</strong>
-                                student(s) who have passed their current year
-                                level?
-                            </p>
-                        </div>
-                        <div class="modal-footer">
-                            <button
-                                type="button"
-                                class="btn-secondary"
-                                @click="showBulkPromoteModal = false"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                type="button"
-                                class="btn-success"
-                                :disabled="isSubmitting"
-                                @click="promoteEligibleStudents"
-                            >
-                                Promote Eligible
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Transition>
-        </Teleport>
+            </div>
+            <p v-else class="lis-empty">
+                No year levels or sections are set up for this school year.
+            </p>
+        </div>
     </RegistrarLayout>
 </template>
 
 <script setup>
 import { computed, ref } from "vue";
-import { router } from "@inertiajs/vue3";
-import { ArrowUpDown, Search, TrendingUp, X } from "lucide-vue-next";
-import { useToast } from "@/composables/useNotify";
+import { Link, router } from "@inertiajs/vue3";
 import RegistrarLayout from "@/Layouts/RegistrarLayout.vue";
-
-const toast = useToast();
 
 const props = defineProps({
     user: { type: Object, required: true },
-    students: { type: Array, default: () => [] },
     yearLevels: { type: Array, default: () => [] },
     sections: { type: Array, default: () => [] },
+    unassignedCount: { type: Number, default: 0 },
     currentSchoolYear: { type: String, default: "" },
+    selectedSchoolYear: { type: String, default: "" },
+    availableSchoolYears: { type: Array, default: () => [] },
+    enrollmentOpen: { type: Boolean, default: true },
 });
 
-const studentSearch = ref("");
-const yearLevelFilter = ref("all");
-const promotionFilter = ref("all");
-const isSubmitting = ref(false);
-const showPromoteModal = ref(false);
-const studentToPromote = ref(null);
-const showYearLevelModal = ref(false);
-const studentToChange = ref(null);
-const showBulkPromoteModal = ref(false);
-const yearLevelForm = ref({ year_level_id: "" });
+const sectionSearch = ref("");
 
-const filteredStudents = computed(() => {
-    return props.students.filter((student) => {
-        const search = studentSearch.value.toLowerCase();
-        const matchesSearch =
-            !search ||
-            student.first_name?.toLowerCase().includes(search) ||
-            student.last_name?.toLowerCase().includes(search) ||
-            student.lrn?.toLowerCase().includes(search);
-        const matchesYear =
-            yearLevelFilter.value === "all" ||
-            String(student.current_enrollment?.year_level_id) ===
-                String(yearLevelFilter.value);
-        const matchesPromotion =
-            promotionFilter.value === "all" ||
-            (student.promotion?.status || "no_record") ===
-                promotionFilter.value;
-
-        return matchesSearch && matchesYear && matchesPromotion;
-    });
-});
-
-const eligibleCount = computed(
-    () =>
-        props.students.filter(
-            (student) => student.promotion?.status === "eligible",
-        ).length,
-);
-const incompleteCount = computed(
-    () =>
-        props.students.filter(
-            (student) => student.promotion?.status === "incomplete",
-        ).length,
-);
-const failedCount = computed(
-    () =>
-        props.students.filter(
-            (student) => student.promotion?.status === "failed",
-        ).length,
-);
-const promotedCount = computed(
-    () =>
-        props.students.filter(
-            (student) => student.promotion?.status === "already_promoted",
-        ).length,
-);
-const filteredEligibleStudents = computed(() =>
-    filteredStudents.value.filter((student) => student.promotion?.can_promote),
-);
-const isSameCurrentYearLevel = computed(() => {
-    const currentId = studentToChange.value?.current_enrollment?.year_level_id;
-    return (
-        currentId &&
-        String(currentId) === String(yearLevelForm.value.year_level_id)
+const changeSchoolYear = (event) => {
+    router.get(
+        "/registrar/students",
+        { sy: event.target.value },
+        { preserveState: false, preserveScroll: true },
     );
-});
+};
 
-const promotionLabel = (status) =>
+const romanYear = (rank) =>
     ({
-        eligible: "Eligible",
-        already_promoted: "Promoted",
-        completed: "Completed",
-        failed: "Failed",
-        incomplete: "Incomplete",
-        no_record: "No record",
-    })[status] || "No record";
+        7: "Year I",
+        8: "Year II",
+        9: "Year III",
+        10: "Year IV",
+        11: "SHS",
+        12: "SHS",
+    })[rank] || null;
 
-const isYearLevelAllowed = (yearLevelId) => {
-    const allowed =
-        studentToChange.value?.promotion?.allowed_year_level_ids || [];
-    return allowed.map(String).includes(String(yearLevelId));
+const columnLabel = (level) => {
+    const rank = Number(level.rank);
+    const roman = romanYear(rank);
+    return roman ? `${level.name} (${roman})` : level.name;
 };
 
-const openPromoteModal = (student) => {
-    if (!student?.promotion?.can_promote) {
-        toast.error(
-            student?.promotion?.message ||
-                "This student has not passed the previous year level.",
-        );
-        return;
-    }
-    studentToPromote.value = student;
-    showPromoteModal.value = true;
-};
+const gradeColumns = computed(() => {
+    const search = sectionSearch.value.trim().toLowerCase();
 
-const closePromoteModal = () => {
-    showPromoteModal.value = false;
-    studentToPromote.value = null;
-};
+    return [...(props.yearLevels || [])]
+        .sort((a, b) => Number(a.rank || a.id) - Number(b.rank || b.id))
+        .map((level) => {
+            const sections = (props.sections || [])
+                .filter(
+                    (section) =>
+                        String(section.year_level_id) === String(level.id),
+                )
+                .filter((section) => {
+                    if (!search) return true;
+                    return String(section.name || "")
+                        .toLowerCase()
+                        .includes(search);
+                })
+                .sort((a, b) =>
+                    String(a.name).localeCompare(String(b.name), undefined, {
+                        sensitivity: "base",
+                    }),
+                );
 
-const promoteStudent = () => {
-    if (!studentToPromote.value) return;
-    isSubmitting.value = true;
-    router.post(
-        `/registrar/students/${studentToPromote.value.id}/promote`,
-        {},
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Student promoted successfully.");
-                closePromoteModal();
-            },
-            onError: (errors) => toast.error(Object.values(errors)[0]),
-            onFinish: () => {
-                isSubmitting.value = false;
-            },
-        },
-    );
-};
-
-const openYearLevelModal = (student) => {
-    studentToChange.value = student;
-    yearLevelForm.value.year_level_id =
-        student.promotion?.can_promote && student.promotion?.next_year_level?.id
-            ? String(student.promotion.next_year_level.id)
-            : student.current_enrollment?.year_level_id
-              ? String(student.current_enrollment.year_level_id)
-              : "";
-    showYearLevelModal.value = true;
-};
-
-const closeYearLevelModal = () => {
-    showYearLevelModal.value = false;
-    studentToChange.value = null;
-    yearLevelForm.value.year_level_id = "";
-};
-
-const submitYearLevelChange = () => {
-    if (!studentToChange.value || !yearLevelForm.value.year_level_id) return;
-    isSubmitting.value = true;
-    router.put(
-        `/registrar/students/${studentToChange.value.id}/year-level`,
-        yearLevelForm.value,
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Year level updated successfully.");
-                closeYearLevelModal();
-            },
-            onError: (errors) => toast.error(Object.values(errors)[0]),
-            onFinish: () => {
-                isSubmitting.value = false;
-            },
-        },
-    );
-};
-
-const promoteEligibleStudents = () => {
-    isSubmitting.value = true;
-    router.post(
-        "/registrar/students/promote-selected",
-        {
-            student_ids: filteredEligibleStudents.value.map(
-                (student) => student.id,
-            ),
-        },
-        {
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Eligible students were promoted.");
-                showBulkPromoteModal.value = false;
-            },
-            onError: (errors) => toast.error(Object.values(errors)[0]),
-            onFinish: () => {
-                isSubmitting.value = false;
-            },
-        },
-    );
-};
+            return {
+                id: level.id,
+                label: columnLabel(level),
+                sections,
+            };
+        })
+        .filter((column) => !search || column.sections.length > 0);
+});
 </script>
 
 <style scoped>
 @import "@/Styles/admin-common.css";
 
-.filter-group {
-    flex-wrap: wrap;
-    justify-content: flex-end;
+.lis-page {
+    background: #f3f3f3;
+    margin: -1.25rem -1.5rem -2rem;
+    padding: 1.25rem 1.5rem 2rem;
 }
 
-.text-muted {
-    color: #555;
-    font-style: italic;
-}
-
-.promotion-cell {
+.lis-banner {
     display: flex;
     flex-direction: column;
-    gap: 0.15rem;
+    gap: 0.1rem;
+    margin: 0 0 0.85rem;
+    padding: 0.45rem 0.7rem;
+    background: #d9edf7;
+    border: 1px solid #b8d4e3;
+    color: #245269;
+    font-size: 0.84rem;
 }
 
-.promotion-cell small {
-    color: #555;
+.lis-banner.closed {
+    background: #d9edf7;
+}
+
+.lis-banner.open {
+    background: #dff0d8;
+    border-color: #c1e2b3;
+    color: #3c763d;
+}
+
+.lis-status {
+    margin: 0 0 0.75rem;
+    color: #444;
+    font-size: 0.88rem;
+}
+
+.lis-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+}
+
+.lis-search {
+    width: min(320px, 100%);
+    border: 1px solid #c5c5c5;
+    background: #fff;
+    padding: 0.4rem 0.55rem;
+    font-size: 0.88rem;
+}
+
+.lis-year {
+    width: auto;
+    min-width: 140px;
+}
+
+.lis-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.65rem;
+    align-items: start;
+}
+
+.lis-column {
+    background: #fff;
+    border: 1px solid #d4d4d4;
+    min-width: 0;
+}
+
+.lis-column-head {
+    background: #003366;
+    color: #fff;
+    font-size: 0.92rem;
+    font-weight: 600;
+    padding: 0.45rem 0.65rem;
+    border-bottom: 1px solid #00264d;
+}
+
+.lis-column-body {
+    padding: 0.35rem 0.45rem 0.55rem;
+}
+
+.lis-section {
+    padding: 0.45rem 0.25rem 0.55rem;
+    border-bottom: 1px solid #ececec;
+}
+
+.lis-section:last-child {
+    border-bottom: 0;
+}
+
+.lis-section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.lis-section-name {
+    color: #1a4f9c;
+    font-weight: 700;
+    font-size: 0.86rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.lis-count {
+    min-width: 1.7rem;
+    background: #2b2b2b;
+    color: #fff;
     font-size: 0.75rem;
+    font-weight: 700;
+    text-align: center;
+    padding: 0.12rem 0.35rem;
 }
 
-.status-badge.eligible {
-    color: #1f6b3a;
-    border-color: #1f6b3a;
+.lis-view-btn {
+    display: inline-flex;
+    margin-top: 0.35rem;
+    margin-left: auto;
+    background: #e8e8e8;
+    color: #222;
+    border: 1px solid #c8c8c8;
+    text-decoration: none;
+    font-size: 0.78rem;
+    padding: 0.2rem 0.55rem;
 }
 
-.status-badge.failed {
-    color: #9b1c1c;
-    border-color: #9b1c1c;
+.lis-view-btn:hover {
+    background: #ddd;
 }
 
-.status-badge.incomplete,
-.status-badge.no_record {
-    color: #9a6700;
-    border-color: #9a6700;
+.lis-empty {
+    margin: 0.5rem 0.25rem;
+    color: #777;
+    font-size: 0.82rem;
 }
 
-.status-badge.already_promoted,
-.status-badge.completed {
-    color: #003366;
-    border-color: #c9a227;
+@media (max-width: 1100px) {
+    .lis-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-.btn-icon:disabled {
-    opacity: 0.45;
-    cursor: not-allowed;
+@media (max-width: 640px) {
+    .lis-page {
+        margin: -1rem;
+        padding: 1rem;
+    }
+
+    .lis-grid {
+        grid-template-columns: 1fr;
+    }
 }
 </style>

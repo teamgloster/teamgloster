@@ -101,41 +101,139 @@ class RegistrarController extends Controller
         ]);
     }
 
-    public function students(StudentPromotionService $promotionService): Response
+    public function students(Request $request): Response
     {
-        $schoolYear = SchoolSetting::currentSchoolYear();
+        $settings = SchoolSetting::current();
+        $currentSchoolYear = $settings->current_school_year;
+        $availableSchoolYears = Section::query()
+            ->select('school_year')
+            ->distinct()
+            ->orderByDesc('school_year')
+            ->pluck('school_year')
+            ->filter()
+            ->values();
 
-        $students = User::query()
-            ->where('role', 'student')
-            ->orderBy('last_name')
-            ->orderBy('first_name')
+        if ($availableSchoolYears->isEmpty()) {
+            $availableSchoolYears = collect([$currentSchoolYear]);
+        } elseif (! $availableSchoolYears->contains($currentSchoolYear)) {
+            $availableSchoolYears->prepend($currentSchoolYear);
+        }
+
+        $schoolYear = (string) $request->query('sy', '');
+        if ($schoolYear === '') {
+            $yearWithMostSections = Section::query()
+                ->selectRaw('school_year, COUNT(*) as total')
+                ->where('is_active', true)
+                ->groupBy('school_year')
+                ->orderByDesc('total')
+                ->orderByDesc('school_year')
+                ->value('school_year');
+
+            $schoolYear = $yearWithMostSections ?: $currentSchoolYear;
+        }
+
+        if (! $availableSchoolYears->contains($schoolYear)) {
+            $schoolYear = $currentSchoolYear;
+        }
+
+        $sections = Section::query()
+            ->with('yearLevel')
+            ->withCount([
+                'enrollments as enrolled_count' => function ($query) use ($schoolYear) {
+                    $query->where('school_year', $schoolYear)
+                        ->whereIn('status', ['enrolled', 'approved']);
+                },
+            ])
+            ->where('school_year', $schoolYear)
+            ->where('is_active', true)
+            ->orderBy('name')
             ->get();
 
-        $enrollments = Enrollment::query()
-            ->with(['yearLevel', 'section'])
+        $unassignedCount = Enrollment::query()
             ->where('school_year', $schoolYear)
-            ->whereIn('user_id', $students->pluck('id'))
-            ->orderByDesc('id')
-            ->get()
-            ->unique('user_id')
-            ->keyBy('user_id');
-
-        $students->each(function (User $student) use ($enrollments) {
-            $student->setRelation('currentEnrollment', $enrollments->get($student->id));
-        });
-
-        $promotionService->attachSummaries($students, $schoolYear);
+            ->whereIn('status', ['enrolled', 'approved'])
+            ->whereNull('section_id')
+            ->count();
 
         return Inertia::render('Dashboard/Registrar/Students', [
             'user' => auth()->user(),
+            'yearLevels' => YearLevel::query()->ordered()->get(),
+            'sections' => $sections,
+            'unassignedCount' => $unassignedCount,
+            'currentSchoolYear' => $currentSchoolYear,
+            'selectedSchoolYear' => $schoolYear,
+            'availableSchoolYears' => $availableSchoolYears,
+            'enrollmentOpen' => (bool) $settings->enrollment_open,
+        ]);
+    }
+
+    public function sectionEnrollment(Section $section, StudentPromotionService $promotionService): Response
+    {
+        $schoolYear = SchoolSetting::currentSchoolYear();
+        $section->load('yearLevel');
+
+        $enrollments = Enrollment::query()
+            ->with(['user', 'yearLevel', 'section'])
+            ->where('section_id', $section->id)
+            ->where('school_year', $section->school_year ?: $schoolYear)
+            ->whereIn('status', ['enrolled', 'approved'])
+            ->get()
+            ->sortBy(fn (Enrollment $enrollment) => strtoupper(
+                trim(($enrollment->user?->last_name ?? '').' '.($enrollment->user?->first_name ?? ''))
+            ))
+            ->values();
+
+        $students = $enrollments
+            ->map(function (Enrollment $enrollment) {
+                $student = $enrollment->user;
+                if (! $student) {
+                    return null;
+                }
+
+                $student->setRelation('currentEnrollment', $enrollment);
+
+                return $student;
+            })
+            ->filter()
+            ->values();
+
+        $promotionService->attachSummaries($students, $schoolYear);
+
+        return Inertia::render('Dashboard/Registrar/SectionEnrollment', [
+            'user' => auth()->user(),
+            'section' => $section,
             'students' => $students,
-            'yearLevels' => YearLevel::ordered()->get(),
-            'sections' => Section::query()
-                ->with('yearLevel')
-                ->where('school_year', $schoolYear)
-                ->orderBy('year_level_id')
-                ->orderBy('name')
-                ->get(),
+            'yearLevels' => YearLevel::query()->ordered()->get(),
+            'currentSchoolYear' => $schoolYear,
+        ]);
+    }
+
+    public function studentEnrollment(User $student, StudentPromotionService $promotionService): Response
+    {
+        abort_unless($student->role === 'student', 404);
+
+        $schoolYear = SchoolSetting::currentSchoolYear();
+
+        $history = Enrollment::query()
+            ->with(['yearLevel', 'section', 'approvedBy:id,first_name,last_name'])
+            ->where('user_id', $student->id)
+            ->orderByDesc('school_year')
+            ->orderByDesc('id')
+            ->get();
+
+        $current = $history->first(
+            fn (Enrollment $enrollment) => $enrollment->school_year === $schoolYear
+        );
+
+        $student->setRelation('currentEnrollment', $current);
+        $student->setRelation('enrollments', $history);
+        $promotionService->attachSummaries([$student], $schoolYear);
+
+        return Inertia::render('Dashboard/Registrar/EnrollmentDetails', [
+            'user' => auth()->user(),
+            'student' => $student,
+            'currentEnrollment' => $current,
+            'enrollments' => $history,
             'currentSchoolYear' => $schoolYear,
         ]);
     }

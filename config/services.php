@@ -38,6 +38,12 @@ return [
     'groq' => [
         'key' => env('GROQ_API_KEY'),
         'transcription_model' => env('GROQ_TRANSCRIPTION_MODEL', 'whisper-large-v3-turbo'),
+        // Short utterances (a single grade like "eighty five") do not need
+        // large-v3's extra accuracy — turbo returns the digits ~3x faster.
+        'transcription_grade_model' => env(
+            'GROQ_TRANSCRIPTION_GRADE_MODEL',
+            'whisper-large-v3-turbo',
+        ),
         'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
     ],
 

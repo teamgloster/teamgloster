@@ -32,6 +32,10 @@
                     <div class="gov-stat-label">Rejected</div>
                     <div class="gov-stat-value">{{ rejectedCount }}</div>
                 </div>
+                <div class="gov-stat-box">
+                    <div class="gov-stat-label">Dropped</div>
+                    <div class="gov-stat-value">{{ droppedCount }}</div>
+                </div>
             </div>
 
             <!-- Header Actions -->
@@ -53,6 +57,7 @@
                             <option value="approved">Approved</option>
                             <option value="enrolled">Enrolled</option>
                             <option value="rejected">Rejected</option>
+                            <option value="dropped">Dropped</option>
                         </select>
                         <select v-model="yearLevelFilter" class="filter-select">
                             <option value="all">All Year Levels</option>
@@ -71,6 +76,14 @@
                         >
                             <Layers :size="18" />
                             Assign Sections
+                        </button>
+                        <button
+                            type="button"
+                            class="btn-primary"
+                            @click="openReshuffleModal"
+                        >
+                            <Shuffle :size="18" />
+                            Reshuffle by Grades
                         </button>
                         <button
                             type="button"
@@ -124,7 +137,8 @@
                             <th>Student</th>
                             <th>Year Level</th>
                             <th>Section</th>
-                            <th>GWA</th>
+                            <th>Admission GWA</th>
+                            <th>Teacher GWA</th>
                             <th>Admission Status</th>
                             <th>Enrollment Status</th>
                             <th>Actions</th>
@@ -204,6 +218,20 @@
                             </td>
                             <td>
                                 <span
+                                    class="gwa-display"
+                                    :class="getGwaClass(enrollment.teacher_gwa)"
+                                >
+                                    {{
+                                        enrollment.teacher_gwa
+                                            ? parseFloat(
+                                                  enrollment.teacher_gwa,
+                                              ).toFixed(2)
+                                            : "-"
+                                    }}
+                                </span>
+                            </td>
+                            <td>
+                                <span
                                     class="status-badge"
                                     :class="
                                         enrollment.user?.admission_status ||
@@ -267,11 +295,19 @@
                                     >
                                         <UserCheck :size="16" />
                                     </button>
+                                    <button
+                                        v-if="canDrop(enrollment)"
+                                        class="btn-icon reject"
+                                        @click="openDropModal(enrollment)"
+                                        title="Mark as drop-out"
+                                    >
+                                        <UserMinus :size="16" />
+                                    </button>
                                 </div>
                             </td>
                         </tr>
                         <tr v-if="filteredEnrollments.length === 0">
-                            <td colspan="8" class="empty-table">
+                            <td colspan="9" class="empty-table">
                                 <div class="empty-message">
                                     <Users :size="40" />
                                     <p>No enrollments found</p>
@@ -1088,6 +1124,17 @@
                                         </label>
                                     </div>
                                 </div>
+                                <label class="method-option">
+                                    <input
+                                        type="checkbox"
+                                        v-model="useTeacherGrades"
+                                    />
+                                    <span>
+                                        <strong>Use teacher-entered grades</strong>
+                                        Rank students from encoded final grades
+                                        instead of admission GWA.
+                                    </span>
+                                </label>
                                 <p class="bulk-assign-count">
                                     {{ bulkAssignCount }} student(s) ready for
                                     section assignment.
@@ -1122,6 +1169,208 @@
                 </div>
             </Transition>
         </Teleport>
+
+        <Teleport to="body">
+            <Transition name="modal">
+                <div
+                    v-if="showReshuffleModal"
+                    class="modal-overlay"
+                    @click.self="closeReshuffleModal"
+                >
+                    <div class="modal-container">
+                        <div class="modal-header section-header">
+                            <h3>
+                                <Shuffle :size="22" />
+                                Reshuffle Sections by Grades
+                            </h3>
+                            <button
+                                class="close-btn"
+                                @click="closeReshuffleModal"
+                            >
+                                <X :size="20" />
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="assign-section-form">
+                                <p class="bulk-assign-intro">
+                                    Reassign every approved or enrolled student
+                                    in the selected year level using the grades
+                                    already encoded by teachers. This replaces
+                                    current section assignments.
+                                </p>
+                                <div class="form-group">
+                                    <label>Year Level <span class="required">*</span></label>
+                                    <select v-model="reshuffleYearLevelId">
+                                        <option
+                                            v-for="level in yearLevels"
+                                            :key="level.id"
+                                            :value="level.id"
+                                        >
+                                            {{ level.name }}
+                                        </option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Assignment Method</label>
+                                    <div class="method-options">
+                                        <label
+                                            class="method-option"
+                                            :class="{
+                                                selected:
+                                                    reshuffleMethod === 'gwa',
+                                            }"
+                                        >
+                                            <input
+                                                type="radio"
+                                                value="gwa"
+                                                v-model="reshuffleMethod"
+                                            />
+                                            <span>
+                                                <strong>Based on GWA</strong>
+                                                Highest teacher GWA students are
+                                                grouped together.
+                                            </span>
+                                        </label>
+                                        <label
+                                            class="method-option"
+                                            :class="{
+                                                selected:
+                                                    reshuffleMethod ===
+                                                    'mixed',
+                                            }"
+                                        >
+                                            <input
+                                                type="radio"
+                                                value="mixed"
+                                                v-model="reshuffleMethod"
+                                            />
+                                            <span>
+                                                <strong>Mixed</strong>
+                                                Each section gets a mix of high
+                                                and low teacher GWA.
+                                            </span>
+                                        </label>
+                                        <label
+                                            class="method-option"
+                                            :class="{
+                                                selected:
+                                                    reshuffleMethod ===
+                                                    'shuffle',
+                                            }"
+                                        >
+                                            <input
+                                                type="radio"
+                                                value="shuffle"
+                                                v-model="reshuffleMethod"
+                                            />
+                                            <span>
+                                                <strong>Shuffle</strong>
+                                                Even random distribution after
+                                                ranking is ignored.
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                                <p class="bulk-assign-count">
+                                    {{ reshuffleCount }} student(s) in this year
+                                    level will be reassigned.
+                                    {{ reshuffleGradedCount }} already have
+                                    teacher-entered grades.
+                                </p>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn-secondary"
+                                @click="closeReshuffleModal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                class="btn-primary"
+                                :disabled="
+                                    isSubmitting || reshuffleCount === 0
+                                "
+                                @click="submitReshuffle"
+                            >
+                                <Loader2
+                                    v-if="isSubmitting"
+                                    :size="18"
+                                    class="spin"
+                                />
+                                Reshuffle Sections
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <Teleport to="body">
+            <Transition name="modal">
+                <div
+                    v-if="showDropModal"
+                    class="modal-overlay"
+                    @click.self="closeDropModal"
+                >
+                    <div class="modal-container">
+                        <div class="modal-header">
+                            <h3>Mark as drop-out</h3>
+                            <button class="close-btn" @click="closeDropModal">
+                                <X :size="20" />
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <p>
+                                Mark
+                                <strong>
+                                    {{ enrollmentToDrop?.user?.last_name }},
+                                    {{ enrollmentToDrop?.user?.first_name }}
+                                </strong>
+                                as a drop-out for this school year? This is
+                                included in the enrollment summary dropout rate.
+                            </p>
+                            <label>Remarks</label>
+                            <textarea
+                                v-model="dropRemarks"
+                                rows="3"
+                                placeholder="Reason for leaving, if known"
+                            ></textarea>
+                        </div>
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn-secondary"
+                                @click="closeDropModal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                class="btn-danger"
+                                :disabled="isSubmitting"
+                                @click="submitDrop"
+                            >
+                                Confirm drop-out
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <ConfirmModal
+            :show="showReshuffleConfirm"
+            title="Reshuffle Sections"
+            message="This will reassign all students in the selected year level based on teacher-entered grades. Continue?"
+            confirm-label="Reshuffle"
+            :danger="false"
+            :busy="isSubmitting"
+            @cancel="showReshuffleConfirm = false"
+            @confirm="confirmReshuffle"
+        />
     </AdminLayout>
 </template>
 
@@ -1130,6 +1379,7 @@ import { ref, computed, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+import ConfirmModal from "@/Components/ConfirmModal.vue";
 import {
     Users,
     Search,
@@ -1139,6 +1389,8 @@ import {
     Layers,
     CheckCircle,
     UserCheck,
+    UserMinus,
+    Shuffle,
     X,
     Loader2,
     ChevronLeft,
@@ -1207,6 +1459,14 @@ const showBulkApproveModal = ref(false);
 const showBulkAssignModal = ref(false);
 const bulkAssignMethod = ref("gwa");
 const bulkYearLevelId = ref("all");
+const useTeacherGrades = ref(false);
+const showReshuffleModal = ref(false);
+const showReshuffleConfirm = ref(false);
+const reshuffleMethod = ref("gwa");
+const reshuffleYearLevelId = ref("");
+const showDropModal = ref(false);
+const enrollmentToDrop = ref(null);
+const dropRemarks = ref("");
 
 // Computed
 const pendingCount = computed(() => {
@@ -1223,6 +1483,10 @@ const enrolledCount = computed(() => {
 
 const rejectedCount = computed(() => {
     return props.enrollments.filter((e) => e.status === "rejected").length;
+});
+
+const droppedCount = computed(() => {
+    return props.enrollments.filter((e) => e.status === "dropped").length;
 });
 
 const filteredEnrollments = computed(() => {
@@ -1323,6 +1587,12 @@ const canAssignSection = (enrollment) => {
     );
 };
 
+const canDrop = (enrollment) => {
+    return (
+        enrollment.status === "approved" || enrollment.status === "enrolled"
+    );
+};
+
 const isSelected = (id) => {
     return selectedIds.value.map((selected) => Number(selected)).includes(Number(id));
 };
@@ -1365,6 +1635,31 @@ const bulkAssignCount = computed(() => {
         if (bulkYearLevelId.value === "all") return true;
         return (
             String(enrollment.year_level_id) === String(bulkYearLevelId.value)
+        );
+    }).length;
+});
+
+const reshuffleCount = computed(() => {
+    if (!reshuffleYearLevelId.value) return 0;
+    return props.enrollments.filter((enrollment) => {
+        return (
+            (enrollment.status === "approved" ||
+                enrollment.status === "enrolled") &&
+            String(enrollment.year_level_id) ===
+                String(reshuffleYearLevelId.value)
+        );
+    }).length;
+});
+
+const reshuffleGradedCount = computed(() => {
+    if (!reshuffleYearLevelId.value) return 0;
+    return props.enrollments.filter((enrollment) => {
+        return (
+            (enrollment.status === "approved" ||
+                enrollment.status === "enrolled") &&
+            String(enrollment.year_level_id) ===
+                String(reshuffleYearLevelId.value) &&
+            enrollment.teacher_gwa
         );
     }).length;
 });
@@ -1722,6 +2017,7 @@ const submitBulkAssign = () => {
 
     const payload = {
         method: bulkAssignMethod.value,
+        gwa_source: useTeacherGrades.value ? "teacher_grades" : "admission",
     };
 
     if (bulkYearLevelId.value !== "all") {
@@ -1744,6 +2040,91 @@ const submitBulkAssign = () => {
             isSubmitting.value = false;
         },
     });
+};
+
+const openReshuffleModal = () => {
+    reshuffleMethod.value = "gwa";
+    reshuffleYearLevelId.value =
+        yearLevelFilter.value !== "all"
+            ? yearLevelFilter.value
+            : props.yearLevels[0]?.id || "";
+    showReshuffleModal.value = true;
+};
+
+const closeReshuffleModal = () => {
+    showReshuffleModal.value = false;
+    showReshuffleConfirm.value = false;
+};
+
+const submitReshuffle = () => {
+    if (!reshuffleYearLevelId.value || reshuffleCount.value === 0) return;
+    showReshuffleConfirm.value = true;
+};
+
+const confirmReshuffle = () => {
+    isSubmitting.value = true;
+    router.post(
+        "/admin/enrollments/reshuffle-by-grades",
+        {
+            method: reshuffleMethod.value,
+            year_level_id: reshuffleYearLevelId.value,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                toast.success(
+                    page.props.flash?.success ||
+                        "Sections reshuffled from teacher grades.",
+                );
+                closeReshuffleModal();
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(firstError || "Failed to reshuffle sections.");
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+                showReshuffleConfirm.value = false;
+            },
+        },
+    );
+};
+
+const openDropModal = (enrollment) => {
+    enrollmentToDrop.value = enrollment;
+    dropRemarks.value = "";
+    showDropModal.value = true;
+};
+
+const closeDropModal = () => {
+    showDropModal.value = false;
+    enrollmentToDrop.value = null;
+    dropRemarks.value = "";
+};
+
+const submitDrop = () => {
+    if (!enrollmentToDrop.value) return;
+    isSubmitting.value = true;
+    router.post(
+        `/admin/enrollments/${enrollmentToDrop.value.id}/drop`,
+        { remarks: dropRemarks.value },
+        {
+            preserveScroll: true,
+            onSuccess: (page) => {
+                toast.success(
+                    page.props.flash?.success || "Student marked as drop-out.",
+                );
+                closeDropModal();
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(firstError || "Failed to mark drop-out.");
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
+        },
+    );
 };
 </script>
 
@@ -1882,5 +2263,12 @@ const submitBulkAssign = () => {
 .page-btn:disabled {
     opacity: 0.45;
     cursor: not-allowed;
+}
+
+.modal-body textarea {
+    width: 100%;
+    margin-top: 0.4rem;
+    border: 1px solid #bdbdbd;
+    padding: 0.45rem 0.55rem;
 }
 </style>

@@ -3,6 +3,7 @@
 use App\Models\Enrollment;
 use App\Models\Grade;
 use App\Models\SchoolSetting;
+use App\Models\Section;
 use App\Models\Subject;
 use App\Models\User;
 use App\Models\YearLevel;
@@ -312,6 +313,37 @@ test('admin can bulk promote only eligible students', function () {
 
     expect(Enrollment::where('user_id', $passing->id)->value('year_level_id'))->toBe($grade8->id);
     expect(Enrollment::where('user_id', $failing->id)->value('year_level_id'))->toBe($grade7->id);
+});
+
+test('admin students page shows year level and section from latest enrollment', function () {
+    SchoolSetting::current()->update([
+        'current_school_year' => '2026-2027',
+    ]);
+
+    $admin = createAdmin();
+    $student = createStudent();
+    ['grade7' => $grade7] = createYearLevelsAndSubjects();
+
+    $section = Section::create([
+        'name' => 'Ruby',
+        'code' => 'G7-RUBY',
+        'year_level_id' => $grade7->id,
+        'school_year' => '2025-2026',
+        'capacity' => 40,
+        'is_active' => true,
+    ]);
+
+    $enrollment = enrollStudent($student, $grade7, '2025-2026');
+    $enrollment->update(['section_id' => $section->id]);
+
+    $this->actingAs($admin)
+        ->get('/admin/students')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Admin/Students')
+            ->where('students.0.current_enrollment.year_level.name', 'Grade 7')
+            ->where('students.0.current_enrollment.section.name', 'Ruby')
+        );
 });
 
 test('admin students page includes promotion summaries', function () {

@@ -104,7 +104,9 @@
                         <div class="sf-sign-role">Prepared by: Class Adviser</div>
                     </div>
                     <div class="sf-sign">
-                        <div class="sf-sign-line">{{ dash(school_head) }}</div>
+                        <div class="sf-sign-line">
+                            {{ dash(school_head || school.school_head) }}
+                        </div>
                         <div class="sf-sign-role">Certified Correct: School Head</div>
                     </div>
                     <div class="sf-seal-box">Dry seal</div>

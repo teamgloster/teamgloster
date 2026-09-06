@@ -1033,6 +1033,7 @@ onMounted(() => {
 .modal-container {
     background: white;
     border: 1px solid #c5c5c5;
+    border-radius: 0;
     padding: 0;
     max-width: 420px;
     width: 90%;
@@ -1069,6 +1070,7 @@ onMounted(() => {
     border: 1px solid #bdbdbd;
     cursor: pointer;
     font-weight: 600;
+    border-radius: 0;
 }
 
 .btn-danger {
@@ -1078,6 +1080,7 @@ onMounted(() => {
     border: none;
     cursor: pointer;
     font-weight: 600;
+    border-radius: 0;
 }
 
 @media (max-width: 768px) {

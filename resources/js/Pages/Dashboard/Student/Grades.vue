@@ -13,7 +13,10 @@
                         <div class="banner-icon"><BarChart3 :size="40" /></div>
                         <div class="banner-text">
                             <h2>Academic Grades</h2>
-                            <p>View your academic grades and performance</p>
+                            <p>
+                                These ratings appear on both your SF9 report
+                                card and your SP-10 / SF10 permanent record.
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -80,7 +83,7 @@
                                         Generate SF9
                                     </Link>
                                     <Link href="/student/sf10" class="sf-link">
-                                        Generate SF10
+                                        Generate SP-10
                                     </Link>
                                 </div>
                             </div>
@@ -149,7 +152,7 @@
                             >Generate SF9</Link
                         >
                         <Link href="/student/sf10" class="sf-link"
-                            >Generate SF10</Link
+                            >Generate SP-10</Link
                         >
                     </div>
                 </div>

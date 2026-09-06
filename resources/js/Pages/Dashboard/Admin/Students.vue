@@ -74,6 +74,9 @@
                                 <template v-else>
                                     {{ section.name }}
                                 </template>
+                                <template v-if="section.school_year">
+                                    ({{ section.school_year }})
+                                </template>
                             </option>
                         </select>
                         <select v-model="genderFilter" class="filter-select">
@@ -178,16 +181,10 @@
                             </td>
                             <td>
                                 <span
-                                    v-if="
-                                        student.current_enrollment?.year_level
-                                            ?.name
-                                    "
+                                    v-if="studentYearLevelName(student)"
                                     class="year-level-badge"
                                 >
-                                    {{
-                                        student.current_enrollment.year_level
-                                            .name
-                                    }}
+                                    {{ studentYearLevelName(student) }}
                                 </span>
                                 <span v-else class="text-muted">—</span>
                             </td>
@@ -220,15 +217,10 @@
                             </td>
                             <td>
                                 <span
-                                    v-if="
-                                        student.current_enrollment?.section
-                                            ?.name
-                                    "
+                                    v-if="studentSectionName(student)"
                                     class="section-badge"
                                 >
-                                    {{
-                                        student.current_enrollment.section.name
-                                    }}
+                                    {{ studentSectionName(student) }}
                                 </span>
                                 <span v-else class="text-muted">
                                     Not assigned
@@ -1128,6 +1120,21 @@ const formatDateFull = (dateString) => {
     });
 };
 
+const studentYearLevelName = (student) =>
+    student.current_enrollment?.year_level?.name ||
+    student.promotion?.current_year_level?.name ||
+    student.promotion?.source_year_level?.name ||
+    "";
+
+const studentSectionName = (student) =>
+    student.current_enrollment?.section?.name || "";
+
+const studentYearLevelId = (student) =>
+    student.current_enrollment?.year_level_id ||
+    student.promotion?.current_year_level?.id ||
+    student.promotion?.source_year_level?.id ||
+    null;
+
 const availableFilterSections = computed(() => {
     if (yearLevelFilter.value === "all") {
         return props.sections;
@@ -1145,7 +1152,7 @@ const filteredStudents = computed(() => {
     if (yearLevelFilter.value !== "all") {
         result = result.filter(
             (student) =>
-                String(student.current_enrollment?.year_level_id) ===
+                String(studentYearLevelId(student)) ===
                 String(yearLevelFilter.value),
         );
     }

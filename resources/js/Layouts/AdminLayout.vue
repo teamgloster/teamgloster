@@ -66,6 +66,22 @@
                         <FileText class="nav-icon" :size="20" />
                         <span class="nav-text">School Forms</span>
                     </Link>
+                    <Link
+                        :href="route('admin.permanent-records')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'permanent-records' }"
+                    >
+                        <FolderSearch class="nav-icon" :size="20" />
+                        <span class="nav-text">SP-10 Records</span>
+                    </Link>
+                    <Link
+                        :href="route('admin.enrollment-summary')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'enrollment-summary' }"
+                    >
+                        <BarChart3 class="nav-icon" :size="20" />
+                        <span class="nav-text">Enrollment Summary</span>
+                    </Link>
                 </div>
 
                 <div class="nav-group">
@@ -201,6 +217,8 @@ import {
     UserCheck,
     FileCheck,
     FileText,
+    FolderSearch,
+    BarChart3,
     Settings,
 } from "lucide-vue-next";
 

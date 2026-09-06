@@ -12,7 +12,15 @@
 
         <p class="hub-intro">
             Generate official DepEd school forms. SF1 and SF2 are prepared by
-            section. SF9 and SF10 are prepared per learner.
+            section. SF9 and SP-10 / SF10 are prepared per learner. Teacher
+            grades are entered once and apply to both the report card and the
+            permanent record.
+        </p>
+        <p v-if="viewer !== 'teacher'" class="hub-intro">
+            <Link :href="`${basePath}/permanent-records`" class="hub-inline">
+                Open the SP-10 finder
+            </Link>
+            to search all Tambo NHS learners and upload old Form 137 files.
         </p>
 
         <div class="form-cards">
@@ -132,7 +140,7 @@
         </div>
 
         <div v-if="activeForm === 'sf9'" class="gov-panel">
-            <div class="gov-panel-bar">SF9 — Learner's Progress Report Card</div>
+            <div class="gov-panel-bar">SF9 — Learner's Performance Report</div>
             <div class="panel-body">
                 <p class="panel-note">
                     Formerly Form 138. Filter by year level and term, then
@@ -211,12 +219,12 @@
 
         <div v-if="activeForm === 'sf10'" class="gov-panel">
             <div class="gov-panel-bar">
-                SF10 — Learner's Permanent Academic Record
+                SP-10 / SF10 — Learner's Permanent Academic Record
             </div>
             <div class="panel-body">
                 <p class="panel-note">
-                    Formerly Form 137. Filter by year level, then generate the
-                    permanent academic record.
+                    Formerly Form 137. Search any learner, then generate the
+                    permanent academic record from the same grades used on SF9.
                 </p>
                 <div class="field-row">
                     <div class="field">
@@ -265,7 +273,7 @@
                                         class="hub-mini"
                                         :href="`${basePath}/students/${student.id}/sf10`"
                                     >
-                                        Generate SF10
+                                        Generate SP-10
                                     </Link>
                                 </td>
                             </tr>
@@ -313,14 +321,14 @@ const formOptions = [
     {
         id: "sf9",
         code: "SF9",
-        name: "Progress Report Card",
-        description: "Formerly Form 138",
+        name: "Learner's Performance Report",
+        description: "SF9 / formerly Form 138",
     },
     {
         id: "sf10",
-        code: "SF10",
+        code: "SP-10",
         name: "Permanent Academic Record",
-        description: "Formerly Form 137",
+        description: "SF10 / formerly Form 137",
     },
 ];
 
@@ -388,7 +396,7 @@ const filteredStudents = computed(() => {
         });
     }
 
-    return list.slice(0, 40);
+    return list;
 });
 
 const sf1Url = computed(() =>
@@ -435,6 +443,11 @@ const studentName = (student) => {
     margin: 0 0 0.85rem;
     color: #444;
     font-size: 0.88rem;
+}
+
+.hub-inline {
+    color: #003366;
+    font-weight: 700;
 }
 
 .form-cards {

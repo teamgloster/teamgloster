@@ -98,15 +98,20 @@
                                 />
                             </div>
                             <div class="form-group">
-                                <label>School Head</label>
+                                <label
+                                    >School Head / Principal
+                                    <span class="required">*</span></label
+                                >
                                 <input
                                     v-model="settingsForm.school_head"
                                     type="text"
-                                    placeholder="Name of Principal / School Head"
+                                    required
+                                    placeholder="e.g., Juan Dela Cruz"
                                 />
                                 <p class="field-help">
-                                    Printed on SF9 and SF10 with Region,
-                                    Division, District, and School ID.
+                                    This name is printed automatically on the
+                                    School Head signature line of SF1, SF2, SF9,
+                                    and SP-10.
                                 </p>
                             </div>
                         </div>
@@ -163,22 +168,115 @@
                                     >Current School Year
                                     <span class="required">*</span></label
                                 >
-                                <input
-                                    v-model="settingsForm.current_school_year"
-                                    type="text"
-                                    required
-                                    placeholder="2026-2027"
-                                />
+                                <div class="sy-dropdown">
+                                    <button
+                                        type="button"
+                                        class="sy-dropdown-toggle"
+                                        @click="yearMenuOpen = !yearMenuOpen"
+                                    >
+                                        <span>
+                                            {{
+                                                settingsForm.current_school_year
+                                                    ? `SY ${settingsForm.current_school_year}`
+                                                    : "Set up a school year first"
+                                            }}
+                                        </span>
+                                        <span class="sy-caret">▾</span>
+                                    </button>
+                                    <div
+                                        v-if="yearMenuOpen"
+                                        class="sy-dropdown-menu"
+                                    >
+                                        <p
+                                            v-if="academicYears.length === 0"
+                                            class="sy-empty"
+                                        >
+                                            No school years yet. Add one below.
+                                        </p>
+                                        <div
+                                            v-for="item in academicYears"
+                                            :key="item.id"
+                                            class="sy-option"
+                                            :class="{
+                                                selected:
+                                                    item.year ===
+                                                    settingsForm.current_school_year,
+                                            }"
+                                        >
+                                            <button
+                                                type="button"
+                                                class="sy-option-label"
+                                                @click="selectSchoolYear(item.year)"
+                                            >
+                                                SY {{ item.year }}
+                                                <small v-if="item.is_current"
+                                                    >(current)</small
+                                                >
+                                            </button>
+                                            <button
+                                                type="button"
+                                                class="sy-remove"
+                                                :disabled="!item.can_remove"
+                                                :title="
+                                                    item.can_remove
+                                                        ? 'Remove this school year'
+                                                        : 'Cannot remove the current year or a year that already has records'
+                                                "
+                                                @click.stop="
+                                                    removeSchoolYear(item)
+                                                "
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
                                 <p class="field-help">
-                                    Use consecutive years, e.g. 2026-2027. This
-                                    is the school year used for enrollments,
-                                    sections, and grades.
+                                    Only school years you set up appear here.
+                                    Choose one as current, or remove a year that
+                                    is not in use.
                                 </p>
                                 <p
                                     v-if="errors.current_school_year"
                                     class="field-error"
                                 >
                                     {{ errors.current_school_year }}
+                                </p>
+                            </div>
+                            <div class="form-group">
+                                <label>Add school year</label>
+                                <div class="sy-add-row">
+                                    <input
+                                        v-model.number="newStartYear"
+                                        type="number"
+                                        min="2000"
+                                        max="2100"
+                                        placeholder="Start year"
+                                    />
+                                    <span class="sy-preview">{{
+                                        newYearPreview
+                                    }}</span>
+                                    <button
+                                        type="button"
+                                        class="btn-secondary"
+                                        :disabled="
+                                            isSavingYear || !newYearPreview
+                                        "
+                                        @click="addSchoolYear"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                                <p class="field-help">
+                                    Enter the starting year. The system saves it
+                                    as consecutive years, e.g. 2026 becomes
+                                    2026-2027.
+                                </p>
+                                <p
+                                    v-if="errors.start_year"
+                                    class="field-error"
+                                >
+                                    {{ errors.start_year }}
                                 </p>
                             </div>
                             <div class="form-group">
@@ -305,15 +403,30 @@
                 </form>
             </div>
         </div>
+
+        <ConfirmModal
+            :show="!!yearToRemove"
+            title="Remove School Year"
+            :message="
+                yearToRemove
+                    ? `Remove school year ${yearToRemove.year}? This cannot be undone.`
+                    : ''
+            "
+            confirm-label="Remove"
+            :busy="isSavingYear"
+            @cancel="yearToRemove = null"
+            @confirm="confirmRemoveSchoolYear"
+        />
     </AdminLayout>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { router, usePage } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import { Loader2 } from "lucide-vue-next";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+import ConfirmModal from "@/Components/ConfirmModal.vue";
 
 const props = defineProps({
     user: {
@@ -324,14 +437,114 @@ const props = defineProps({
         type: Object,
         required: true,
     },
+    academicYears: {
+        type: Array,
+        default: () => [],
+    },
+    officialSchoolYears: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const toast = useToast();
 const page = usePage();
 const errors = computed(() => page.props.errors || {});
 
+watch(
+    () => page.props.flash,
+    (flash) => {
+        if (flash?.error) {
+            toast.error(flash.error);
+        }
+    },
+);
+
 const isSavingSettings = ref(false);
 const isSavingPassword = ref(false);
+const isSavingYear = ref(false);
+const yearMenuOpen = ref(false);
+const newStartYear = ref("");
+const yearToRemove = ref(null);
+
+const newYearPreview = computed(() => {
+    const start = Number(newStartYear.value);
+    if (!Number.isInteger(start) || start < 2000 || start > 2100) {
+        return "";
+    }
+    return `${start}-${start + 1}`;
+});
+
+const closeYearMenu = () => {
+    yearMenuOpen.value = false;
+};
+
+const onDocumentClick = (event) => {
+    const root = event.target.closest?.(".sy-dropdown");
+    if (!root) {
+        closeYearMenu();
+    }
+};
+
+onMounted(() => document.addEventListener("mousedown", onDocumentClick));
+onUnmounted(() => document.removeEventListener("mousedown", onDocumentClick));
+
+const selectSchoolYear = (year) => {
+    settingsForm.value.current_school_year = year;
+    closeYearMenu();
+};
+
+const addSchoolYear = () => {
+    if (!newYearPreview.value) return;
+    isSavingYear.value = true;
+    router.post(
+        "/admin/settings/school-years",
+        { start_year: Number(newStartYear.value) },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success(`School year ${newYearPreview.value} was added.`);
+                settingsForm.value.current_school_year = newYearPreview.value;
+                newStartYear.value = "";
+            },
+            onError: (formErrors) => {
+                const firstError = Object.values(formErrors)[0];
+                toast.error(firstError || "Could not add that school year.");
+            },
+            onFinish: () => {
+                isSavingYear.value = false;
+            },
+        },
+    );
+};
+
+const removeSchoolYear = (item) => {
+    if (!item.can_remove) return;
+    yearToRemove.value = item;
+};
+
+const confirmRemoveSchoolYear = () => {
+    const item = yearToRemove.value;
+    if (!item?.can_remove) return;
+    isSavingYear.value = true;
+    router.delete(`/admin/settings/school-years/${item.id}`, {
+        preserveScroll: true,
+        onSuccess: () => {
+            toast.success(`School year ${item.year} was removed.`);
+            if (settingsForm.value.current_school_year === item.year) {
+                settingsForm.value.current_school_year =
+                    props.settings.current_school_year || "";
+            }
+        },
+        onError: () => {
+            toast.error("Could not remove that school year.");
+        },
+        onFinish: () => {
+            isSavingYear.value = false;
+            yearToRemove.value = null;
+        },
+    });
+};
 
 const settingsForm = ref({
     school_name: props.settings.school_name || "",
@@ -493,6 +706,109 @@ const savePassword = () => {
 
 .gov-two-col .gov-panel {
     margin-bottom: 0;
+}
+
+.sy-dropdown {
+    position: relative;
+}
+
+.sy-dropdown-toggle {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.45rem 0.55rem;
+    border: 1px solid #bdbdbd;
+    background: #fff;
+    color: #1a1a1a;
+    font-size: 0.9rem;
+    text-align: left;
+    cursor: pointer;
+}
+
+.sy-caret {
+    color: #555;
+}
+
+.sy-dropdown-menu {
+    position: absolute;
+    z-index: 20;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid #bdbdbd;
+    max-height: 220px;
+    overflow-y: auto;
+}
+
+.sy-empty {
+    margin: 0;
+    padding: 0.7rem 0.75rem;
+    font-size: 0.82rem;
+    color: #555;
+}
+
+.sy-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    border-bottom: 1px solid #eee;
+}
+
+.sy-option:last-child {
+    border-bottom: none;
+}
+
+.sy-option.selected {
+    background: #e8eef5;
+}
+
+.sy-option-label {
+    flex: 1;
+    border: 0;
+    background: transparent;
+    text-align: left;
+    padding: 0.55rem 0.7rem;
+    color: #1a1a1a;
+    cursor: pointer;
+}
+
+.sy-option-label small {
+    color: #003366;
+    margin-left: 0.35rem;
+}
+
+.sy-remove {
+    margin-right: 0.45rem;
+    border: 1px solid #c45c5c;
+    background: #fff;
+    color: #9b1c1c;
+    font-size: 0.75rem;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+}
+
+.sy-remove:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.sy-add-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.sy-add-row input {
+    width: 8rem;
+}
+
+.sy-preview {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #003366;
+    min-width: 5.5rem;
 }
 
 .field-help {

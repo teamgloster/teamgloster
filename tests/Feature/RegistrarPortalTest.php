@@ -140,6 +140,51 @@ test('registrar can view year levels sections and grading records', function () 
             ->component('Dashboard/Registrar/Grades')
             ->has('records', 1)
             ->where('records.0.remarks', 'Passed'));
+
+    $this->actingAs($registrar)
+        ->get('/registrar/students')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Registrar/Students')
+            ->has('sections', 1)
+            ->where('sections.0.name', 'Rizal')
+            ->where('sections.0.enrolled_count', 1)
+            ->where('selectedSchoolYear', '2025-2026')
+            ->has('yearLevels', 2));
+
+    $this->actingAs($registrar)
+        ->get("/registrar/sections/{$section->id}/enrollment")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Registrar/SectionEnrollment')
+            ->where('section.id', $section->id)
+            ->has('students', 1)
+            ->where('students.0.last_name', 'Reyes')
+            ->where('students.0.current_enrollment.status', 'enrolled'));
+
+    $this->actingAs($registrar)
+        ->get("/registrar/students/{$student->id}/enrollment")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Registrar/EnrollmentDetails')
+            ->where('student.id', $student->id)
+            ->where('currentEnrollment.status', 'enrolled')
+            ->where('currentEnrollment.section.name', 'Rizal')
+            ->has('enrollments', 1));
+
+    $this->actingAs($registrar)
+        ->get("/registrar/students/{$student->id}/sf9")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/SchoolForms/Sf9')
+            ->where('viewer', 'registrar'));
+
+    $this->actingAs($registrar)
+        ->get("/registrar/students/{$student->id}/sf10")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/SchoolForms/Sf10')
+            ->where('viewer', 'registrar'));
 });
 
 test('registrar can promote a student who passed', function () {

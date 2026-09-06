@@ -37,17 +37,26 @@ class TranscriptionController extends Controller
         }
 
         $file = $request->file('audio');
-        // Short utterances (a single grade) hallucinate on turbo. Always
-        // use the configured model, defaulting to large-v3 for accuracy.
-        $model = config('services.groq.transcription_model', 'whisper-large-v3');
+        $mode = $request->input('mode');
+        // Short utterances (a single grade digit) use the turbo model — it
+        // returns numbers in ~200–400 ms compared with 1–2 s on large-v3.
+        // Longer utterances (student names) stay on the more accurate model.
+        $defaultModel = config('services.groq.transcription_model', 'whisper-large-v3-turbo');
+        $gradeModel = config('services.groq.transcription_grade_model', $defaultModel);
+        $model = $mode === 'grade' ? $gradeModel : $defaultModel;
         $baseUrl = rtrim((string) config('services.groq.base_url', 'https://api.groq.com/openai/v1'), '/');
 
         try {
-            $response = Http::timeout(20)
+            // Stream the audio directly from disk instead of loading the whole
+            // blob into memory. Cuts backend latency on the grade path by a
+            // few hundred milliseconds and keeps memory flat under load.
+            $stream = fopen($file->getRealPath(), 'rb');
+            $response = Http::timeout(10)
+                ->connectTimeout(5)
                 ->withToken($apiKey)
                 ->attach(
                     'file',
-                    file_get_contents($file->getRealPath()),
+                    $stream,
                     $file->getClientOriginalName() ?: 'audio.webm',
                     ['Content-Type' => $file->getMimeType() ?: 'audio/webm']
                 )
@@ -59,6 +68,9 @@ class TranscriptionController extends Controller
                     'temperature' => '0',
                     'prompt' => $request->input('prompt'),
                 ]));
+            if (is_resource($stream)) {
+                @fclose($stream);
+            }
         } catch (\Throwable $e) {
             Log::error('Groq transcription request failed', ['error' => $e->getMessage()]);
 

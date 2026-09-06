@@ -143,6 +143,11 @@ class User extends Authenticatable
         return $this->hasMany(Enrollment::class);
     }
 
+    public function permanentRecords(): HasMany
+    {
+        return $this->hasMany(StudentPermanentRecord::class, 'student_id');
+    }
+
     public function previousYearLevel(?string $currentSchoolYear = null): ?YearLevel
     {
         $query = $this->enrollments()

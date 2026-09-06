@@ -3,6 +3,8 @@
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EnrollmentSummaryController;
+use App\Http\Controllers\PermanentRecordController;
 use App\Http\Controllers\RegistrarController;
 use App\Http\Controllers\SchoolFormController;
 use App\Http\Controllers\StudentEnrollmentController;
@@ -55,6 +57,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/school-forms/sf2/{section}', [SchoolFormController::class, 'adminSf2'])->name('admin.school-forms.sf2');
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'adminSf9'])->name('admin.students.sf9');
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'adminSf10'])->name('admin.students.sf10');
+        Route::get('/permanent-records', [PermanentRecordController::class, 'adminIndex'])->name('admin.permanent-records');
+        Route::post('/students/{student}/permanent-records', [PermanentRecordController::class, 'store'])->name('admin.permanent-records.store');
+        Route::get('/permanent-records/{record}/download', [PermanentRecordController::class, 'download'])->name('admin.permanent-records.download');
+        Route::delete('/permanent-records/{record}', [PermanentRecordController::class, 'destroy'])->name('admin.permanent-records.destroy');
+        Route::get('/enrollment-summary', [EnrollmentSummaryController::class, 'adminIndex'])->name('admin.enrollment-summary');
     });
 
     Route::get('/dashboard/registrar', function () {
@@ -65,17 +72,27 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [RegistrarController::class, 'dashboard'])->name('registrar.dashboard');
         Route::get('/year-levels', [RegistrarController::class, 'yearLevels'])->name('registrar.year-levels');
         Route::get('/sections', [RegistrarController::class, 'sections'])->name('registrar.sections');
+        Route::get('/sections/{section}/enrollment', [RegistrarController::class, 'sectionEnrollment'])->name('registrar.sections.enrollment');
         Route::get('/grades', [RegistrarController::class, 'grades'])->name('registrar.grades');
         Route::get('/students', [RegistrarController::class, 'students'])->name('registrar.students');
+        Route::get('/students/{student}/enrollment', [RegistrarController::class, 'studentEnrollment'])->name('registrar.students.enrollment');
         Route::post('/students/promote-selected', [RegistrarController::class, 'promoteSelected']);
         Route::post('/students/{student}/promote', [RegistrarController::class, 'promoteStudent']);
         Route::put('/students/{student}/year-level', [RegistrarController::class, 'changeStudentYearLevel']);
+        Route::get('/students/{student}/sf9', [SchoolFormController::class, 'registrarSf9'])->name('registrar.students.sf9');
+        Route::get('/students/{student}/sf10', [SchoolFormController::class, 'registrarSf10'])->name('registrar.students.sf10');
+        Route::get('/permanent-records', [PermanentRecordController::class, 'registrarIndex'])->name('registrar.permanent-records');
+        Route::post('/students/{student}/permanent-records', [PermanentRecordController::class, 'store'])->name('registrar.permanent-records.store');
+        Route::get('/permanent-records/{record}/download', [PermanentRecordController::class, 'download'])->name('registrar.permanent-records.download');
+        Route::delete('/permanent-records/{record}', [PermanentRecordController::class, 'destroy'])->name('registrar.permanent-records.destroy');
+        Route::get('/enrollment-summary', [EnrollmentSummaryController::class, 'registrarIndex'])->name('registrar.enrollment-summary');
     });
 
     Route::get('/dashboard/teacher', [DashboardController::class, 'teacher'])
         ->middleware('role:teacher');
 
     Route::middleware('role:teacher')->prefix('teacher')->group(function () {
+        Route::get('/subjects/{subject}/students', [DashboardController::class, 'teacherSubjectStudents'])->name('teacher.subjects.students');
         Route::get('/school-forms/sf1/{section}', [SchoolFormController::class, 'teacherSf1'])->name('teacher.school-forms.sf1');
         Route::get('/school-forms/sf2/{section}', [SchoolFormController::class, 'teacherSf2'])->name('teacher.school-forms.sf2');
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'teacherSf9'])->name('teacher.students.sf9');
@@ -152,6 +169,8 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/enrollments/enroll-selected', [AdminController::class, 'enrollSelected']);
         Route::post('/enrollments/{enrollment}/assign-section', [AdminController::class, 'assignSection']);
         Route::post('/enrollments/auto-assign-sections', [AdminController::class, 'autoAssignSections']);
+        Route::post('/enrollments/reshuffle-by-grades', [AdminController::class, 'reshuffleSectionsByGrades']);
+        Route::post('/enrollments/{enrollment}/drop', [AdminController::class, 'dropEnrollment']);
 
         // Year level management
         Route::post('/year-levels', [AdminController::class, 'storeYearLevel']);
@@ -189,5 +208,7 @@ Route::middleware(['auth'])->group(function () {
         // School settings
         Route::put('/settings', [AdminController::class, 'updateSettings']);
         Route::put('/settings/password', [AdminController::class, 'updateAdminPassword']);
+        Route::post('/settings/school-years', [AdminController::class, 'storeAcademicYear'])->name('admin.school-years.store');
+        Route::delete('/settings/school-years/{academicYear}', [AdminController::class, 'destroyAcademicYear'])->name('admin.school-years.destroy');
     });
 });

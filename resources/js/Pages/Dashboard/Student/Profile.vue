@@ -32,7 +32,7 @@
                             </button>
                             <button
                                 v-if="profilePhotoUrl"
-                                @click="removePhoto"
+                                @click="showRemovePhotoModal = true"
                                 class="avatar-btn remove-btn"
                                 title="Remove Photo"
                             >
@@ -258,6 +258,15 @@
                 </div>
             </div>
         </div>
+
+        <ConfirmModal
+            :show="showRemovePhotoModal"
+            title="Remove Photo"
+            message="Remove your profile photo?"
+            confirm-label="Remove"
+            @cancel="showRemovePhotoModal = false"
+            @confirm="confirmRemovePhoto"
+        />
     </StudentLayout>
 </template>
 
@@ -266,6 +275,7 @@ import { ref, computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
+import ConfirmModal from "@/Components/ConfirmModal.vue";
 import { Camera, Trash2, Pencil, X, Save } from "lucide-vue-next";
 
 const toast = useToast();
@@ -278,6 +288,7 @@ const isEditing = ref(false);
 const isSaving = ref(false);
 const photoInput = ref(null);
 const isUploadingPhoto = ref(false);
+const showRemovePhotoModal = ref(false);
 
 const profilePhotoUrl = computed(() =>
     props.user.profile_photo ? `/storage/${props.user.profile_photo}` : null,
@@ -356,10 +367,12 @@ const uploadPhoto = (file) => {
     });
 };
 
-const removePhoto = () => {
-    if (!confirm("Remove profile photo?")) return;
+const confirmRemovePhoto = () => {
     router.delete("/profile/photo", {
-        onSuccess: () => toast.success("Photo removed"),
+        onSuccess: () => {
+            showRemovePhotoModal.value = false;
+            toast.success("Photo removed");
+        },
         onError: () => toast.error("Failed to remove photo"),
     });
 };

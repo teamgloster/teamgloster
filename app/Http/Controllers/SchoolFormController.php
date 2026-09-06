@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Enrollment;
 use App\Models\SchoolSetting;
 use App\Models\Section;
+use App\Models\SectionSubjectTeacher;
+use App\Models\StudentPermanentRecord;
 use App\Models\User;
 use App\Models\YearLevel;
 use App\Services\SchoolFormService;
@@ -48,18 +50,25 @@ class SchoolFormController extends Controller
             ->get(['id', 'name', 'code']);
 
         $enrollments = Enrollment::query()
-            ->where('school_year', $schoolYear)
             ->whereIn('status', ['enrolled', 'approved'])
-            ->with('yearLevel')
+            ->with(['yearLevel', 'section'])
+            ->orderByDesc('school_year')
+            ->orderByDesc('id')
             ->get()
+            ->unique('user_id')
             ->keyBy('user_id');
+
+        $fileCounts = StudentPermanentRecord::query()
+            ->selectRaw('student_id, count(*) as total')
+            ->groupBy('student_id')
+            ->pluck('total', 'student_id');
 
         $students = User::query()
             ->where('role', 'student')
             ->orderBy('last_name')
             ->orderBy('first_name')
-            ->get(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'lrn', 'gender'])
-            ->map(function (User $student) use ($enrollments) {
+            ->get(['id', 'first_name', 'middle_name', 'last_name', 'suffix', 'lrn', 'gender', 'year_level_applying'])
+            ->map(function (User $student) use ($enrollments, $fileCounts) {
                 $enrollment = $enrollments->get($student->id);
 
                 return [
@@ -71,7 +80,9 @@ class SchoolFormController extends Controller
                     'lrn' => $student->lrn,
                     'gender' => $student->gender,
                     'year_level_id' => $enrollment?->year_level_id,
-                    'year_level' => $enrollment?->yearLevel?->name,
+                    'year_level' => $enrollment?->yearLevel?->name ?? $student->year_level_applying,
+                    'section' => $enrollment?->section?->name,
+                    'uploaded_count' => (int) ($fileCounts[$student->id] ?? 0),
                 ];
             });
 
@@ -166,25 +177,49 @@ class SchoolFormController extends Controller
 
     public function teacherSf9(Request $request, User $student, SchoolFormService $forms): Response
     {
-        $this->assertAdvisoryStudent($request->user(), $student);
+        $this->assertTeacherCanViewStudent($request->user(), $student);
 
         return $this->preview(
             'Dashboard/SchoolForms/Sf9',
             $forms->sf9($student, $request->query('school_year'), $this->requestedTerm($request)),
             'teacher',
-            '/dashboard/teacher?nav=school-forms'
+            '/dashboard/teacher?nav=grades'
         );
     }
 
     public function teacherSf10(Request $request, User $student, SchoolFormService $forms): Response
     {
-        $this->assertAdvisoryStudent($request->user(), $student);
+        $this->assertTeacherCanViewStudent($request->user(), $student);
 
         return $this->preview(
             'Dashboard/SchoolForms/Sf10',
             $forms->sf10($student),
             'teacher',
-            '/dashboard/teacher?nav=school-forms'
+            '/dashboard/teacher?nav=grades'
+        );
+    }
+
+    public function registrarSf9(Request $request, User $student, SchoolFormService $forms): Response
+    {
+        abort_unless($student->role === 'student', 404);
+
+        return $this->preview(
+            'Dashboard/SchoolForms/Sf9',
+            $forms->sf9($student, $request->query('school_year'), $this->requestedTerm($request)),
+            'registrar',
+            route('registrar.students.enrollment', $student)
+        );
+    }
+
+    public function registrarSf10(User $student, SchoolFormService $forms): Response
+    {
+        abort_unless($student->role === 'student', 404);
+
+        return $this->preview(
+            'Dashboard/SchoolForms/Sf10',
+            $forms->sf10($student),
+            'registrar',
+            route('registrar.students.enrollment', $student)
         );
     }
 
@@ -207,21 +242,34 @@ class SchoolFormController extends Controller
         ]));
     }
 
-    private function assertAdvisoryStudent(User $teacher, User $student): void
+    private function assertTeacherCanViewStudent(User $teacher, User $student): void
     {
         abort_unless($student->role === 'student', 404);
 
-        $sectionIds = Section::query()
+        $advisorySectionIds = Section::query()
             ->where('adviser_id', $teacher->id)
             ->pluck('id');
 
-        $isAdvisory = Enrollment::query()
+        $taughtSectionIds = SectionSubjectTeacher::query()
+            ->where('teacher_id', $teacher->id)
+            ->pluck('section_id');
+
+        if ($taughtSectionIds->isEmpty()) {
+            $yearLevelIds = $teacher->teachableSubjects()->pluck('year_level_id')->filter();
+            $taughtSectionIds = Section::query()
+                ->whereIn('year_level_id', $yearLevelIds)
+                ->pluck('id');
+        }
+
+        $sectionIds = $advisorySectionIds->merge($taughtSectionIds)->unique()->filter();
+
+        $canView = $sectionIds->isNotEmpty() && Enrollment::query()
             ->where('user_id', $student->id)
             ->whereIn('section_id', $sectionIds)
             ->whereIn('status', ['enrolled', 'approved'])
             ->exists();
 
-        abort_unless($isAdvisory, 403);
+        abort_unless($canView, 403);
     }
 
     private function assertAdvisorySection(User $teacher, Section $section): void

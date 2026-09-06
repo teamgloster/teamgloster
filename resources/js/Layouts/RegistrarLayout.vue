@@ -58,6 +58,22 @@
                         <Users class="nav-icon" :size="20" />
                         <span class="nav-text">Students</span>
                     </Link>
+                    <Link
+                        :href="route('registrar.permanent-records')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'permanent-records' }"
+                    >
+                        <FolderSearch class="nav-icon" :size="20" />
+                        <span class="nav-text">SP-10 Records</span>
+                    </Link>
+                    <Link
+                        :href="route('registrar.enrollment-summary')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'enrollment-summary' }"
+                    >
+                        <BarChart3 class="nav-icon" :size="20" />
+                        <span class="nav-text">Enrollment Summary</span>
+                    </Link>
                 </div>
             </nav>
 
@@ -125,6 +141,8 @@ import {
     ClipboardList,
     Layers,
     Building,
+    FolderSearch,
+    BarChart3,
     LogOut,
     Menu,
 } from "lucide-vue-next";

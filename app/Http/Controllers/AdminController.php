@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Exceptions\StudentPromotionException;
+use App\Models\AcademicYear;
 use App\Models\Enrollment;
+use App\Models\Grade;
 use App\Models\SchoolSetting;
 use App\Models\Section;
 use App\Models\SectionSubjectTeacher;
@@ -14,6 +16,7 @@ use App\Models\User;
 use App\Models\YearLevel;
 use App\Services\SectionAssignmentService;
 use App\Services\StudentPromotionService;
+use App\Support\SchoolYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -346,12 +349,14 @@ class AdminController extends Controller
         $validated = $request->validate([
             'method' => 'required|in:gwa,mixed,shuffle',
             'year_level_id' => 'nullable|exists:year_levels,id',
+            'gwa_source' => 'nullable|in:admission,teacher_grades',
         ]);
 
         $result = $assignmentService->assign(
             $validated['method'],
             isset($validated['year_level_id']) ? (int) $validated['year_level_id'] : null,
             SchoolSetting::currentSchoolYear(),
+            $validated['gwa_source'] ?? 'admission',
         );
 
         if ($result['assigned'] === 0) {
@@ -371,6 +376,76 @@ class AdminController extends Controller
         }
 
         return back()->with('success', $message);
+    }
+
+    public function reshuffleSectionsByGrades(Request $request, SectionAssignmentService $assignmentService)
+    {
+        $validated = $request->validate([
+            'method' => 'required|in:gwa,mixed,shuffle',
+            'year_level_id' => 'required|exists:year_levels,id',
+            'preview' => 'nullable|boolean',
+        ]);
+
+        $preview = $request->boolean('preview');
+        $result = $assignmentService->reshuffleByTeacherGrades(
+            $validated['method'],
+            (int) $validated['year_level_id'],
+            SchoolSetting::currentSchoolYear(),
+            ! $preview,
+        );
+
+        if ($preview) {
+            return back()->with('reshufflePreview', $result);
+        }
+
+        if ($result['assigned'] === 0) {
+            $message = $result['message'];
+            if (! empty($result['warnings'])) {
+                $message .= ' '.implode('; ', $result['warnings']);
+            }
+
+            return back()->withErrors([
+                'assignment' => $message,
+            ]);
+        }
+
+        $message = $result['message'];
+        if (! empty($result['warnings'])) {
+            $message .= ' Warnings: '.implode('; ', $result['warnings']);
+        }
+
+        return back()->with('success', $message);
+    }
+
+    public function dropEnrollment(Request $request, Enrollment $enrollment)
+    {
+        $validated = $request->validate([
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        if (! in_array($enrollment->status, ['approved', 'enrolled'], true)) {
+            return back()->withErrors([
+                'enrollment' => 'Only approved or enrolled students can be marked as drop-outs.',
+            ]);
+        }
+
+        $note = trim((string) ($validated['remarks'] ?? ''));
+        $existing = trim((string) $enrollment->remarks);
+        $stamp = 'Marked as drop-out on '.now()->format('M d, Y').'.';
+        $remarks = trim($existing === '' ? $stamp : $existing."\n".$stamp);
+        if ($note !== '') {
+            $remarks .= ' '.$note;
+        }
+
+        $enrollment->update([
+            'status' => 'dropped',
+            'remarks' => $remarks,
+        ]);
+
+        $enrollment->loadMissing('user');
+        $name = trim(($enrollment->user?->first_name ?? '').' '.($enrollment->user?->last_name ?? 'Student'));
+
+        return back()->with('success', $name.' was marked as a drop-out.');
     }
 
     // ==================== YEAR LEVEL PROMOTION ====================
@@ -503,9 +578,27 @@ class AdminController extends Controller
             'year_level_id' => 'required|exists:year_levels,id',
             'adviser_id' => 'nullable|exists:users,id',
             'capacity' => 'nullable|integer|min:1|max:100',
-            'school_year' => 'required|string|max:20',
+            'school_year' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, $fail) {
+                if (! SchoolYear::isValid((string) $value)) {
+                    $fail('School year must be consecutive calendar years, e.g. 2026-2027.');
+                }
+            }],
             'is_active' => 'boolean',
         ]);
+
+        $validated['school_year'] = SchoolYear::normalize($validated['school_year']);
+
+        $duplicate = Section::query()
+            ->where('year_level_id', $validated['year_level_id'])
+            ->where('name', $validated['name'])
+            ->where('school_year', $validated['school_year'])
+            ->exists();
+
+        if ($duplicate) {
+            return back()->withErrors([
+                'school_year' => 'This section already exists for school year '.$validated['school_year'].'.',
+            ]);
+        }
 
         Section::create($validated);
 
@@ -682,12 +775,18 @@ class AdminController extends Controller
             'section_id' => 'required|exists:sections,id',
             'subject_id' => 'required|exists:subjects,id',
             'teacher_id' => 'required|exists:users,id',
-            'school_year' => 'required|string|max:20',
+            'school_year' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, $fail) {
+                if (! SchoolYear::isValid((string) $value)) {
+                    $fail('School year must be consecutive calendar years, e.g. 2026-2027.');
+                }
+            }],
             'semester' => 'nullable|in:first,second,full_year',
             'schedule' => 'nullable|string|max:100',
             'room' => 'nullable|string|max:50',
             'is_active' => 'boolean',
         ]);
+
+        $validated['school_year'] = SchoolYear::normalize($validated['school_year']);
 
         // Verify teacher can teach this subject
         $canTeach = TeacherSubject::where('teacher_id', $validated['teacher_id'])
@@ -797,22 +896,71 @@ class AdminController extends Controller
             'province' => 'nullable|string|max:255',
             'contact_number' => 'nullable|string|max:30',
             'email' => 'nullable|email|max:255',
-            'school_head' => 'nullable|string|max:255',
-            'current_school_year' => ['required', 'string', 'max:20', 'regex:/^\d{4}-\d{4}$/'],
+            'school_head' => 'required|string|max:255',
+            'current_school_year' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, $fail) {
+                if (! SchoolYear::isValid((string) $value)) {
+                    $fail('School year must be consecutive calendar years, e.g. 2026-2027.');
+                }
+            }],
             'current_term' => 'required|integer|in:1,2,3',
             'enrollment_open' => 'required|boolean',
         ]);
 
-        [$startYear, $endYear] = explode('-', $validated['current_school_year']);
-        if ((int) $endYear !== (int) $startYear + 1) {
+        $validated['current_school_year'] = SchoolYear::normalize($validated['current_school_year']);
+
+        if (! AcademicYear::query()->where('year', $validated['current_school_year'])->exists()) {
             return back()->withErrors([
-                'current_school_year' => 'School year must use consecutive years, e.g. 2026-2027.',
+                'current_school_year' => 'Add that school year first before setting it as current.',
             ]);
         }
 
         SchoolSetting::current()->update($validated);
 
         return back()->with('success', 'Settings saved successfully.');
+    }
+
+    public function storeAcademicYear(Request $request)
+    {
+        $validated = $request->validate([
+            'start_year' => ['required', 'integer', 'min:2000', 'max:2100'],
+        ]);
+
+        $year = SchoolYear::normalize((string) $validated['start_year']);
+        if (! $year) {
+            return back()->withErrors([
+                'start_year' => 'School year must be consecutive calendar years, e.g. 2026-2027.',
+            ]);
+        }
+
+        if (AcademicYear::query()->where('year', $year)->exists()) {
+            return back()->withErrors([
+                'start_year' => 'School year '.$year.' is already set up.',
+            ]);
+        }
+
+        AcademicYear::create(['year' => $year]);
+
+        $settings = SchoolSetting::current();
+        if (! $settings->current_school_year) {
+            $settings->update(['current_school_year' => $year]);
+        }
+
+        return back()->with('success', 'School year '.$year.' was added.');
+    }
+
+    public function destroyAcademicYear(AcademicYear $academicYear)
+    {
+        if ($academicYear->year === SchoolSetting::currentSchoolYear()) {
+            return back()->with('error', 'You cannot remove the current school year.');
+        }
+
+        if ($academicYear->isInUse()) {
+            return back()->with('error', 'You cannot remove '.$academicYear->year.' because it already has records.');
+        }
+
+        $academicYear->delete();
+
+        return back()->with('success', 'School year '.$academicYear->year.' was removed.');
     }
 
     public function updateAdminPassword(Request $request)

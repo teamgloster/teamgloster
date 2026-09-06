@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SchoolYear;
 use Illuminate\Database\Eloquent\Model;
 
 class SchoolSetting extends Model
@@ -41,7 +42,13 @@ class SchoolSetting extends Model
 
     public static function currentSchoolYear(): string
     {
-        return static::current()->current_school_year;
+        return SchoolYear::normalize(static::current()->current_school_year)
+            ?? static::current()->current_school_year;
+    }
+
+    public function setCurrentSchoolYearAttribute(?string $value): void
+    {
+        $this->attributes['current_school_year'] = SchoolYear::normalize($value) ?? $value;
     }
 
     public static function enrollmentOpen(): bool

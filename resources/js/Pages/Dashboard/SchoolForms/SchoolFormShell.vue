@@ -35,6 +35,7 @@
 import { computed } from "vue";
 import { router } from "@inertiajs/vue3";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
+import RegistrarLayout from "@/Layouts/RegistrarLayout.vue";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
 import TeacherLayout from "@/Layouts/TeacherLayout.vue";
 
@@ -53,12 +54,21 @@ const layoutComponent = computed(() => {
     if (props.viewer === "teacher") {
         return TeacherLayout;
     }
+    if (props.viewer === "registrar") {
+        return RegistrarLayout;
+    }
     return AdminLayout;
 });
 
-const navPage = computed(() =>
-    props.viewer === "student" ? "grades" : "school-forms",
-);
+const navPage = computed(() => {
+    if (props.viewer === "student") {
+        return "grades";
+    }
+    if (props.viewer === "registrar") {
+        return "students";
+    }
+    return "school-forms";
+});
 
 const goBack = () => {
     if (window.history.length > 1) {

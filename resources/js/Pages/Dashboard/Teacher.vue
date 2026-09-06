@@ -510,7 +510,7 @@
                     <div class="subjects-header-card">
                         <div class="subjects-header-left">
                             <div class="subjects-icon">
-                                <BookOpen :size="28" />
+                                <BookOpen :size="16" />
                             </div>
                             <div class="subjects-details">
                                 <h2>Subjects Handled</h2>
@@ -541,7 +541,7 @@
                         >
                             <div class="subject-card-header">
                                 <div class="subject-icon-wrapper">
-                                    <BookOpen :size="24" />
+                                    <BookOpen :size="16" />
                                 </div>
                                 <div class="subject-info">
                                     <h3 class="subject-name">
@@ -589,15 +589,13 @@
                                     </div>
                                 </div>
                                 <div class="subject-card-actions">
-                                    <button
+                                    <Link
                                         class="view-students-btn"
-                                        @click="
-                                            openSubjectStudentsModal(subject)
-                                        "
+                                        :href="`/teacher/subjects/${subject.id}/students`"
                                     >
                                         <Users :size="16" />
                                         <span>View Students</span>
-                                    </button>
+                                    </Link>
                                 </div>
                             </div>
                         </div>
@@ -627,6 +625,13 @@
                             <h2>Student Grades</h2>
                         </div>
                     </div>
+                    <p class="grade-once-note">
+                        Enter grades once. The same ratings are used on both
+                        the SF9 report card and the SP-10 / SF10 permanent
+                        record. Select a term first — you can only encode
+                        grades for that term. SF9 and SP-10 use the same
+                        saved ratings.
+                    </p>
 
                     <div class="management-header">
                         <div class="search-filter-container">
@@ -665,6 +670,19 @@
                                 >
                                     {{ section.name }}
                                 </option>
+                            </select>
+
+                            <select
+                                v-model="selectedGradeTerm"
+                                class="filter-select"
+                                :class="{
+                                    'term-required': !canEncodeGrades,
+                                }"
+                            >
+                                <option value="">Select Term</option>
+                                <option value="1">Term 1</option>
+                                <option value="2">Term 2</option>
+                                <option value="3">Term 3</option>
                             </select>
 
                             <!-- Unfinished Grades Filter Button -->
@@ -794,48 +812,69 @@
                                 ></div>
                             </div>
 
-                            <!-- Voice Mode Master Toggle -->
                             <button
                                 type="button"
                                 class="voice-mode-toggle"
-                                :class="{ active: voiceModeEnabled }"
+                                :class="{
+                                    active: voiceModeEnabled,
+                                    listening: voiceModeEnabled,
+                                }"
+                                :disabled="!canEncodeGrades"
                                 @click="toggleVoiceModeGlobal"
-                                title="Toggle voice input mode (F2)"
+                                :title="
+                                    canEncodeGrades
+                                        ? 'Start or stop voice grade entry (F2)'
+                                        : 'Select a term first'
+                                "
                             >
                                 <Mic v-if="!voiceModeEnabled" :size="18" />
                                 <MicOff v-else :size="18" />
                                 <span>{{
-                                    voiceModeEnabled ? "Voice ON" : "Voice OFF"
+                                    voiceModeEnabled
+                                        ? "Stop Voice Input"
+                                        : "Input Grades via Voice"
                                 }}</span>
                                 <kbd class="shortcut-key">F2</kbd>
                             </button>
                         </div>
                     </div>
 
-                    <!-- Table Voice Status Bar -->
+                    <p v-if="!canEncodeGrades" class="term-lock-note">
+                        Select a term above before encoding grades.
+                    </p>
+
                     <div
                         v-if="voiceModeEnabled && !showGradeModal"
-                        class="table-voice-bar"
+                        class="table-voice-bar listening-banner"
                     >
-                        <div class="table-voice-status">
-                            <div class="voice-indicator">
+                        <div class="listening-main">
+                            <div class="voice-indicator listening">
+                                <span class="pulse-rings"></span>
                                 <span class="pulse-dot"></span>
-                                <Mic :size="18" class="mic-icon-active" />
+                                <Mic :size="20" class="mic-icon-active" />
                             </div>
-                            <span class="table-voice-text">{{
-                                tableVoiceStatus
-                            }}</span>
+                            <div class="listening-copy">
+                                <strong>The system is listening</strong>
+                                <span class="table-voice-text">{{
+                                    tableVoiceStatus
+                                }}</span>
+                            </div>
                         </div>
                         <div
                             v-if="voiceTranscript"
                             class="table-voice-transcript"
                         >
-                            {{ voiceTranscript }}
+                            Heard {{ voiceTranscript }}
                         </div>
                         <div class="table-voice-commands">
-                            <span class="command-tag">Say student name</span>
-                            <span class="command-tag">Edit</span>
-                            <span class="command-tag">Cancel</span>
+                            <span class="command-tag">1. Say the name</span>
+                            <span class="command-tag"
+                                >2. Wait for confirmation</span
+                            >
+                            <span class="command-tag">3. Say the grade</span>
+                            <span class="command-tag"
+                                >Only names &amp; grades are accepted</span
+                            >
                         </div>
                     </div>
 
@@ -855,9 +894,30 @@
                                         <th>LRN</th>
                                         <th>Section</th>
                                         <th>Subject</th>
-                                        <th>T1</th>
-                                        <th>T2</th>
-                                        <th>T3</th>
+                                        <th
+                                            :class="{
+                                                'active-term-col':
+                                                    selectedTermNumber === 1,
+                                            }"
+                                        >
+                                            T1
+                                        </th>
+                                        <th
+                                            :class="{
+                                                'active-term-col':
+                                                    selectedTermNumber === 2,
+                                            }"
+                                        >
+                                            T2
+                                        </th>
+                                        <th
+                                            :class="{
+                                                'active-term-col':
+                                                    selectedTermNumber === 3,
+                                            }"
+                                        >
+                                            T3
+                                        </th>
                                         <th>Final</th>
                                         <th>Actions</th>
                                     </tr>
@@ -957,20 +1017,57 @@
                                             <div class="action-buttons">
                                                 <button
                                                     class="action-btn edit"
+                                                    :disabled="!canEncodeGrades"
                                                     @click="
                                                         openGradeModal(grade)
                                                     "
-                                                    title="Edit Grades"
+                                                    :title="
+                                                        canEncodeGrades
+                                                            ? `Edit Term ${selectedTermNumber}`
+                                                            : 'Select a term first'
+                                                    "
                                                 >
                                                     <Pencil :size="16" />
                                                 </button>
+                                                <Link
+                                                    v-if="grade.student?.id"
+                                                    class="action-btn form-link"
+                                                    :href="`/teacher/students/${grade.student.id}/sf9`"
+                                                    title="Open SF9 report card"
+                                                >
+                                                    SF9
+                                                </Link>
+                                                <Link
+                                                    v-if="grade.student?.id"
+                                                    class="action-btn form-link"
+                                                    :href="`/teacher/students/${grade.student.id}/sf10`"
+                                                    title="Open SP-10 permanent record"
+                                                >
+                                                    SP10
+                                                </Link>
                                             </div>
                                         </td>
                                     </tr>
                                     <tr v-if="filteredGrades.length === 0">
                                         <td colspan="9" class="empty-state">
                                             <div class="empty-state-content">
-                                                <p>No grades found.</p>
+                                                <p v-if="studentGrades.length === 0">
+                                                    No students are assigned to
+                                                    you for
+                                                    <strong
+                                                        >SY
+                                                        {{ currentSchoolYear }}</strong
+                                                    >. Ask the administrator to
+                                                    set up your teaching
+                                                    assignments (Admin → Teacher
+                                                    Assignments) so learners
+                                                    for this school year
+                                                    appear here.
+                                                </p>
+                                                <p v-else>
+                                                    No grades match the
+                                                    selected filters.
+                                                </p>
                                             </div>
                                         </td>
                                     </tr>
@@ -1037,55 +1134,18 @@
                                         }}
                                     </h4>
                                     <span
+                                        v-if="selectedTermNumber"
+                                        class="grade-term-badge"
+                                    >
+                                        Encoding Term {{ selectedTermNumber }}
+                                    </span>
+                                    <span
                                         v-if="selectedGrade?.student?.lrn"
                                         class="grade-lrn-badge"
                                     >
                                         LRN: {{ selectedGrade.student.lrn }}
                                     </span>
                                 </div>
-                            </div>
-
-                            <div
-                                v-if="voiceModeEnabled"
-                                class="grade-voice-panel"
-                            >
-                                <div class="grade-voice-row">
-                                    <span class="grade-voice-label">
-                                        <span class="pulse-dot"></span>
-                                        Voice Mode Active
-                                    </span>
-                                    <span class="grade-voice-status">{{
-                                        voiceStatus
-                                    }}</span>
-                                    <button
-                                        type="button"
-                                        class="grade-voice-off"
-                                        @click="toggleVoiceRecognition"
-                                    >
-                                        <X :size="12" />
-                                        Turn Off
-                                    </button>
-                                </div>
-                                <div
-                                    v-if="voiceTranscript"
-                                    class="grade-voice-transcript"
-                                >
-                                    {{ voiceTranscript }}
-                                </div>
-                                <div class="grade-voice-hint">
-                                    Say a grade (60–100), or: Term 1 · Term 2
-                                    · Term 3 · Next · Back · Clear · Save
-                                </div>
-                            </div>
-                            <div v-else class="grade-voice-toggle-row">
-                                <button
-                                    type="button"
-                                    class="grade-voice-toggle-btn"
-                                    @click="toggleVoiceRecognition"
-                                >
-                                    <Mic :size="14" />
-                                    Enable Voice Input
-                                </button>
                             </div>
 
                             <div class="grade-detail-grid">
@@ -1123,8 +1183,9 @@
                                     class="grade-detail-item"
                                     :class="{
                                         'active-term':
-                                            voiceModeEnabled &&
-                                            currentVoiceQuarter === 1,
+                                            selectedTermNumber === 1,
+                                        'locked-term':
+                                            selectedTermNumber !== 1,
                                     }"
                                 >
                                     <label>1st Term</label>
@@ -1137,6 +1198,7 @@
                                         step="0.01"
                                         placeholder="—"
                                         class="grade-term-input"
+                                        :disabled="selectedTermNumber !== 1"
                                     />
                                     <span
                                         v-if="gradeForm.term_1"
@@ -1153,8 +1215,9 @@
                                     class="grade-detail-item"
                                     :class="{
                                         'active-term':
-                                            voiceModeEnabled &&
-                                            currentVoiceQuarter === 2,
+                                            selectedTermNumber === 2,
+                                        'locked-term':
+                                            selectedTermNumber !== 2,
                                     }"
                                 >
                                     <label>2nd Term</label>
@@ -1167,6 +1230,7 @@
                                         step="0.01"
                                         placeholder="—"
                                         class="grade-term-input"
+                                        :disabled="selectedTermNumber !== 2"
                                     />
                                     <span
                                         v-if="gradeForm.term_2"
@@ -1183,8 +1247,9 @@
                                     class="grade-detail-item"
                                     :class="{
                                         'active-term':
-                                            voiceModeEnabled &&
-                                            currentVoiceQuarter === 3,
+                                            selectedTermNumber === 3,
+                                        'locked-term':
+                                            selectedTermNumber !== 3,
                                     }"
                                 >
                                     <label>3rd Term</label>
@@ -1197,6 +1262,7 @@
                                         step="0.01"
                                         placeholder="—"
                                         class="grade-term-input"
+                                        :disabled="selectedTermNumber !== 3"
                                     />
                                     <span
                                         v-if="gradeForm.term_3"
@@ -1210,6 +1276,23 @@
                                     </span>
                                 </div>
                             </div>
+                            <p class="grade-once-inline">
+                                Saving once updates both SF9 and SP-10 for this
+                                learner.
+                                <Link
+                                    v-if="selectedGrade?.student?.id"
+                                    :href="`/teacher/students/${selectedGrade.student.id}/sf9`"
+                                >
+                                    Open SF9
+                                </Link>
+                                ·
+                                <Link
+                                    v-if="selectedGrade?.student?.id"
+                                    :href="`/teacher/students/${selectedGrade.student.id}/sf10`"
+                                >
+                                    Open SP-10
+                                </Link>
+                            </p>
                         </div>
 
                         <div class="grade-clean-footer">
@@ -1432,139 +1515,12 @@
             </Transition>
         </Teleport>
 
-        <!-- Subject Students Modal -->
-        <Teleport to="body">
-            <Transition name="modal">
-                <div
-                    v-if="showSubjectStudentsModal"
-                    class="modal-overlay"
-                    @click.self="closeSubjectStudentsModal"
-                >
-                    <div class="modal-container large subject-students-modal">
-                        <div class="modal-header gradient-header">
-                            <div class="header-content">
-                                <BookOpen :size="22" class="header-icon" />
-                                <div class="header-text">
-                                    <h3>{{ selectedSubjectForView?.name }}</h3>
-                                    <span class="header-subtitle"
-                                        >Enrolled Students</span
-                                    >
-                                </div>
-                            </div>
-                            <button
-                                class="close-btn"
-                                @click="closeSubjectStudentsModal"
-                            >
-                                <X :size="20" />
-                            </button>
-                        </div>
-                        <div class="modal-body subject-students-body">
-                            <!-- Search Box -->
-                            <div class="modal-search-bar">
-                                <div class="search-box-modal">
-                                    <Search :size="16" />
-                                    <input
-                                        v-model="subjectStudentsSearch"
-                                        type="text"
-                                        placeholder="Search students..."
-                                        class="search-input"
-                                    />
-                                </div>
-                                <span class="students-count-badge">
-                                    {{ filteredSubjectStudents.length }}
-                                    student{{
-                                        filteredSubjectStudents.length !== 1
-                                            ? "s"
-                                            : ""
-                                    }}
-                                </span>
-                            </div>
-
-                            <!-- Students List -->
-                            <div
-                                class="subject-students-list"
-                                v-if="filteredSubjectStudents.length > 0"
-                            >
-                                <div
-                                    v-for="student in filteredSubjectStudents"
-                                    :key="student.id"
-                                    class="subject-student-card"
-                                >
-                                    <div class="student-card-avatar">
-                                        <img
-                                            v-if="student.profile_photo"
-                                            :src="`/storage/${student.profile_photo}`"
-                                            alt="Profile"
-                                            class="avatar-img"
-                                        />
-                                        <span v-else class="avatar-initials">{{
-                                            getInitials(student)
-                                        }}</span>
-                                    </div>
-                                    <div class="student-card-info">
-                                        <h4 class="student-card-name">
-                                            {{ student.last_name }},
-                                            {{ student.first_name }}
-                                            {{
-                                                student.middle_name
-                                                    ? student.middle_name.charAt(
-                                                          0,
-                                                      ) + "."
-                                                    : ""
-                                            }}
-                                        </h4>
-                                        <div class="student-card-meta">
-                                            <span class="meta-item">
-                                                <Hash :size="12" />
-                                                {{ student.lrn || "N/A" }}
-                                            </span>
-                                            <span class="meta-item">
-                                                <Layers :size="12" />
-                                                {{ student.sectionName }}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div class="student-card-actions">
-                                        <button
-                                            class="icon-action-btn view"
-                                            @click="openStudentModal(student)"
-                                            title="View Details"
-                                        >
-                                            <Eye :size="18" />
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Empty State -->
-                            <div v-else class="empty-subject-students">
-                                <Users :size="48" />
-                                <p v-if="subjectStudentsSearch">
-                                    No students match your search
-                                </p>
-                                <p v-else>
-                                    No students enrolled in this subject
-                                </p>
-                            </div>
-                        </div>
-                        <div class="modal-footer">
-                            <button
-                                class="btn-secondary"
-                                @click="closeSubjectStudentsModal"
-                            >
-                                Close
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </Transition>
-        </Teleport>
     </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from "vue";
-import { router, Head } from "@inertiajs/vue3";
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
+import { router, Head, Link } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import SchoolFormsHub from "@/Pages/Dashboard/SchoolForms/SchoolFormsHub.vue";
 import {
@@ -1630,6 +1586,10 @@ const props = defineProps({
         type: [Number, String],
         default: null,
     },
+    schoolHead: {
+        type: String,
+        default: "",
+    },
 });
 
 const logo = "/images/311494412_220590550318716_333223840059485017_n.jpg";
@@ -1641,6 +1601,13 @@ const isSubmitting = ref(false);
 const gradeSearch = ref("");
 const selectedSubjectFilter = ref("all");
 const selectedSectionFilter = ref("all");
+const selectedGradeTerm = ref("");
+const canEncodeGrades = computed(() =>
+    ["1", "2", "3"].includes(String(selectedGradeTerm.value)),
+);
+const selectedTermNumber = computed(() =>
+    canEncodeGrades.value ? Number(selectedGradeTerm.value) : null,
+);
 const showGradeModal = ref(false);
 const selectedGrade = ref(null);
 const gradeForm = ref({
@@ -1696,6 +1663,7 @@ watch(currentVoiceQuarter, (newTerm) => {
 const tableVoiceActive = ref(false);
 const focusedGradeRow = ref(null); // The grade row currently focused by voice
 const tableVoiceStatus = ref("Say a student name to select...");
+const voiceTableSaving = ref(false);
 
 // Advisory Search/Filter State
 const advisorySearch = ref("");
@@ -1704,11 +1672,6 @@ const advisoryGenderFilter = ref("all");
 // Student Modal State
 const showStudentModal = ref(false);
 const selectedStudent = ref(null);
-
-// Subject Students Modal State
-const showSubjectStudentsModal = ref(false);
-const selectedSubjectForView = ref(null);
-const subjectStudentsSearch = ref("");
 
 // Print Options State
 const showPrintDropdown = ref(false);
@@ -1785,11 +1748,14 @@ const filteredGrades = computed(() => {
         );
     }
 
-    // Filter unfinished grades (missing any term or final grade)
+    // Filter unfinished grades. If a term is selected, only that term.
     if (showUnfinishedOnly.value) {
-        filtered = filtered.filter(
-            (g) => !g.term_1 || !g.term_2 || !g.term_3 || !g.final_grade,
-        );
+        filtered = filtered.filter((g) => {
+            if (selectedTermNumber.value === 1) return !g.term_1;
+            if (selectedTermNumber.value === 2) return !g.term_2;
+            if (selectedTermNumber.value === 3) return !g.term_3;
+            return !g.term_1 || !g.term_2 || !g.term_3 || !g.final_grade;
+        });
     }
 
     if (gradeSearch.value) {
@@ -1863,30 +1829,59 @@ const schoolFormSections = computed(() => {
 });
 
 const schoolFormYearLevels = computed(() => {
-    const yearLevel = props.advisorySection?.year_level;
-    if (!yearLevel) {
-        return [];
+    const map = new Map();
+    const advisoryYear = props.advisorySection?.year_level;
+    if (advisoryYear) {
+        map.set(advisoryYear.id || props.advisorySection.year_level_id, {
+            id: advisoryYear.id || props.advisorySection.year_level_id,
+            name: advisoryYear.name,
+        });
     }
 
-    return [
-        {
-            id: yearLevel.id || props.advisorySection.year_level_id,
-            name: yearLevel.name,
-        },
-    ];
+    (props.teacherSections || []).forEach((section) => {
+        const yearLevel = section.year_level;
+        const id = yearLevel?.id || section.year_level_id;
+        if (id && !map.has(id)) {
+            map.set(id, {
+                id,
+                name: yearLevel?.name || section.name,
+            });
+        }
+    });
+
+    return [...map.values()];
 });
 
 const schoolFormStudents = computed(() => {
-    const yearLevelId =
+    const map = new Map();
+    const advisoryYearLevelId =
         props.advisorySection?.year_level_id ||
         props.advisorySection?.year_level?.id;
-    const yearLevelName = props.advisorySection?.year_level?.name;
+    const advisoryYearLevelName = props.advisorySection?.year_level?.name;
 
-    return (props.advisoryStudents || []).map((student) => ({
-        ...student,
-        year_level_id: student.year_level_id || yearLevelId,
-        year_level: student.year_level || yearLevelName,
-    }));
+    (props.advisoryStudents || []).forEach((student) => {
+        map.set(student.id, {
+            ...student,
+            year_level_id: student.year_level_id || advisoryYearLevelId,
+            year_level: student.year_level || advisoryYearLevelName,
+        });
+    });
+
+    (props.studentGrades || []).forEach((grade) => {
+        const student = grade.student;
+        if (!student?.id || map.has(student.id)) {
+            return;
+        }
+
+        map.set(student.id, {
+            ...student,
+            year_level_id:
+                grade.section?.year_level_id || grade.section?.year_level?.id,
+            year_level: grade.section?.year_level?.name,
+        });
+    });
+
+    return [...map.values()];
 });
 
 const getPageTitle = computed(() => {
@@ -1962,6 +1957,11 @@ const getGradeLabel = (grade) => {
 };
 
 const openGradeModal = (grade) => {
+    if (!canEncodeGrades.value) {
+        toast.error("Select a term first before encoding grades.");
+        return;
+    }
+
     selectedGrade.value = grade;
     gradeForm.value = {
         term_1: grade.term_1,
@@ -1970,21 +1970,13 @@ const openGradeModal = (grade) => {
     };
     showGradeModal.value = true;
 
-    // Flip the voice pipeline to modal. Keep the microphone running — killing
-    // and re-requesting getUserMedia is why the first grade after opening
-    // the modal used to take 2–3 repeats.
-    currentVoiceMode = "modal";
+    // Manual entry only. Pause table listening while the teacher types.
+    currentVoiceMode = "table";
     groqGeneration++;
     clearPendingTens();
-
     cancelSpeech();
+    stopGroqStream();
     tableVoiceActive.value = false;
-    tablePromptCount = 0;
-    focusedGradeRow.value = null;
-
-    if (voiceModeEnabled.value) {
-        startVoiceRecognition();
-    }
 };
 
 const closeGradeModal = () => {
@@ -2000,10 +1992,9 @@ const closeGradeModal = () => {
     currentVoiceMode = "table";
     groqGeneration++;
 
-    // Restart table voice recognition if voice mode is still enabled
     if (voiceModeEnabled.value) {
         setTimeout(() => {
-            startTableVoiceRecognition();
+            startTableVoiceRecognition({ quiet: true });
         }, 100);
     }
 };
@@ -2131,17 +2122,16 @@ const VAD_SPEECH_THRESHOLD_NAME = 14;
 // teacher is saying a single two-digit number so the recorder cuts almost
 // as soon as the number is finished. Longer in table mode because a full
 // Filipino name can have a natural pause between first and last name.
-// 650ms keeps "eighty five" in one utterance. 400ms was cutting between
-// the tens and the ones, so Whisper only heard "eighty" and the ones
-// digit was thrown away — teacher had to repeat 2–3 times.
-const VAD_SILENCE_MS_GRADE = 650;
-const VAD_SILENCE_MS_CMD = 280; // next / save / edit — cut as soon as the word ends
-const VAD_SILENCE_MS_NAME = 700;
-const VAD_MIN_SPEECH_MS_CMD = 120; // grade / focused-command mode
-const VAD_MIN_SPEECH_MS_NAME = 350; // full-name utterance in table mode
-const VAD_MAX_UTTERANCE_MS = 6000; // hard cap per utterance
+// 500ms still keeps "eighty five" in one utterance while shaving ~150ms
+// off the perceived response time per grade.
+const VAD_SILENCE_MS_GRADE = 500;
+const VAD_SILENCE_MS_CMD = 220; // next / save / edit — cut as soon as the word ends
+const VAD_SILENCE_MS_NAME = 650;
+const VAD_MIN_SPEECH_MS_CMD = 90; // grade / focused-command mode
+const VAD_MIN_SPEECH_MS_NAME = 320; // full-name utterance in table mode
+const VAD_MAX_UTTERANCE_MS = 5000; // hard cap per utterance
 const VAD_MAX_IDLE_MS = 4000; // recycle recorder every N ms if no speech
-const VAD_TICK_MS = 50;
+const VAD_TICK_MS = 40;
 
 const isNameListenMode = () =>
     currentVoiceMode === "table" && !focusedGradeRow.value;
@@ -2155,7 +2145,7 @@ const currentSilenceMs = () => {
         const filled = gradeForm.value?.[termKey] != null;
         return filled ? VAD_SILENCE_MS_CMD : VAD_SILENCE_MS_GRADE;
     }
-    if (focusedGradeRow.value) return VAD_SILENCE_MS_CMD;
+    if (focusedGradeRow.value) return VAD_SILENCE_MS_GRADE;
     return VAD_SILENCE_MS_NAME;
 };
 
@@ -2278,19 +2268,12 @@ const stripPunctuation = (s) =>
 const PROMPT_MAX_CHARS = 900;
 const buildTranscriptionPrompt = () => {
     // Two very different prompts: numeric grade mode vs. student-name mode.
-    if (showGradeModal.value) {
-        // Numeric bias: front-load the prompt with concrete two-digit
-        // examples so Whisper's decoder assigns higher probability to
-        // digit tokens. The plain-English sentence at the end gives it
-        // context but the digit examples do the real work.
-        // Whisper's prompt is previous-transcript context, not instructions.
-        // A short run of real grades works better than listing 60–100
-        // (that list was leaking into the output as hallucinations).
-        return "85. 90. 75. 88. 92. 80. 95. 70. 78. 100. next. save.";
+    if (showGradeModal.value || focusedGradeRow.value) {
+        return "85. 90. 75. 88. 92. 80. 95. 70. 78. 100. next. cancel.";
     }
 
     const baseNames =
-        "The teacher will say a student's Filipino name (first and last name). Also possible commands: edit, cancel.";
+        "The teacher will say a student's Filipino name (first and last name). Also possible commands: next, cancel.";
     try {
         const seen = new Set();
         const names = [];
@@ -2472,6 +2455,17 @@ const startGroqStream = async () => {
             // Cheap guard: if the app started speaking / switched modes while
             // we were still holding the blob, skip the upload entirely.
             if (myGen !== groqGeneration) return;
+
+            // Instant feedback while we wait for Whisper — otherwise the
+            // teacher sees no change for ~500–1500 ms and thinks the mic is
+            // frozen.
+            if (
+                myMode === "table" &&
+                focusedGradeRow.value &&
+                !voiceTableSaving.value
+            ) {
+                tableVoiceStatus.value = "Heard you — transcribing...";
+            }
 
             const text = await uploadAudioChunk(blob, myMode);
             if (!text) return;
@@ -3081,6 +3075,14 @@ const isClearCommand = (word) => {
 };
 
 const goToTerm = (term) => {
+    if (
+        selectedTermNumber.value &&
+        Number(term) !== selectedTermNumber.value
+    ) {
+        showStatus(`Encoding Term ${selectedTermNumber.value} only`);
+        return;
+    }
+
     const t = Math.min(3, Math.max(1, term));
     // Set lastSpokenTerm first so the watcher does not speak "Term two"
     // and mute the mic — that mute is what made "next" feel delayed.
@@ -3301,6 +3303,11 @@ const focusQuarterInput = (quarter) => {
 
 // Global voice mode toggle (from header)
 const toggleVoiceModeGlobal = () => {
+    if (!voiceModeEnabled.value && !canEncodeGrades.value) {
+        toast.error("Select a term first before using voice grade entry.");
+        return;
+    }
+
     voiceModeEnabled.value = !voiceModeEnabled.value;
 
     if (voiceModeEnabled.value) {
@@ -3336,16 +3343,20 @@ const startVoiceRecognition = async () => {
     // Reuse the Groq audio stream. Transcripts recorded from now on are
     // stamped as "modal" so late-arriving results can be routed correctly.
     currentVoiceMode = "modal";
-    currentVoiceQuarter.value = 1;
-    lastSpokenTerm = 1;
-    focusQuarterInput(1);
+    const startTerm = selectedTermNumber.value || 1;
+    currentVoiceQuarter.value = startTerm;
+    lastSpokenTerm = startTerm;
+    focusQuarterInput(startTerm);
     clearPendingTens();
 
     const studentName = studentSpokenName(selectedGrade.value?.student);
-    const prompt = studentName ? `${studentName}. Term one.` : "Term one.";
+    const termWords = { 1: "one", 2: "two", 3: "three" };
+    const prompt = studentName
+        ? `${studentName}. Term ${termWords[startTerm]}.`
+        : `Term ${termWords[startTerm]}.`;
     voiceStatus.value = studentName
         ? `Entering grades for ${studentName}`
-        : "Listening — Term 1";
+        : `Listening — Term ${startTerm}`;
 
     // Start the mic BEFORE speaking so it is already open (muted) while
     // TTS plays. Previously we awaited TTS then called getUserMedia, and
@@ -3448,55 +3459,207 @@ const isEditCommand = (transcript) => {
 };
 
 const processTableVoiceCommand = (transcript, isFinal) => {
-    // Check for "edit" command - process immediately for snappy response.
-    // Whisper mishears the short word "edit" as "at it", "added", "add it",
-    // "adit", "editing", etc., so match on any of these variants and also
-    // do a per-word fuzzy check.
-    if (isEditCommand(transcript)) {
-        if (focusedGradeRow.value) {
-            tableVoiceStatus.value = `Opening ${studentSpokenName(focusedGradeRow.value.student)}'s grades...`;
-            // Stop table voice and open modal immediately
-            stopTableVoiceRecognition();
-            openGradeModal(focusedGradeRow.value);
-            return true;
-        } else {
-            tableVoiceStatus.value = "No student selected. Say a name first.";
-            return true;
-        }
-    }
-
-    // Check for "cancel" or "clear" to deselect - immediate
-    if (
-        transcript.includes("cancel") ||
-        transcript.includes("clear") ||
-        transcript.includes("deselect")
-    ) {
-        focusedGradeRow.value = null;
-        tableVoiceStatus.value = "Selection cleared. Say a student name...";
+    if (voiceTableSaving.value || ttsSpeaking) {
         return true;
     }
 
-    // Try to find a matching student - immediate on interim
+    // Strict mode: the voice pipeline only accepts two things —
+    //   1. A numeric grade (60–100)  → saved to the currently focused row
+    //   2. A student name            → jumps focus to that row
+    // A name is ALWAYS honored — even mid-flow — so the teacher can go
+    // back to a previously graded student and re-say the correct grade
+    // when Whisper misheard (e.g. 95 → 90). Anything that is neither a
+    // grade nor a matching name is silently ignored.
+
+    if (focusedGradeRow.value) {
+        const grade = extractGrade(transcript);
+        if (grade !== null) {
+            if (grade === 60 || grade === 70 || grade === 80 || grade === 90) {
+                clearPendingTens();
+                pendingTens = grade;
+                tableVoiceStatus.value = `Heard ${grade}...`;
+                pendingTensTimer = setTimeout(() => {
+                    if (pendingTens === grade) {
+                        saveVoiceTableGrade(focusedGradeRow.value, grade);
+                    }
+                }, 900);
+                return true;
+            }
+            saveVoiceTableGrade(focusedGradeRow.value, grade);
+            return true;
+        }
+
+        if (pendingTens !== null) {
+            const ones = extractOnesDigit(transcript);
+            if (ones !== null) {
+                const combined = pendingTens + ones;
+                clearPendingTens();
+                if (combined >= 60 && combined <= 100) {
+                    saveVoiceTableGrade(focusedGradeRow.value, combined);
+                    return true;
+                }
+            }
+        }
+
+        // No grade in this utterance — try treating it as a student name
+        // so the teacher can jump BACK to a previously graded student to
+        // correct a mis-heard value.
+        const jumpTarget = findStudentByVoice(transcript);
+        if (
+            jumpTarget &&
+            (jumpTarget.student?.id !== focusedGradeRow.value.student?.id ||
+                jumpTarget.subject_id !== focusedGradeRow.value.subject_id)
+        ) {
+            clearPendingTens();
+            focusStudentForVoice(jumpTarget, {
+                announce: true,
+                confirm: true,
+            });
+            return true;
+        }
+
+        // Neither a grade nor a different student's name — ignore.
+        if (typeof console !== "undefined") {
+            console.log("[voice] ignored non-grade in focused mode:", transcript);
+        }
+        return true;
+    }
+
     const matchedGrade = findStudentByVoice(transcript);
     if (matchedGrade) {
-        const previouslyFocused = focusedGradeRow.value;
-        focusedGradeRow.value = matchedGrade;
-        tableVoiceStatus.value = `${studentSpokenName(matchedGrade.student)} — say "edit" to open`;
-        // Scroll to the focused row
-        scrollToFocusedRow(matchedGrade);
-        // Confirm first and last name so the teacher can hear which student
-        // was matched before saying "edit".
-        if (
-            !previouslyFocused ||
-            previouslyFocused.student?.id !== matchedGrade.student?.id
-        ) {
-            const spoken = studentSpokenName(matchedGrade.student) || "Selected";
-            speakPrompt(spoken, { wait: false });
-        }
+        focusStudentForVoice(matchedGrade, {
+            announce: true,
+            confirm: true,
+        });
         return true;
     }
 
+    // Not a name — ignore. findStudentByVoice already updates the status.
     return false;
+};
+
+const averageFinalGrade = (term1, term2, term3) => {
+    const values = [term1, term2, term3]
+        .map((value) => parseFloat(value))
+        .filter((value) => !Number.isNaN(value) && value > 0);
+    if (values.length === 0) return null;
+    return (values.reduce((sum, value) => sum + value, 0) / values.length).toFixed(2);
+};
+
+const focusStudentForVoice = (
+    grade,
+    { announce = false, confirm = false } = {},
+) => {
+    focusedGradeRow.value = grade;
+    scrollToFocusedRow(grade);
+    clearPendingTens();
+    const name = studentSpokenName(grade.student) || "this student";
+    const term = selectedTermNumber.value || "";
+    tableVoiceStatus.value = confirm
+        ? `Confirmed ${name} — say the Term ${term} grade`
+        : `The system is listening — say ${name}'s Term ${term} grade`;
+    if (announce) {
+        const phrase = confirm
+            ? `${name}. Say the grade for term ${term}.`
+            : `Next student: ${name}. Say the grade.`;
+        speakPrompt(phrase, { wait: false });
+    }
+};
+
+const waitForVoiceUiToSettle = async () => {
+    await nextTick();
+    await new Promise((resolve) => {
+        requestAnimationFrame(() => {
+            requestAnimationFrame(() => setTimeout(resolve, 220));
+        });
+    });
+};
+
+const announceNextVoiceStudent = async (value, nextRow) => {
+    const term = selectedTermNumber.value || "";
+    const nextName = studentSpokenName(nextRow.student) || "the next student";
+    focusStudentForVoice(nextRow, { announce: false });
+    tableVoiceStatus.value = `Saved ${value}. Next: ${nextName}`;
+    // After the first student, only speak the next student's name. The
+    // teacher already knows the pattern — echoing "say the grade" every
+    // time gets repetitive and slows the flow.
+    await speakPrompt(`${nextName}.`, { wait: true });
+    if (voiceModeEnabled.value && focusedGradeRow.value) {
+        tableVoiceStatus.value = `The system is listening — say ${nextName}'s Term ${term} grade`;
+    }
+};
+
+const saveVoiceTableGrade = (row, value) => {
+    if (voiceTableSaving.value || !row || !selectedTermNumber.value) return;
+
+    const studentId = row.student?.id;
+    const subjectId = row.subject_id;
+    if (!studentId || !subjectId) return;
+
+    voiceTableSaving.value = true;
+    const term = selectedTermNumber.value;
+    const payload = {
+        term_1: term === 1 ? value : row.term_1,
+        term_2: term === 2 ? value : row.term_2,
+        term_3: term === 3 ? value : row.term_3,
+        section_id: row.section_id,
+    };
+    payload.final_grade = averageFinalGrade(
+        payload.term_1,
+        payload.term_2,
+        payload.term_3,
+    );
+
+    const name = studentSpokenName(row.student) || "Student";
+    tableVoiceStatus.value = `Saving ${name} — Term ${term} = ${value}`;
+
+    let saveSucceeded = false;
+
+    router.put(`/teacher/grades/${studentId}/${subjectId}`, payload, {
+        preserveState: true,
+        preserveScroll: true,
+        only: ["studentGrades"],
+        showProgress: false,
+        onSuccess: () => {
+            saveSucceeded = true;
+            toast.success(`${name}: Term ${term} = ${value}`);
+        },
+        onError: () => {
+            toast.error("Could not save the grade. Say it again.");
+            tableVoiceStatus.value = "Save failed. Say the grade again.";
+        },
+        onFinish: async () => {
+            if (!saveSucceeded || !voiceModeEnabled.value) {
+                voiceTableSaving.value = false;
+                return;
+            }
+
+            await waitForVoiceUiToSettle();
+
+            const nextHint = findNextIncompleteGrade(row);
+            try {
+                if (nextHint) {
+                    const refreshed =
+                        (filteredGrades.value || []).find(
+                            (grade) =>
+                                grade.student?.id === nextHint.student?.id &&
+                                grade.subject_id === nextHint.subject_id,
+                        ) || nextHint;
+                    await announceNextVoiceStudent(value, refreshed);
+                } else {
+                    focusedGradeRow.value = null;
+                    tableVoiceStatus.value =
+                        "All students for this term are done. Say a name or stop voice input.";
+                    await speakPrompt(
+                        `${value}. All grades for this term are complete.`,
+                        { wait: true },
+                    );
+                }
+            } finally {
+                voiceTableSaving.value = false;
+            }
+        },
+    });
 };
 
 // Levenshtein distance (small strings only) for fuzzy name matching.
@@ -3555,8 +3718,31 @@ const NAME_MATCH_STOPWORDS = new Set([
     "very", "much", "quite", "just",
 ]);
 
+// Search pool for voice name lookup. Uses the full studentGrades list so
+// the teacher can jump BACK to a student whose row is currently hidden by
+// the "Unfinished" filter (i.e. after their grade was saved, possibly with
+// the wrong value that needs correcting). Subject and section filters are
+// still respected so we don't cross-match to an unrelated class.
+const voiceSearchPool = computed(() => {
+    let pool = [...(props.studentGrades || [])];
+
+    if (selectedSubjectFilter.value !== "all") {
+        pool = pool.filter(
+            (g) => g.subject_id === selectedSubjectFilter.value,
+        );
+    }
+
+    if (selectedSectionFilter.value !== "all") {
+        pool = pool.filter(
+            (g) => g.section_id === selectedSectionFilter.value,
+        );
+    }
+
+    return pool;
+});
+
 const findStudentByVoice = (transcript) => {
-    const grades = filteredGrades.value;
+    const grades = voiceSearchPool.value;
     if (!grades || grades.length === 0) return null;
 
     const normalizedTranscript = normalizeName(transcript);
@@ -3718,10 +3904,12 @@ const findStudentByVoice = (transcript) => {
         return bestMatch;
     }
 
-    if (transcript.length > 2) {
-        tableVoiceStatus.value = `Heard "${transcript}" — say the student's name again`;
+    // Silently drop unrecognized transcripts. Do not surface "Heard X" —
+    // the whole point of strict mode is that non-name/non-grade audio is
+    // completely ignored, so the UI should stay quiet.
+    if (typeof console !== "undefined") {
+        console.log("[voice] ignored non-name transcript:", transcript);
     }
-
     return null;
 };
 
@@ -3764,24 +3952,32 @@ const buildTeacherGreeting = () => {
     const first = (props.user?.first_name || "").toString().trim();
     const name = last || first;
     const address = name ? `${title} ${name}` : "teacher";
-    return `${timeOfDayGreeting()}, ${address}! Voice mode is now active. Let's enter some grades.`;
+    return `${timeOfDayGreeting()}, ${address}! Voice grade entry is on. Say a student name, then say the grade.`;
 };
 
-const startTableVoiceRecognition = async () => {
-    // Any transcript recorded from here on is student-selection input.
+const startTableVoiceRecognition = async (options = {}) => {
     currentVoiceMode = "table";
-    let prompt;
-    if (!voiceGreetingSpoken) {
-        voiceGreetingSpoken = true;
-        prompt = `${buildTeacherGreeting()} What is the student's name?`;
-    } else if (tablePromptCount === 0) {
-        prompt = "What is the student's name?";
-    } else {
-        prompt = "Next student, please.";
+    const quiet = Boolean(options.quiet);
+
+    if (!quiet) {
+        let prompt;
+        if (!voiceGreetingSpoken) {
+            voiceGreetingSpoken = true;
+            prompt = `${buildTeacherGreeting()} What is the student's name?`;
+        } else if (focusedGradeRow.value) {
+            const name =
+                studentSpokenName(focusedGradeRow.value.student) ||
+                "this student";
+            prompt = `${name}. Say the grade.`;
+        } else if (tablePromptCount === 0) {
+            prompt = "What is the student's name?";
+        } else {
+            prompt = "Next student, please.";
+        }
+        tablePromptCount++;
+        tableVoiceStatus.value = prompt;
+        await speakPrompt(prompt);
     }
-    tablePromptCount++;
-    tableVoiceStatus.value = prompt;
-    await speakPrompt(prompt);
 
     const ok = await startGroqStream();
     if (!ok) {
@@ -3789,7 +3985,9 @@ const startTableVoiceRecognition = async () => {
         return;
     }
     tableVoiceActive.value = true;
-    tableVoiceStatus.value = "Listening — say a student name";
+    tableVoiceStatus.value = focusedGradeRow.value
+        ? `The system is listening — say the Term ${selectedTermNumber.value} grade`
+        : "The system is listening — say a student name";
 };
 
 const stopTableVoiceRecognition = () => {
@@ -3808,59 +4006,6 @@ const closeStudentModal = () => {
     showStudentModal.value = false;
     selectedStudent.value = null;
 };
-
-const openSubjectStudentsModal = (subject) => {
-    selectedSubjectForView.value = subject;
-    subjectStudentsSearch.value = "";
-    showSubjectStudentsModal.value = true;
-};
-
-const closeSubjectStudentsModal = () => {
-    showSubjectStudentsModal.value = false;
-    selectedSubjectForView.value = null;
-    subjectStudentsSearch.value = "";
-};
-
-const getSubjectStudents = (subjectId) => {
-    // Get all students from studentGrades where subject matches
-    const studentSet = new Set();
-    const students = [];
-
-    // Primary source: studentGrades - this contains all students in sections where teacher teaches
-    if (props.studentGrades && props.studentGrades.length > 0) {
-        props.studentGrades
-            .filter((g) => g.subject_id === subjectId)
-            .forEach((grade) => {
-                if (grade.student && !studentSet.has(grade.student.id)) {
-                    studentSet.add(grade.student.id);
-                    students.push({
-                        ...grade.student,
-                        sectionName: grade.section?.name || "N/A",
-                    });
-                }
-            });
-    }
-
-    return students;
-};
-
-const filteredSubjectStudents = computed(() => {
-    if (!selectedSubjectForView.value) return [];
-
-    let students = getSubjectStudents(selectedSubjectForView.value.id);
-
-    if (subjectStudentsSearch.value) {
-        const search = subjectStudentsSearch.value.toLowerCase();
-        students = students.filter(
-            (s) =>
-                s.first_name?.toLowerCase().includes(search) ||
-                s.last_name?.toLowerCase().includes(search) ||
-                s.lrn?.toLowerCase().includes(search),
-        );
-    }
-
-    return students;
-});
 
 const formatDate = (date) => {
     if (!date) return null;
@@ -3885,8 +4030,12 @@ const findNextIncompleteGrade = (currentGrade) => {
     if (rows.length === 0) return null;
     const currentSubjectId = currentGrade?.subject_id ?? null;
     const currentStudentId = currentGrade?.student?.id ?? null;
-    const isIncomplete = (g) =>
-        !g.term_1 || !g.term_2 || !g.term_3 || !g.final_grade;
+    const isIncomplete = (g) => {
+        if (selectedTermNumber.value === 1) return !g.term_1;
+        if (selectedTermNumber.value === 2) return !g.term_2;
+        if (selectedTermNumber.value === 3) return !g.term_3;
+        return !g.term_1 || !g.term_2 || !g.term_3 || !g.final_grade;
+    };
 
     const currentIndex = rows.findIndex(
         (g) =>
@@ -3963,9 +4112,6 @@ const submitGrades = () => {
     // Get student_id and subject_id from selectedGrade
     const studentId = selectedGrade.value.student?.id;
     const subjectId = selectedGrade.value.subject_id;
-    // Snapshot the grade we're saving so we can locate the next one after
-    // the modal state has been cleared.
-    const savedGrade = selectedGrade.value;
 
     if (!studentId || !subjectId) {
         toast.error("Invalid student or subject");
@@ -3985,26 +4131,9 @@ const submitGrades = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success("Grades updated successfully!");
-                // Auto-advance only if:
-                //   1. Voice mode is on, AND
-                //   2. This save actually completed all three terms for
-                //      the current student. Partial saves shouldn't hop
-                //      to a different student — the teacher probably
-                //      wants to keep filling this one in.
-                const allTermsFilled =
-                    gradeForm.value.term_1 != null &&
-                    gradeForm.value.term_2 != null &&
-                    gradeForm.value.term_3 != null;
-                if (voiceModeEnabled.value && allTermsFilled) {
-                    const next = findNextIncompleteGrade(savedGrade);
-                    if (next) {
-                        switchToGradeModal(next);
-                        return;
-                    }
-                    speakPrompt("All grades complete.", { wait: false });
-                }
-                pauseVoiceRecognition();
+                toast.success(
+                    "Grades saved. SF9 and SP-10 will use this one-time entry.",
+                );
                 closeGradeModal();
             },
             onError: () => {
@@ -4258,7 +4387,7 @@ const printGrades = () => {
                 </div>
                 <div class="signature-block">
                     <div class="line"></div>
-                    <div class="label">Noted by: Principal</div>
+                    <div class="label">Noted by: ${props.schoolHead || "School Head"}</div>
                 </div>
             </div>
             <div class="footer">
@@ -4549,7 +4678,7 @@ const printSelectedSections = () => {
                 </div>
                 <div class="signature-block">
                     <div class="line"></div>
-                    <div class="label">Noted by: Principal</div>
+                    <div class="label">Noted by: ${props.schoolHead || "School Head"}</div>
                 </div>
             </div>
             <div class="footer">
@@ -5402,14 +5531,56 @@ onUnmounted(() => {
     border: 1px solid #e2e8f0;
     border-left: 3px solid #003366;
     padding: 0.65rem 0.9rem;
-    border-radius: 10px;
+    border-radius: 0;
     margin-bottom: 1rem;
     display: flex;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;
     gap: 0.75rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.table-voice-bar.listening-banner {
+    background: #003366;
+    color: #fff;
+    border: 1px solid #00264d;
+    border-left: 4px solid #c9a227;
+}
+
+.listening-main {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.listening-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.1rem;
+}
+
+.listening-copy strong {
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+}
+
+.table-voice-bar.listening-banner .table-voice-text {
+    color: rgba(255, 255, 255, 0.88);
+    font-weight: 500;
+    font-size: 0.82rem;
+}
+
+.table-voice-bar.listening-banner .table-voice-transcript {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.2);
+    color: #fff;
+}
+
+.table-voice-bar.listening-banner .command-tag {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+    border-radius: 0;
 }
 
 .table-voice-status {
@@ -5418,22 +5589,49 @@ onUnmounted(() => {
     gap: 0.6rem;
 }
 
-.table-voice-status .voice-indicator {
+.table-voice-status .voice-indicator,
+.voice-indicator.listening {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
+    position: relative;
     gap: 0.4rem;
+    width: 42px;
+    height: 42px;
+    background: #9b1c1c;
+    flex-shrink: 0;
 }
 
-.table-voice-status .pulse-dot {
+.voice-indicator.listening .pulse-rings {
+    position: absolute;
+    inset: -6px;
+    border: 2px solid rgba(201, 162, 39, 0.7);
+    animation: listen-ring 1.4s ease-out infinite;
+}
+
+.table-voice-status .pulse-dot,
+.voice-indicator.listening .pulse-dot {
     width: 8px;
     height: 8px;
-    background: #003366;
+    background: #c9a227;
     border-radius: 50%;
-    animation: pulse-dot 1.6s infinite;
+    animation: pulse-dot 1.1s infinite;
 }
 
-.table-voice-status .mic-icon-active {
-    color: #003366;
+.table-voice-status .mic-icon-active,
+.voice-indicator.listening .mic-icon-active {
+    color: #fff;
+}
+
+@keyframes listen-ring {
+    0% {
+        transform: scale(0.85);
+        opacity: 0.9;
+    }
+    100% {
+        transform: scale(1.25);
+        opacity: 0;
+    }
 }
 
 .table-voice-text {
@@ -5550,6 +5748,12 @@ onUnmounted(() => {
     color: #003366;
     border-bottom: 1px solid #c5c5c5;
     background: #e8eef4;
+}
+
+.data-table th.active-term-col {
+    background: #003366;
+    color: #fff;
+    border-bottom-color: #c9a227;
 }
 
 .data-table td {
@@ -5815,6 +6019,37 @@ onUnmounted(() => {
     color: #fff;
 }
 
+.action-btn.edit:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #fff;
+    color: #003366;
+}
+
+.action-btn.form-link {
+    text-decoration: none;
+    font-size: 0.68rem;
+    font-weight: 700;
+    padding: 0.2rem 0.35rem;
+}
+
+.grade-once-note,
+.grade-once-inline {
+    margin: 0 0 0.85rem;
+    color: #444;
+    font-size: 0.86rem;
+}
+
+.grade-once-inline {
+    margin: 0.85rem 0 0;
+}
+
+.grade-once-inline a,
+.grade-once-note a {
+    color: #003366;
+    font-weight: 700;
+}
+
 .action-btn.view {
     background: #fff;
     color: #003366;
@@ -5879,7 +6114,7 @@ onUnmounted(() => {
 .subjects-header-card {
     background: #003366;
     color: #fff;
-    padding: 0.9rem 1.1rem;
+    padding: 0.45rem 0.85rem;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -5894,13 +6129,13 @@ onUnmounted(() => {
 .subjects-header-left {
     display: flex;
     align-items: center;
-    gap: 1.25rem;
+    gap: 0.7rem;
     z-index: 1;
 }
 
 .subjects-icon {
-    width: 40px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     background: #00264d;
     display: flex;
     align-items: center;
@@ -5910,16 +6145,17 @@ onUnmounted(() => {
 
 .subjects-details h2 {
     margin: 0;
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 700;
     color: white;
+    line-height: 1.2;
 }
 
 .subjects-count-text {
     display: block;
-    font-size: 0.95rem;
+    font-size: 0.78rem;
     color: rgba(255, 255, 255, 0.85);
-    margin-top: 0.35rem;
+    margin-top: 0.1rem;
 }
 
 .subjects-header-right {
@@ -5934,32 +6170,33 @@ onUnmounted(() => {
 
 .subject-card {
     background: white;
-    border-radius: 16px;
+    border-radius: 0;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
-    transition: all 0.3s ease;
+    box-shadow: none;
+    border: 1px solid #c5c5c5;
+    transition: border-color 0.2s ease;
 }
 
 .subject-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.1);
+    transform: none;
+    border-color: #003366;
+    box-shadow: none;
 }
 
 .subject-card-header {
     display: flex;
     align-items: center;
-    gap: 1rem;
-    padding: 1.25rem;
-    background: linear-gradient(135deg, #f0f7ff 0%, #dbeafe 100%);
-    border-bottom: 1px solid #e2e8f0;
+    gap: 0.7rem;
+    padding: 0.55rem 0.75rem;
+    background: #003366;
+    border-bottom: 3px solid #c9a227;
 }
 
 .subject-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
-    border-radius: 12px;
+    width: 32px;
+    height: 32px;
+    background: #00264d;
+    border-radius: 0;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5972,22 +6209,23 @@ onUnmounted(() => {
     min-width: 0;
 }
 
-.subject-name {
+.subject-card-header .subject-name {
     margin: 0;
-    font-size: 1.1rem;
+    font-size: 0.95rem;
     font-weight: 600;
-    color: #1e293b;
+    color: #fff;
+    line-height: 1.25;
 }
 
-.subject-code {
+.subject-card-header .subject-code {
     display: inline-block;
-    margin-top: 0.25rem;
-    font-size: 0.8rem;
-    color: #003366;
+    margin-top: 0.15rem;
+    font-size: 0.72rem;
+    color: #fff;
     font-weight: 500;
-    background: rgba(0, 51, 102, 0.1);
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.16);
+    padding: 0.1rem 0.4rem;
+    border-radius: 0;
 }
 
 .subject-card-body {
@@ -6033,9 +6271,9 @@ onUnmounted(() => {
     display: inline-flex;
     align-items: center;
     padding: 0.35rem 0.75rem;
-    background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
-    color: #4338ca;
-    border-radius: 20px;
+    background: #003366;
+    color: #fff;
+    border-radius: 0;
     font-size: 0.8rem;
     font-weight: 500;
 }
@@ -6083,27 +6321,30 @@ onUnmounted(() => {
     align-items: center;
     gap: 0.5rem;
     padding: 0.6rem 1rem;
-    background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
+    background: #003366;
     color: white;
     border: none;
-    border-radius: 8px;
+    border-radius: 0;
     font-size: 0.875rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s ease;
     width: 100%;
     justify-content: center;
+    text-decoration: none;
 }
 
 .view-students-btn:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 51, 102, 0.3);
+    transform: none;
+    background: #00264d;
+    box-shadow: none;
 }
 
 /* Subject Students Modal */
 .subject-students-modal .modal-header.gradient-header {
-    background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
-    padding: 1.5rem;
+    background: #003366;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 3px solid #c9a227;
 }
 
 .subject-students-modal .header-text {
@@ -6326,6 +6567,20 @@ onUnmounted(() => {
     border-color: #003366;
 }
 
+.filter-select.term-required {
+    border-color: #c9a227;
+    background: #fffdf4;
+}
+
+.term-lock-note {
+    margin: 0 0 0.75rem;
+    padding: 0.45rem 0.7rem;
+    background: #fff8e1;
+    border: 1px solid #e6d08a;
+    color: #6b5200;
+    font-size: 0.84rem;
+}
+
 /* Modal Styles */
 .modal-overlay {
     position: fixed;
@@ -6345,12 +6600,12 @@ onUnmounted(() => {
 
 .modal-container {
     background: white;
-    border-radius: 16px;
+    border-radius: 0;
     width: 100%;
     max-width: 500px;
     max-height: 90vh;
     overflow: hidden;
-    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.2);
+    border: 1px solid #c5c5c5;
 }
 
 .modal-container.large {
@@ -6361,10 +6616,11 @@ onUnmounted(() => {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.25rem 1.5rem;
-    border-bottom: 1px solid #e2e8f0;
-    background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
+    padding: 0.55rem 0.85rem;
+    border-bottom: 3px solid #c9a227;
+    background: #003366;
     color: white;
+    border-radius: 0;
 }
 
 .modal-header h3 {
@@ -6377,16 +6633,15 @@ onUnmounted(() => {
 }
 
 .close-btn {
-    background: rgba(255, 255, 255, 0.2);
+    background: none;
     border: none;
-    padding: 0.375rem;
-    border-radius: 6px;
+    padding: 0.2rem;
+    border-radius: 0;
     cursor: pointer;
     color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.2s;
 }
 
 .close-btn:hover {
@@ -6644,6 +6899,20 @@ onUnmounted(() => {
     background: #fdfaf0;
 }
 
+.grade-detail-item.locked-term {
+    opacity: 0.55;
+}
+
+.grade-term-badge {
+    display: inline-block;
+    margin-top: 0.25rem;
+    background: #003366;
+    color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 0.12rem 0.4rem;
+}
+
 .grade-detail-item label {
     font-size: 0.7rem;
     color: #555;
@@ -6836,7 +7105,7 @@ onUnmounted(() => {
     color: #1e293b;
 }
 
-.subject-name {
+.student-grade-info .subject-name {
     font-size: 0.9rem;
     color: #64748b;
     margin-top: 0.25rem;
@@ -7135,16 +7404,23 @@ onUnmounted(() => {
     color: #003366;
 }
 
-.voice-mode-toggle.active {
-    background: #1f6b3a;
-    border-color: #1f6b3a;
+.voice-mode-toggle:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.voice-mode-toggle.active,
+.voice-mode-toggle.listening {
+    background: #9b1c1c;
+    border-color: #9b1c1c;
     color: white;
 }
 
-.voice-mode-toggle.active .shortcut-key {
+.voice-mode-toggle.active .shortcut-key,
+.voice-mode-toggle.listening .shortcut-key {
     background: #fff;
     border-color: #fff;
-    color: #1f6b3a;
+    color: #9b1c1c;
 }
 
 .shortcut-key {
@@ -7416,8 +7692,9 @@ onUnmounted(() => {
 
 /* Enhanced Student Modal */
 .student-modal .modal-header.gradient-header {
-    background: linear-gradient(135deg, #003366 0%, #0066cc 100%);
-    padding: 1.5rem;
+    background: #003366;
+    padding: 0.55rem 0.85rem;
+    border-bottom: 3px solid #c9a227;
 }
 
 .gradient-header .header-content {
@@ -7427,9 +7704,9 @@ onUnmounted(() => {
 }
 
 .gradient-header .header-icon {
-    background: rgba(255, 255, 255, 0.2);
-    padding: 0.5rem;
-    border-radius: 10px;
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
 }
 
 .gradient-header h3 {
@@ -7447,10 +7724,10 @@ onUnmounted(() => {
     align-items: center;
     gap: 1.5rem;
     padding: 1.75rem;
-    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-radius: 16px;
+    background: #f4f4f4;
+    border-radius: 0;
     margin-bottom: 1.75rem;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #c5c5c5;
 }
 
 .profile-avatar-large {
@@ -7821,8 +8098,8 @@ onUnmounted(() => {
     .subjects-header-card {
         flex-direction: column;
         text-align: center;
-        gap: 1.5rem;
-        padding: 1.5rem;
+        gap: 0.55rem;
+        padding: 0.55rem 0.75rem;
     }
 
     .subjects-header-left {

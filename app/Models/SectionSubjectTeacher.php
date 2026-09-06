@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SchoolYear;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -44,5 +45,10 @@ class SectionSubjectTeacher extends Model
     public function teacher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'teacher_id');
+    }
+
+    public function setSchoolYearAttribute(?string $value): void
+    {
+        $this->attributes['school_year'] = SchoolYear::normalize($value) ?? $value;
     }
 }

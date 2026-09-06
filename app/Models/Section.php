@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\SchoolYear;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -77,5 +78,10 @@ class Section extends Model
     public function getFullNameAttribute(): string
     {
         return $this->yearLevel->name . ' - ' . $this->name;
+    }
+
+    public function setSchoolYearAttribute(?string $value): void
+    {
+        $this->attributes['school_year'] = SchoolYear::normalize($value) ?? $value;
     }
 }

@@ -30,7 +30,7 @@
                 </p>
                 <Sf10CertificationBlock
                     :learner="learner"
-                    :school-head="school_head"
+                    :school-head="school_head || school.school_head"
                     :next-grade="next_grade"
                 />
             </section>
@@ -64,7 +64,7 @@
                 </p>
                 <Sf10CertificationBlock
                     :learner="learner"
-                    :school-head="school_head"
+                    :school-head="school_head || school.school_head"
                     :next-grade="next_grade"
                 />
             </section>

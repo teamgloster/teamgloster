@@ -12,6 +12,9 @@
                 </p>
                 <div class="gov-pagehead-row">
                     <h2>Sections</h2>
+                    <span class="gov-sy"
+                        >School Year {{ selectedSchoolYear }}</span
+                    >
                 </div>
             </div>
 
@@ -47,6 +50,24 @@
                         />
                     </div>
                     <div class="filter-group">
+                        <select
+                            class="filter-select"
+                            :value="selectedSchoolYear"
+                            @change="changeSchoolYear"
+                        >
+                            <option
+                                v-for="year in availableSchoolYears"
+                                :key="year"
+                                :value="year"
+                            >
+                                SY {{ year
+                                }}{{
+                                    year === currentSchoolYear
+                                        ? " (current)"
+                                        : ""
+                                }}
+                            </option>
+                        </select>
                         <select v-model="yearLevelFilter" class="filter-select">
                             <option value="all">All Year Levels</option>
                             <option
@@ -80,6 +101,7 @@
                         <tr>
                             <th>Section</th>
                             <th>Year Level</th>
+                            <th>School Year</th>
                             <th>Adviser</th>
                             <th>Capacity</th>
                             <th>Status</th>
@@ -112,6 +134,11 @@
                                 </span>
                             </td>
                             <td>
+                                <span class="section-code">{{
+                                    section.school_year || "—"
+                                }}</span>
+                            </td>
+                            <td>
                                 <div
                                     v-if="section.adviser"
                                     class="adviser-cell"
@@ -131,7 +158,7 @@
                             </td>
                             <td>
                                 <span class="capacity-badge">
-                                    {{ getEnrollmentCount(section.id) }}/{{
+                                    {{ getEnrollmentCount(section) }}/{{
                                         section.capacity
                                     }}
                                 </span>
@@ -285,7 +312,7 @@
                                         <span
                                             >{{
                                                 getEnrollmentCount(
-                                                    selectedSection.id,
+                                                    selectedSection,
                                                 )
                                             }}
                                             students</span
@@ -422,12 +449,26 @@
                                                 >*</span
                                             ></label
                                         >
-                                        <input
+                                        <select
                                             v-model="sectionForm.school_year"
-                                            type="text"
                                             required
-                                            placeholder="e.g., 2025-2026"
-                                        />
+                                        >
+                                            <option value="">
+                                                Select school year
+                                            </option>
+                                            <option
+                                                v-for="year in schoolYearOptions"
+                                                :key="year"
+                                                :value="year"
+                                            >
+                                                SY {{ year
+                                                }}{{
+                                                    year === currentSchoolYear
+                                                        ? " (current)"
+                                                        : ""
+                                                }}
+                                            </option>
+                                        </select>
                                     </div>
                                     <div class="form-group">
                                         <label>Status</label>
@@ -595,6 +636,32 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    selectedSchoolYear: {
+        type: String,
+        default: "",
+    },
+    availableSchoolYears: {
+        type: Array,
+        default: () => [],
+    },
+    officialSchoolYears: {
+        type: Array,
+        default: () => [],
+    },
+});
+
+const schoolYearOptions = computed(() => {
+    const years = new Set();
+    const source = props.officialSchoolYears;
+    const list = Array.isArray(source)
+        ? source
+        : source && typeof source === "object"
+          ? Object.values(source)
+          : [];
+    list.forEach((year) => years.add(String(year)));
+    if (props.currentSchoolYear) years.add(props.currentSchoolYear);
+    if (props.selectedSchoolYear) years.add(props.selectedSchoolYear);
+    return [...years].sort((a, b) => b.localeCompare(a));
 });
 
 // State
@@ -653,7 +720,8 @@ const filteredSections = computed(() => {
     // Year level filter
     if (yearLevelFilter.value !== "all") {
         result = result.filter(
-            (section) => section.year_level_id === yearLevelFilter.value,
+            (section) =>
+                String(section.year_level_id) === String(yearLevelFilter.value),
         );
     }
 
@@ -680,10 +748,14 @@ const formatAdviserName = (adviser) => {
     return `${adviser.last_name}, ${adviser.first_name}${adviser.middle_name ? " " + adviser.middle_name.charAt(0) + "." : ""}`;
 };
 
-const getEnrollmentCount = (sectionId) => {
-    return props.enrollments.filter(
-        (e) => e.section_id === sectionId && e.status === "enrolled",
-    ).length;
+const getEnrollmentCount = (section) => section?.enrollments_count ?? 0;
+
+const changeSchoolYear = (event) => {
+    router.get(
+        "/admin/sections",
+        { sy: event.target.value },
+        { preserveState: false, preserveScroll: true },
+    );
 };
 
 // Reset Form
@@ -694,7 +766,8 @@ const resetSectionForm = () => {
         year_level_id: "",
         adviser_id: "",
         capacity: 40,
-        school_year: props.currentSchoolYear || "",
+        school_year:
+            props.selectedSchoolYear || props.currentSchoolYear || "",
         is_active: true,
     };
 };

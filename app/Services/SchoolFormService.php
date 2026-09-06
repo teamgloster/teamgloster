@@ -75,9 +75,9 @@ class SchoolFormService
         return [
             'form' => [
                 'code' => $isShs ? 'SF9-SHS' : 'SF9-JHS',
-                'title' => "Learner's Progress Report Card",
-                'former' => 'Formerly Form 138',
-                'legal' => 'DepEd Order No. 58, s. 2017 and DepEd Order No. 8, s. 2015',
+                'title' => "Learner's Performance Report",
+                'former' => 'Formerly Form 138 / SF9',
+                'legal' => 'DepEd Order No. 58, s. 2017',
             ],
             'school' => $this->schoolPayload($settings),
             'learner' => $this->learnerPayload($student, $schoolYear),
@@ -95,11 +95,11 @@ class SchoolFormService
             'general_average_descriptor' => $this->descriptor($generalAverage),
             'general_average_remarks' => $this->remarks($generalAverage !== null ? (float) $generalAverage : null),
             'general_average_complete' => $subjects->isNotEmpty() && $finals->count() === $subjects->count(),
-            'observed_values' => $this->observedValuesTemplate(),
-            'attendance_months' => $this->attendanceMonths(),
-            'descriptors' => $this->descriptorScale(),
+            'attendance_months' => $this->sf9AttendanceMonths(),
+            'descriptors' => $this->sf9DescriptorScale(),
             'parent' => $student->guardian_full_name ?: $student->father_name ?: $student->mother_name,
             'school_head' => $settings->school_head,
+            'next_grade' => $this->nextGradeLabel($rank),
             'generated_term' => $term,
         ];
     }
@@ -720,6 +720,28 @@ class SchoolFormService
     private function attendanceMonths(): array
     {
         return ['Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Total'];
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function sf9AttendanceMonths(): array
+    {
+        return ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'Total'];
+    }
+
+    /**
+     * @return list<array{grade: string, description: string, remarks: string}>
+     */
+    private function sf9DescriptorScale(): array
+    {
+        return [
+            ['grade' => '90–100', 'description' => 'Advancing', 'remarks' => 'Passed'],
+            ['grade' => '80–89', 'description' => 'Benchmarking', 'remarks' => 'Passed'],
+            ['grade' => '75–79', 'description' => 'Connecting', 'remarks' => 'Passed'],
+            ['grade' => '65–74', 'description' => 'Developing', 'remarks' => 'Failed'],
+            ['grade' => '0–64', 'description' => 'Emerging', 'remarks' => 'Failed'],
+        ];
     }
 
     private function subjectTypeOrder(?string $type): int

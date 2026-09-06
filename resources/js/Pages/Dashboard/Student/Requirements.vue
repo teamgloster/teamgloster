@@ -582,6 +582,7 @@ const confirmDelete = () => {
 .modal-container {
     background: white;
     border: 1px solid #c5c5c5;
+    border-radius: 0;
     padding: 0;
     max-width: 450px;
     width: 100%;
@@ -628,6 +629,7 @@ const confirmDelete = () => {
     color: #333;
     cursor: pointer;
     font-weight: 600;
+    border-radius: 0;
 }
 
 .btn-cancel:hover {
@@ -644,6 +646,7 @@ const confirmDelete = () => {
     display: flex;
     align-items: center;
     gap: 0.4rem;
+    border-radius: 0;
 }
 
 .btn-delete:hover:not(:disabled) {

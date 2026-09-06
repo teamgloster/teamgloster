@@ -1,6 +1,10 @@
 <template>
     <div class="sf-letterhead">
-        <img :src="logo" alt="School seal" class="sf-seal" />
+        <img
+            :src="depedLogo"
+            alt="Department of Education"
+            class="sf-deped-logo"
+        />
         <div class="sf-letterhead-text">
             <div class="sf-rp">Republic of the Philippines</div>
             <div class="sf-deped">Department of Education</div>
@@ -19,9 +23,7 @@
                 School ID: {{ school.school_id }}
             </div>
         </div>
-        <div class="sf-form-badge">
-            <div>{{ formCode }}</div>
-        </div>
+        <img :src="schoolSeal" alt="School seal" class="sf-seal" />
     </div>
 </template>
 
@@ -31,5 +33,6 @@ defineProps({
     formCode: { type: String, required: true },
 });
 
-const logo = "/images/311494412_220590550318716_333223840059485017_n.jpg";
+const depedLogo = "/images/deped-logo.svg";
+const schoolSeal = "/images/311494412_220590550318716_333223840059485017_n.jpg";
 </script>
