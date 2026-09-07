@@ -313,7 +313,8 @@
 .btn-icon.approve,
 .btn-icon.enroll,
 .btn-icon.reject,
-.btn-icon.promote {
+.btn-icon.promote,
+.btn-icon.transfer {
     background: #fff;
     color: #003366;
     border: 1px solid #003366;
@@ -329,7 +330,8 @@
 .btn-icon.edit:hover,
 .btn-icon.approve:hover,
 .btn-icon.enroll:hover,
-.btn-icon.promote:hover {
+.btn-icon.promote:hover,
+.btn-icon.transfer:hover {
     background: #003366;
     color: #fff;
 }
@@ -975,6 +977,16 @@
 .req-status-badge.pending {
     color: #9a6700;
     border-color: #9a6700;
+}
+
+.req-status-badge.submitted {
+    color: #003366;
+    border-color: #003366;
+}
+
+.req-status-badge.na {
+    color: #777;
+    border-color: #ccc;
 }
 
 .req-status-badge.verified {

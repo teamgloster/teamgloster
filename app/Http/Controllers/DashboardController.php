@@ -14,8 +14,10 @@ use App\Models\TeacherSubject;
 use App\Models\User;
 use App\Models\YearLevel;
 use App\Services\StudentPromotionService;
+use App\Support\AdmissionDocuments;
 use App\Support\SchoolYear;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 
 class DashboardController extends Controller
@@ -104,7 +106,7 @@ class DashboardController extends Controller
             ->get();
 
         return Inertia::render('Dashboard/Administrator', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'stats' => [
                 'totalStudents' => $totalStudents,
                 'totalTeachers' => $totalTeachers,
@@ -157,7 +159,7 @@ class DashboardController extends Controller
         }])->ordered()->get();
 
         return Inertia::render('Dashboard/Admin/Index', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'stats' => $stats,
             'recentEnrollments' => $recentEnrollments,
             'enrollmentByYearLevel' => $enrollmentByYearLevel,
@@ -197,7 +199,7 @@ class DashboardController extends Controller
         $yearLevels = YearLevel::ordered()->get();
 
         return Inertia::render('Dashboard/Admin/Students', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'students' => $students,
             'yearLevels' => $yearLevels,
             'sections' => $sections,
@@ -221,7 +223,7 @@ class DashboardController extends Controller
             ->get();
 
         return Inertia::render('Dashboard/Admin/Teachers', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'teachers' => $teachers,
             'subjects' => $subjects,
         ]);
@@ -259,7 +261,7 @@ class DashboardController extends Controller
         $yearLevels = YearLevel::ordered()->get();
 
         return Inertia::render('Dashboard/Admin/Enrollments', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'enrollments' => $enrollments,
             'sections' => $sections,
             'yearLevels' => $yearLevels,
@@ -279,7 +281,7 @@ class DashboardController extends Controller
             ->get();
 
         return Inertia::render('Dashboard/Admin/Admissions', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'applicants' => $applicants,
         ]);
     }
@@ -313,7 +315,7 @@ class DashboardController extends Controller
             ->get();
 
         return Inertia::render('Dashboard/Admin/Sections', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'sections' => $sections,
             'yearLevels' => $yearLevels,
             'teachers' => $teachers,
@@ -337,7 +339,7 @@ class DashboardController extends Controller
         $yearLevels = YearLevel::ordered()->get();
 
         return Inertia::render('Dashboard/Admin/Subjects', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'subjects' => $subjects,
             'yearLevels' => $yearLevels,
         ]);
@@ -357,7 +359,7 @@ class DashboardController extends Controller
         }])->ordered()->get();
 
         return Inertia::render('Dashboard/Admin/YearLevels', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'yearLevels' => $yearLevels,
             'currentSchoolYear' => $currentSchoolYear,
         ]);
@@ -404,7 +406,7 @@ class DashboardController extends Controller
         $yearLevels = YearLevel::ordered()->get();
 
         return Inertia::render('Dashboard/Admin/TeacherAssignments', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'teacherSubjects' => $teacherSubjects,
             'sectionSubjectTeachers' => $sectionSubjectTeachers,
             'teachersWithSubjects' => $teachersWithSubjects,
@@ -449,7 +451,7 @@ class DashboardController extends Controller
         })->values()->toArray();
 
         return Inertia::render('Dashboard/Admin/Requirements', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'studentRequirements' => $studentRequirements,
         ]);
     }
@@ -485,7 +487,7 @@ class DashboardController extends Controller
             ->values();
 
         return Inertia::render('Dashboard/Admin/Settings', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
             'settings' => SchoolSetting::current(),
             'academicYears' => $academicYears,
             'officialSchoolYears' => $academicYears->pluck('year')->all(),
@@ -494,7 +496,7 @@ class DashboardController extends Controller
 
     public function teacher()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Get advisory section for this teacher
         $advisorySection = Section::where('adviser_id', $user->id)
@@ -544,7 +546,7 @@ class DashboardController extends Controller
 
     public function teacherSubjectStudents(Subject $subject)
     {
-        $teacher = auth()->user();
+        $teacher = $this->authenticatedUser();
         $this->assertTeacherHandlesSubject($teacher, $subject);
 
         $schoolYear = $this->getCurrentSchoolYear();
@@ -560,10 +562,10 @@ class DashboardController extends Controller
 
     public function student()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Get or create student requirements
-        $requirementTypes = ['form_137', 'picture_2x2', 'birth_certificate', 'good_moral_certificate'];
+        $requirementTypes = AdmissionDocuments::typesForYearLevel($user->year_level_applying);
 
         foreach ($requirementTypes as $type) {
             StudentRequirement::firstOrCreate(
@@ -574,18 +576,18 @@ class DashboardController extends Controller
             );
         }
 
-        // Get all requirements for the user
+        $catalog = AdmissionDocuments::catalog();
         $requirements = StudentRequirement::where('user_id', $user->id)
+            ->whereIn('requirement_type', $requirementTypes)
             ->get()
-            ->map(function ($req) {
+            ->map(function ($req) use ($catalog) {
+                $meta = $catalog[$req->requirement_type] ?? null;
+
                 return [
-                    'id' => match ($req->requirement_type) {
-                        'form_137' => 1,
-                        'picture_2x2' => 2,
-                        'birth_certificate' => 3,
-                        'good_moral_certificate' => 4,
-                    },
+                    'id' => $req->id,
                     'type' => $req->requirement_type,
+                    'name' => $meta['label'] ?? $req->requirement_type,
+                    'description' => $meta['description'] ?? '',
                     'submitted' => $req->status === 'submitted' || $req->status === 'verified',
                     'file_name' => $req->original_filename,
                     'submitted_date' => $req->updated_at?->format('M d, Y'),
@@ -673,7 +675,7 @@ class DashboardController extends Controller
      */
     public function studentDashboard()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
         $currentEnrollment = Enrollment::where('user_id', $user->id)
@@ -780,7 +782,7 @@ class DashboardController extends Controller
     public function studentProfile()
     {
         return Inertia::render('Dashboard/Student/Profile', [
-            'user' => auth()->user(),
+            'user' => Auth::user(),
         ]);
     }
 
@@ -789,7 +791,7 @@ class DashboardController extends Controller
      */
     public function studentEnrollment()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
         $currentEnrollment = Enrollment::where('user_id', $user->id)
@@ -824,7 +826,7 @@ class DashboardController extends Controller
      */
     public function studentSubjects()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
         $currentEnrollment = Enrollment::where('user_id', $user->id)
@@ -869,7 +871,7 @@ class DashboardController extends Controller
      */
     public function studentGrades()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
         // Get current enrollment
@@ -923,10 +925,11 @@ class DashboardController extends Controller
      */
     public function studentRequirements()
     {
-        $user = auth()->user();
+        $user = $this->authenticatedUser();
 
         // Get or create student requirements
-        $requirementTypes = ['form_137', 'picture_2x2', 'birth_certificate', 'good_moral_certificate'];
+        $requirementTypes = AdmissionDocuments::typesForYearLevel($user->year_level_applying);
+        $catalog = AdmissionDocuments::catalog();
 
         foreach ($requirementTypes as $type) {
             StudentRequirement::firstOrCreate([
@@ -935,32 +938,16 @@ class DashboardController extends Controller
             ]);
         }
 
-        // Get all requirements for the user
         $requirements = StudentRequirement::where('user_id', $user->id)
+            ->whereIn('requirement_type', $requirementTypes)
             ->get()
-            ->map(function ($req) {
+            ->map(function ($req) use ($catalog) {
+                $meta = $catalog[$req->requirement_type] ?? null;
+
                 return [
-                    'id' => match ($req->requirement_type) {
-                        'form_137' => 1,
-                        'picture_2x2' => 2,
-                        'birth_certificate' => 3,
-                        'good_moral_certificate' => 4,
-                        default => 0,
-                    },
-                    'name' => match ($req->requirement_type) {
-                        'form_137' => 'Form 137',
-                        'picture_2x2' => '2x2 ID Picture',
-                        'birth_certificate' => 'Birth Certificate (PSA)',
-                        'good_moral_certificate' => 'Good Moral Certificate',
-                        default => $req->requirement_type,
-                    },
-                    'description' => match ($req->requirement_type) {
-                        'form_137' => 'Academic records from previous school',
-                        'picture_2x2' => 'Recent 2x2 ID photo with white background',
-                        'birth_certificate' => 'Original PSA/NSO certified birth certificate',
-                        'good_moral_certificate' => 'Certificate of Good Moral Character from previous school',
-                        default => '',
-                    },
+                    'id' => $req->id,
+                    'name' => $meta['label'] ?? $req->requirement_type,
+                    'description' => $meta['description'] ?? '',
                     'type' => $req->requirement_type,
                     'submitted' => $req->status === 'submitted' || $req->status === 'verified',
                     'file_name' => $req->original_filename,
@@ -989,7 +976,7 @@ class DashboardController extends Controller
         ]);
 
         $schoolYear = $this->getCurrentSchoolYear();
-        $teacher = auth()->user();
+        $teacher = $this->authenticatedUser();
 
         // Find or create the grade record
         $grade = Grade::updateOrCreate(
@@ -1262,5 +1249,13 @@ class DashboardController extends Controller
         return $students
             ->sortBy(fn (User $student) => strtoupper(trim($student->last_name.' '.$student->first_name)))
             ->values();
+    }
+
+    private function authenticatedUser(): User
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 401);
+
+        return $user;
     }
 }

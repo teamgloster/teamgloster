@@ -17,6 +17,40 @@
     box-sizing: border-box;
 }
 
+html {
+    scrollbar-width: thin;
+    scrollbar-color: #003366 #e4e8ee;
+}
+
+*::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+    background: #e8eef4;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: #003366;
+    border-radius: 8px;
+    border: 2px solid #e8eef4;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+    background: #c9a227;
+}
+
+*::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+*::-webkit-scrollbar-corner {
+    background: transparent;
+}
+
 body {
     font-family: "Figtree", sans-serif;
 }

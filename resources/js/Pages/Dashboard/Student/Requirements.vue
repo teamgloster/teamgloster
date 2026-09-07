@@ -18,7 +18,7 @@
                 <div class="requirements-grid">
                     <div
                         v-for="requirement in localRequirements"
-                        :key="requirement.id"
+                        :key="requirement.type"
                         class="requirement-card"
                     >
                         <div class="requirement-header">
@@ -57,7 +57,7 @@
                                     </div>
                                 </div>
                                 <button
-                                    @click="removeRequirement(requirement.id)"
+                                    @click="removeRequirement(requirement.type)"
                                     class="remove-btn"
                                     title="Remove file"
                                 >
@@ -69,7 +69,9 @@
                                 <div
                                     class="upload-drop-zone"
                                     @click="
-                                        triggerRequirementUpload(requirement.id)
+                                        triggerRequirementUpload(
+                                            requirement.type,
+                                        )
                                     "
                                     @dragover.prevent="
                                         requirement.dragOver = true
@@ -80,7 +82,7 @@
                                     @drop.prevent="
                                         handleRequirementDrop(
                                             $event,
-                                            requirement.id,
+                                            requirement.type,
                                         )
                                     "
                                     :class="{
@@ -93,24 +95,24 @@
                                         or click to select
                                     </p>
                                     <p class="file-type-hint">
-                                        {{ getFileTypeHint(requirement.id) }}
+                                        {{ getFileTypeHint() }}
                                     </p>
                                 </div>
                                 <input
                                     :ref="
                                         (el) => {
                                             requirementInputRefs[
-                                                requirement.id
+                                                requirement.type
                                             ] = el;
                                         }
                                     "
                                     type="file"
                                     class="hidden-input"
-                                    :accept="getAcceptTypes(requirement.id)"
+                                    :accept="getAcceptTypes()"
                                     @change="
                                         handleRequirementChange(
                                             $event,
-                                            requirement.id,
+                                            requirement.type,
                                         )
                                     "
                                 />
@@ -122,17 +124,16 @@
                 <div class="requirements-info">
                     <h4><AlertCircle :size="18" /> Important Notes:</h4>
                     <ul>
-                        <li>All documents must be clear and legible</li>
-                        <li>Accepted formats: PDF, JPG, PNG (Max 5MB each)</li>
+                        <li>All documents must be clear and legible PDF files (Max 5MB each)</li>
                         <li>
-                            Form 137 must be the original copy from previous
-                            school
+                            Incoming Grade 7 and transferees need Form 137 and a
+                            Good Moral Certificate
                         </li>
-                        <li>2x2 picture must be recent (within 6 months)</li>
-                        <li>Birth Certificate must be from PSA/NEC</li>
                         <li>
-                            Good Moral Certificate must be from previous school
+                            Senior High (Grade 11-12) applicants need
+                            accomplishment credentials
                         </li>
+                        <li>Birth Certificate must be from PSA/NSO</li>
                     </ul>
                 </div>
             </div>
@@ -154,7 +155,7 @@
                         <p>
                             Are you sure you want to remove
                             <strong>{{
-                                getRequirementName(deleteTargetId)
+                                getRequirementName(deleteTargetType)
                             }}</strong
                             >?
                         </p>
@@ -189,7 +190,7 @@
 </template>
 
 <script setup>
-import { ref, reactive } from "vue";
+import { ref, reactive, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
@@ -207,118 +208,85 @@ const localRequirements = ref(
     props.requirements.map((r) => ({ ...r, dragOver: false })),
 );
 
+watch(
+    () => props.requirements,
+    (requirements) => {
+        localRequirements.value = requirements.map((r) => ({
+            ...r,
+            dragOver: false,
+        }));
+    },
+    { deep: true },
+);
+
 const requirementInputRefs = reactive({});
 
 // Delete modal state
 const showDeleteModal = ref(false);
-const deleteTargetId = ref(null);
+const deleteTargetType = ref(null);
 const isDeleting = ref(false);
 
-const getRequirementName = (id) => {
-    const names = {
-        1: "Form 137",
-        2: "2x2 ID Picture",
-        3: "Birth Certificate",
-        4: "Good Moral Certificate",
-    };
-    return names[id] || "this document";
+const getRequirementName = (type) => {
+    const found = localRequirements.value.find((r) => r.type === type);
+    return found?.name || "this document";
 };
 
-const openDeleteModal = (requirementId) => {
-    deleteTargetId.value = requirementId;
+const openDeleteModal = (requirementType) => {
+    deleteTargetType.value = requirementType;
     showDeleteModal.value = true;
 };
 
 const closeDeleteModal = () => {
     showDeleteModal.value = false;
-    deleteTargetId.value = null;
+    deleteTargetType.value = null;
 };
 
-// Get accept types per requirement
-const getAcceptTypes = (requirementId) => {
-    if (requirementId === 2) return ".jpg,.jpeg,.png"; // 2x2 Picture - images only
-    return ".pdf"; // Form 137, Birth Certificate, Good Moral - PDF only
-};
+const getAcceptTypes = () => ".pdf";
 
-// Get file type hint text
-const getFileTypeHint = (requirementId) => {
-    if (requirementId === 2) return "Accepts: JPG, PNG";
-    return "Accepts: PDF only";
-};
+const getFileTypeHint = () => "Accepts: PDF only";
 
-const triggerRequirementUpload = (requirementId) => {
-    const input = requirementInputRefs[requirementId];
+const triggerRequirementUpload = (requirementType) => {
+    const input = requirementInputRefs[requirementType];
     if (input) input.click();
 };
 
-const handleRequirementChange = (event, requirementId) => {
+const handleRequirementChange = (event, requirementType) => {
     const file = event.target.files[0];
     if (file) {
-        uploadRequirement(file, requirementId);
+        uploadRequirement(file, requirementType);
     }
 };
 
-const handleRequirementDrop = (event, requirementId) => {
+const handleRequirementDrop = (event, requirementType) => {
     const file = event.dataTransfer.files[0];
-    const req = localRequirements.value.find((r) => r.id === requirementId);
+    const req = localRequirements.value.find((r) => r.type === requirementType);
     if (req) req.dragOver = false;
     if (file) {
-        uploadRequirement(file, requirementId);
+        uploadRequirement(file, requirementType);
     }
 };
 
-const uploadRequirement = (file, requirementId) => {
-    // Validate file size (5MB max)
+const uploadRequirement = (file, requirementType) => {
     if (file.size > 5 * 1024 * 1024) {
         toast.error("File size must not exceed 5MB");
         return;
     }
 
-    // Define allowed types per requirement
-    const requirementConfig = {
-        1: {
-            // Form 137
-            types: ["application/pdf"],
-            name: "Form 137",
-            hint: "PDF files only",
-        },
-        2: {
-            // 2x2 Picture
-            types: ["image/jpeg", "image/png"],
-            name: "2x2 ID Picture",
-            hint: "JPG or PNG images only",
-        },
-        3: {
-            // Birth Certificate
-            types: ["application/pdf"],
-            name: "Birth Certificate",
-            hint: "PDF files only",
-        },
-        4: {
-            // Good Moral Certificate
-            types: ["application/pdf"],
-            name: "Good Moral Certificate",
-            hint: "PDF files only",
-        },
-    };
-
-    const config = requirementConfig[requirementId];
-    if (config && !config.types.includes(file.type)) {
-        toast.error(`Invalid file type for ${config.name}. ${config.hint}.`);
+    if (file.type !== "application/pdf") {
+        toast.error("Please upload a PDF file.");
         return;
     }
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("requirement_id", requirementId);
+    formData.append("requirement_type", requirementType);
 
     router.post("/requirements/upload", formData, {
         forceFormData: true,
         preserveScroll: true,
         onSuccess: () => {
-            // Update local state
             const req = localRequirements.value.find(
-                (r) => r.id === requirementId,
+                (r) => r.type === requirementType,
             );
             if (req) {
                 req.submitted = true;
@@ -336,22 +304,22 @@ const uploadRequirement = (file, requirementId) => {
     });
 };
 
-const removeRequirement = (requirementId) => {
-    openDeleteModal(requirementId);
+const removeRequirement = (requirementType) => {
+    openDeleteModal(requirementType);
 };
 
 const confirmDelete = () => {
-    if (!deleteTargetId.value) return;
+    if (!deleteTargetType.value) return;
     isDeleting.value = true;
 
     router.post(
         "/requirements/remove",
-        { requirement_id: deleteTargetId.value },
+        { requirement_type: deleteTargetType.value },
         {
             preserveScroll: true,
             onSuccess: () => {
                 const req = localRequirements.value.find(
-                    (r) => r.id === deleteTargetId.value,
+                    (r) => r.type === deleteTargetType.value,
                 );
                 if (req) {
                     req.submitted = false;

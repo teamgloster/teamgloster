@@ -63,13 +63,6 @@
                     </Link>
                 </div>
             </nav>
-
-            <div class="sidebar-footer">
-                <button @click="logout" class="logout-btn">
-                    <LogOut class="nav-icon" :size="20" />
-                    <span class="nav-text">Logout</span>
-                </button>
-            </div>
         </aside>
 
         <div
@@ -91,22 +84,32 @@
                         <h1>{{ pageTitle }}</h1>
                     </div>
                 </div>
-                <div class="user-info">
-                    <div class="user-meta">
-                        <span class="user-role">Teacher</span>
-                        <span class="user-name"
-                            >{{ user.first_name }} {{ user.last_name }}</span
-                        >
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-meta">
+                            <span class="user-role">Teacher</span>
+                            <span class="user-name"
+                                >{{ user.first_name }} {{ user.last_name }}</span
+                            >
+                        </div>
+                        <div class="user-avatar">
+                            <img
+                                v-if="profilePhotoUrl"
+                                :src="profilePhotoUrl"
+                                alt="Profile"
+                                class="avatar-img"
+                            />
+                            <span v-else>{{ userInitials }}</span>
+                        </div>
                     </div>
-                    <div class="user-avatar">
-                        <img
-                            v-if="profilePhotoUrl"
-                            :src="profilePhotoUrl"
-                            alt="Profile"
-                            class="avatar-img"
-                        />
-                        <span v-else>{{ userInitials }}</span>
-                    </div>
+                    <button
+                        type="button"
+                        class="header-logout-btn"
+                        @click="logout"
+                    >
+                        <LogOut :size="16" />
+                        <span class="logout-text">Logout</span>
+                    </button>
                 </div>
             </header>
 

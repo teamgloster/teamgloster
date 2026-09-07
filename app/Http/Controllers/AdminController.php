@@ -246,15 +246,82 @@ class AdminController extends Controller
 
     public function assignSection(Request $request, Enrollment $enrollment)
     {
+        if ($enrollment->section_id) {
+            return back()->withErrors([
+                'section_id' => 'This student already has a section. Use Transfer Section if they need to move.',
+            ]);
+        }
+
+        $section = $this->validatedSectionForEnrollment($request, $enrollment);
+
+        if (! $section) {
+            return back()->withErrors([
+                'section_id' => 'Choose a valid section for this student\'s year level.',
+            ]);
+        }
+
+        $enrollment->update([
+            'section_id' => $section->id,
+        ]);
+
+        return back()->with('success', 'Section assigned successfully.');
+    }
+
+    public function transferSection(Request $request, Enrollment $enrollment)
+    {
+        $request->validate([
+            'confirm_transfer' => 'accepted',
+        ], [
+            'confirm_transfer.accepted' => 'Please confirm that this student really needs to transfer to another section.',
+        ]);
+
+        if (! $enrollment->section_id) {
+            return back()->withErrors([
+                'section_id' => 'This student is not assigned to a section yet. Use Assign Section instead.',
+            ]);
+        }
+
+        $section = $this->validatedSectionForEnrollment($request, $enrollment);
+
+        if (! $section) {
+            return back()->withErrors([
+                'section_id' => 'Choose a valid section for this student\'s year level.',
+            ]);
+        }
+
+        if ((int) $enrollment->section_id === (int) $section->id) {
+            return back()->withErrors([
+                'section_id' => 'Choose a different section to transfer this student.',
+            ]);
+        }
+
+        $enrollment->loadMissing('section');
+        $fromSection = $enrollment->section?->name ?? 'their current section';
+
+        $enrollment->update([
+            'section_id' => $section->id,
+        ]);
+
+        return back()->with('success', "Student transferred from {$fromSection} to {$section->name}.");
+    }
+
+    private function validatedSectionForEnrollment(Request $request, Enrollment $enrollment): ?Section
+    {
+        if (! in_array($enrollment->status, ['approved', 'enrolled'], true)) {
+            return null;
+        }
+
         $validated = $request->validate([
             'section_id' => 'required|exists:sections,id',
         ]);
 
-        $enrollment->update([
-            'section_id' => $validated['section_id'],
-        ]);
+        $section = Section::query()->find($validated['section_id']);
 
-        return back()->with('success', 'Section assigned successfully.');
+        if (! $section || (int) $section->year_level_id !== (int) $enrollment->year_level_id) {
+            return null;
+        }
+
+        return $section;
     }
 
     public function enrollStudent(Enrollment $enrollment)

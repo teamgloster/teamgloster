@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\SchoolSetting;
 use App\Models\StudentRequirement;
 use App\Models\User;
+use App\Support\AdmissionDocuments;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -124,6 +125,10 @@ class AuthController extends Controller
             'previous_school' => 'nullable|string|max:255',
             'school_year_applying' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
+            'form_137' => 'nullable|file|mimes:pdf|max:5120',
+            'birth_certificate' => 'nullable|file|mimes:pdf|max:5120',
+            'good_moral_certificate' => 'nullable|file|mimes:pdf|max:5120',
+            'accomplishment_credentials' => 'nullable|file|mimes:pdf|max:5120',
         ], [
             'lrn.required' => 'LRN is required.',
             'lrn.digits' => 'LRN must be exactly 12 digits.',
@@ -193,13 +198,7 @@ class AuthController extends Controller
 
     private function storeAdmissionDocuments(Request $request, User $user): void
     {
-        $documentKeys = [
-            'form_137',
-            'picture_2x2',
-            'medical_certificate',
-            'birth_certificate',
-            'good_moral_certificate',
-        ];
+        $documentKeys = AdmissionDocuments::typesForYearLevel($user->year_level_applying);
 
         foreach ($documentKeys as $key) {
             if (! $request->hasFile($key)) {
@@ -207,6 +206,11 @@ class AuthController extends Controller
             }
 
             $file = $request->file($key);
+
+            if (! $file->isValid()) {
+                continue;
+            }
+
             $path = $file->store('requirements/'.$user->id, 'public');
 
             StudentRequirement::updateOrCreate(
@@ -235,7 +239,7 @@ class AuthController extends Controller
 
     public function updateProfile(Request $request)
     {
-        $user = Auth::user();
+        $user = $this->authenticatedUser();
 
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
@@ -268,7 +272,7 @@ class AuthController extends Controller
             'profile_photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        $user = Auth::user();
+        $user = $this->authenticatedUser();
 
         // Delete old photo if exists
         if ($user->profile_photo) {
@@ -285,7 +289,7 @@ class AuthController extends Controller
 
     public function removeProfilePhoto()
     {
-        $user = Auth::user();
+        $user = $this->authenticatedUser();
 
         if ($user->profile_photo) {
             Storage::disk('public')->delete($user->profile_photo);
@@ -297,65 +301,27 @@ class AuthController extends Controller
 
     public function uploadRequirement(Request $request)
     {
-        // Define file type requirements
-        $fileTypeRequirements = [
-            1 => 'pdf',           // Form 137 - PDF only
-            2 => 'jpeg,png,jpg',  // 2x2 Picture - Images only
-            3 => 'pdf',           // Birth Certificate - PDF only
-            4 => 'pdf',            // Good Moral Certificate - PDF only
-        ];
-
-        $requirementId = $request->requirement_id;
-        $allowedMimes = $fileTypeRequirements[$requirementId] ?? 'pdf';
+        $allowedTypes = AdmissionDocuments::allowedTypes();
 
         $request->validate([
-            'requirement_id' => 'required|integer|in:1,2,3,4',
-            'file' => 'required|file|mimes:'.$allowedMimes.'|max:5120',
+            'requirement_type' => 'required|string|in:'.implode(',', $allowedTypes),
+            'file' => 'required|file|mimes:pdf|max:5120',
         ], [
-            'file.mimes' => 'Invalid file type for this requirement. Please check the accepted file format.',
+            'file.mimes' => 'Invalid file type for this requirement. Please upload a PDF.',
         ]);
 
-        $user = Auth::user();
-        $file = $request->file('file');
+        $user = $this->authenticatedUser();
+        $requirementType = $request->string('requirement_type')->toString();
+        $requiredTypes = AdmissionDocuments::typesForYearLevel($user->year_level_applying);
 
-        // Define requirement types
-        $requirementTypes = [
-            1 => 'form_137',
-            2 => 'picture_2x2',
-            3 => 'birth_certificate',
-            4 => 'good_moral_certificate',
-        ];
-
-        $requirementType = $requirementTypes[$request->requirement_id];
-
-        // Additional validation for 2x2 picture
-        if ($requirementId === 2) {
-            $imageInfo = getimagesize($file->getRealPath());
-            if ($imageInfo === false) {
-                return response()->json(['error' => 'Invalid image file'], 422);
-            }
-
-            $width = $imageInfo[0];
-            $height = $imageInfo[1];
-
-            // 2x2 inches at 300 DPI = 600x600 pixels
-            // Allow tolerance of ±50 pixels (570-630)
-            if ($width < 570 || $width > 630 || $height < 570 || $height > 630) {
-                return response()->json([
-                    'error' => 'Image dimensions must be 2x2 inches (approximately 600x600 pixels). Current size: '.$width.'x'.$height.' pixels',
-                ], 422);
-            }
-
-            // Check if image is square (within 5% tolerance)
-            $aspectRatio = abs($width - $height) / max($width, $height);
-            if ($aspectRatio > 0.05) {
-                return response()->json([
-                    'error' => 'Image must be square (2x2). Current aspect ratio: '.round($width / $height, 2),
-                ], 422);
-            }
+        if (! in_array($requirementType, $requiredTypes, true)) {
+            return back()->withErrors([
+                'file' => 'This document is not required for your year level.',
+            ]);
         }
 
-        // Delete old file if exists
+        $file = $request->file('file');
+
         $existingRequirement = StudentRequirement::where('user_id', $user->id)
             ->where('requirement_type', $requirementType)
             ->first();
@@ -364,10 +330,8 @@ class AuthController extends Controller
             Storage::disk('public')->delete($existingRequirement->file_path);
         }
 
-        // Store new file
         $path = $file->store('requirements/'.$user->id, 'public');
 
-        // Update or create requirement record
         StudentRequirement::updateOrCreate(
             [
                 'user_id' => $user->id,
@@ -385,21 +349,14 @@ class AuthController extends Controller
 
     public function removeRequirement(Request $request)
     {
+        $allowedTypes = AdmissionDocuments::allowedTypes();
+
         $request->validate([
-            'requirement_id' => 'required|integer|in:1,2,3,4',
+            'requirement_type' => 'required|string|in:'.implode(',', $allowedTypes),
         ]);
 
-        $user = Auth::user();
-
-        // Define requirement types
-        $requirementTypes = [
-            1 => 'form_137',
-            2 => 'picture_2x2',
-            3 => 'birth_certificate',
-            4 => 'good_moral_certificate',
-        ];
-
-        $requirementType = $requirementTypes[$request->requirement_id];
+        $user = $this->authenticatedUser();
+        $requirementType = $request->string('requirement_type')->toString();
 
         $requirement = StudentRequirement::where('user_id', $user->id)
             ->where('requirement_type', $requirementType)
@@ -413,5 +370,13 @@ class AuthController extends Controller
         }
 
         return back()->with('success', 'Document removed successfully!');
+    }
+
+    private function authenticatedUser(): User
+    {
+        $user = Auth::user();
+        abort_unless($user instanceof User, 401);
+
+        return $user;
     }
 }

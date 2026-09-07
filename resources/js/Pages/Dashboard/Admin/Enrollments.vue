@@ -288,6 +288,18 @@
                                         <Layers :size="16" />
                                     </button>
                                     <button
+                                        v-if="canTransferSection(enrollment)"
+                                        class="btn-icon transfer"
+                                        @click="
+                                            openTransferSectionModal(
+                                                enrollment,
+                                            )
+                                        "
+                                        title="Transfer Section"
+                                    >
+                                        <ArrowRightLeft :size="16" />
+                                    </button>
+                                    <button
                                         v-if="canEnroll(enrollment)"
                                         class="btn-icon enroll"
                                         @click="openEnrollModal(enrollment)"
@@ -776,6 +788,150 @@
                                     class="spin"
                                 />
                                 Assign Section
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </Transition>
+        </Teleport>
+
+        <!-- Transfer Section Modal -->
+        <Teleport to="body">
+            <Transition name="modal">
+                <div
+                    v-if="showTransferSectionModal"
+                    class="modal-overlay"
+                    @click.self="closeTransferSectionModal"
+                >
+                    <div class="modal-container small">
+                        <div class="modal-header section-header">
+                            <h3>
+                                <ArrowRightLeft :size="22" />
+                                Transfer Section
+                            </h3>
+                            <button
+                                class="close-btn"
+                                @click="closeTransferSectionModal"
+                            >
+                                <X :size="20" />
+                            </button>
+                        </div>
+                        <div class="modal-body">
+                            <div class="assign-section-form">
+                                <div class="transfer-note">
+                                    <p>
+                                        This student is already assigned to a
+                                        section. Transfer them only if they
+                                        really need to move.
+                                    </p>
+                                    <p>
+                                        Do you really need to transfer
+                                        <strong
+                                            >{{
+                                                enrollmentToTransfer?.user
+                                                    ?.first_name
+                                            }}
+                                            {{
+                                                enrollmentToTransfer?.user
+                                                    ?.last_name
+                                            }}</strong
+                                        >
+                                        to another section?
+                                    </p>
+                                </div>
+                                <div class="assign-info">
+                                    <div class="delete-student-info">
+                                        <strong
+                                            >{{
+                                                enrollmentToTransfer?.user
+                                                    ?.first_name
+                                            }}
+                                            {{
+                                                enrollmentToTransfer?.user
+                                                    ?.last_name
+                                            }}</strong
+                                        >
+                                        <span>{{
+                                            enrollmentToTransfer?.year_level
+                                                ?.name
+                                        }}</span>
+                                        <span>
+                                            Current section:
+                                            {{
+                                                enrollmentToTransfer?.section
+                                                    ?.name || "—"
+                                            }}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label
+                                        >New Section
+                                        <span class="required">*</span></label
+                                    >
+                                    <select
+                                        v-model="selectedTransferSectionId"
+                                        required
+                                        :disabled="
+                                            availableTransferSections.length ===
+                                            0
+                                        "
+                                    >
+                                        <option value="">
+                                            {{
+                                                availableTransferSections.length
+                                                    ? "Select a different section"
+                                                    : "No other section is available"
+                                            }}
+                                        </option>
+                                        <option
+                                            v-for="section in availableTransferSections"
+                                            :key="section.id"
+                                            :value="section.id"
+                                        >
+                                            {{ section.name }} ({{
+                                                section.year_level?.name
+                                            }})
+                                        </option>
+                                    </select>
+                                </div>
+                                <label class="transfer-confirm">
+                                    <input
+                                        v-model="confirmTransfer"
+                                        type="checkbox"
+                                    />
+                                    <span
+                                        >Yes, I need to transfer this student
+                                        to another section.</span
+                                    >
+                                </label>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button
+                                type="button"
+                                class="btn-secondary"
+                                @click="closeTransferSectionModal"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
+                                class="btn-primary"
+                                :disabled="
+                                    isSubmitting ||
+                                    !selectedTransferSectionId ||
+                                    !confirmTransfer ||
+                                    availableTransferSections.length === 0
+                                "
+                                @click="transferSection"
+                            >
+                                <Loader2
+                                    v-if="isSubmitting"
+                                    :size="18"
+                                    class="spin"
+                                />
+                                Transfer Student
                             </button>
                         </div>
                     </div>
@@ -1391,6 +1547,7 @@ import {
     UserCheck,
     UserMinus,
     Shuffle,
+    ArrowRightLeft,
     X,
     Loader2,
     ChevronLeft,
@@ -1448,6 +1605,12 @@ const rejectRemarks = ref("");
 const showAssignSectionModal = ref(false);
 const enrollmentToAssign = ref(null);
 const selectedSectionId = ref("");
+
+// Transfer Section Modal
+const showTransferSectionModal = ref(false);
+const enrollmentToTransfer = ref(null);
+const selectedTransferSectionId = ref("");
+const confirmTransfer = ref(false);
 
 // Enroll Modal
 const showEnrollModal = ref(false);
@@ -1570,6 +1733,19 @@ const availableSections = computed(() => {
     );
 });
 
+const availableTransferSections = computed(() => {
+    if (!enrollmentToTransfer.value) return [];
+    const currentSectionId = Number(
+        enrollmentToTransfer.value.section_id ||
+            enrollmentToTransfer.value.section?.id,
+    );
+    return props.sections.filter(
+        (s) =>
+            s.year_level_id === enrollmentToTransfer.value.year_level_id &&
+            Number(s.id) !== currentSectionId,
+    );
+});
+
 const canApprove = (enrollment) => {
     return enrollment.status === "pending";
 };
@@ -1581,9 +1757,23 @@ const canEnroll = (enrollment) => {
     );
 };
 
+const hasAssignedSection = (enrollment) => {
+    return Boolean(enrollment?.section_id || enrollment?.section?.id);
+};
+
 const canAssignSection = (enrollment) => {
     return (
-        enrollment.status === "approved" || enrollment.status === "enrolled"
+        (enrollment.status === "approved" ||
+            enrollment.status === "enrolled") &&
+        !hasAssignedSection(enrollment)
+    );
+};
+
+const canTransferSection = (enrollment) => {
+    return (
+        (enrollment.status === "approved" ||
+            enrollment.status === "enrolled") &&
+        hasAssignedSection(enrollment)
     );
 };
 
@@ -1867,6 +2057,53 @@ const assignSection = () => {
             onError: (errors) => {
                 const firstError = Object.values(errors)[0];
                 toast.error(firstError || "Failed to assign section.");
+            },
+            onFinish: () => {
+                isSubmitting.value = false;
+            },
+        },
+    );
+};
+
+const openTransferSectionModal = (enrollment) => {
+    enrollmentToTransfer.value = enrollment;
+    selectedTransferSectionId.value = "";
+    confirmTransfer.value = false;
+    showTransferSectionModal.value = true;
+};
+
+const closeTransferSectionModal = () => {
+    showTransferSectionModal.value = false;
+    enrollmentToTransfer.value = null;
+    selectedTransferSectionId.value = "";
+    confirmTransfer.value = false;
+};
+
+const transferSection = () => {
+    if (
+        !enrollmentToTransfer.value ||
+        !selectedTransferSectionId.value ||
+        !confirmTransfer.value
+    ) {
+        return;
+    }
+    isSubmitting.value = true;
+
+    router.post(
+        `/admin/enrollments/${enrollmentToTransfer.value.id}/transfer-section`,
+        {
+            section_id: selectedTransferSectionId.value,
+            confirm_transfer: true,
+        },
+        {
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success("Student transferred to the new section.");
+                closeTransferSectionModal();
+            },
+            onError: (errors) => {
+                const firstError = Object.values(errors)[0];
+                toast.error(firstError || "Failed to transfer section.");
             },
             onFinish: () => {
                 isSubmitting.value = false;
@@ -2270,5 +2507,41 @@ const submitDrop = () => {
     margin-top: 0.4rem;
     border: 1px solid #bdbdbd;
     padding: 0.45rem 0.55rem;
+}
+
+.transfer-note {
+    padding: 0.85rem 0.95rem;
+    border: 1px solid #c9a227;
+    background: #fff8e6;
+    color: #5c4a12;
+}
+
+.transfer-note p {
+    margin: 0 0 0.65rem;
+    font-size: 0.9rem;
+    line-height: 1.45;
+}
+
+.transfer-note p:last-child {
+    margin-bottom: 0;
+}
+
+.transfer-confirm {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.6rem;
+    font-size: 0.9rem;
+    color: #333;
+    cursor: pointer;
+}
+
+.transfer-confirm input {
+    margin-top: 0.2rem;
+    accent-color: #003366;
+}
+
+.btn-icon.transfer:hover {
+    background: #003366;
+    color: #fff;
 }
 </style>

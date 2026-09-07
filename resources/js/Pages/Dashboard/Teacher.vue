@@ -69,13 +69,6 @@
                     </a>
                 </div>
             </nav>
-
-            <div class="sidebar-footer">
-                <button @click="logout" class="logout-btn">
-                    <LogOut class="nav-icon" :size="20" />
-                    <span class="nav-text">Logout</span>
-                </button>
-            </div>
         </aside>
 
         <!-- Mobile Overlay -->
@@ -99,22 +92,32 @@
                         <h1>{{ getPageTitle }}</h1>
                     </div>
                 </div>
-                <div class="user-info">
-                    <div class="user-meta">
-                        <span class="user-role">Teacher</span>
-                        <span class="user-name"
-                            >{{ user.first_name }} {{ user.last_name }}</span
-                        >
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-meta">
+                            <span class="user-role">Teacher</span>
+                            <span class="user-name"
+                                >{{ user.first_name }} {{ user.last_name }}</span
+                            >
+                        </div>
+                        <div class="user-avatar">
+                            <img
+                                v-if="profilePhotoUrl"
+                                :src="profilePhotoUrl"
+                                alt="Profile"
+                                class="avatar-img"
+                            />
+                            <span v-else>{{ userInitials }}</span>
+                        </div>
                     </div>
-                    <div class="user-avatar">
-                        <img
-                            v-if="profilePhotoUrl"
-                            :src="profilePhotoUrl"
-                            alt="Profile"
-                            class="avatar-img"
-                        />
-                        <span v-else>{{ userInitials }}</span>
-                    </div>
+                    <button
+                        type="button"
+                        class="header-logout-btn"
+                        @click="logout"
+                    >
+                        <LogOut :size="16" />
+                        <span class="logout-text">Logout</span>
+                    </button>
                 </div>
             </header>
 
@@ -4785,6 +4788,33 @@ onUnmounted(() => {
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a227 #002244;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: #002244;
+    border-radius: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: #c9a227;
+    border-radius: 8px;
+    border: 2px solid #002244;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #e0b93a;
+}
+
+.sidebar-nav::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .nav-group {
@@ -4839,28 +4869,31 @@ onUnmounted(() => {
     font-weight: 500;
 }
 
-.sidebar-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #00264d;
-}
-
-.logout-btn {
+.header-right {
     display: flex;
     align-items: center;
-    gap: 0.65rem;
-    width: 100%;
-    padding: 0.55rem 0;
-    background: transparent;
-    border: none;
-    color: #e8eef4;
-    cursor: pointer;
-    font-size: 0.88rem;
-    font-weight: 500;
+    gap: 0.85rem;
 }
 
-.logout-btn:hover {
+.header-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.85rem;
+    border: none;
+    border-radius: 6px;
+    background: #003366;
     color: #fff;
-    text-decoration: underline;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.82rem;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.header-logout-btn:hover {
+    background: #c9a227;
+    color: #003366;
 }
 
 /* Main Content */
@@ -8066,6 +8099,19 @@ onUnmounted(() => {
 
     .mobile-menu-btn {
         display: block;
+    }
+
+    .user-name,
+    .user-role {
+        display: none;
+    }
+
+    .header-logout-btn .logout-text {
+        display: none;
+    }
+
+    .header-logout-btn {
+        padding: 0.42rem 0.55rem;
     }
 
     .stats-grid {

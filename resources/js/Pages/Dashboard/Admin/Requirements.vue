@@ -66,9 +66,9 @@
                             <th style="width: 40px"></th>
                             <th>Student</th>
                             <th>Form 137</th>
-                            <th>2x2 Picture</th>
-                            <th>Birth Certificate</th>
                             <th>Good Moral</th>
+                            <th>Birth Certificate</th>
+                            <th>Accomplishment</th>
                             <th>Progress</th>
                         </tr>
                     </thead>
@@ -150,7 +150,7 @@
                                         :class="
                                             getRequirementStatus(
                                                 student,
-                                                'picture_2x2',
+                                                'good_moral_certificate',
                                             )
                                         "
                                     >
@@ -158,7 +158,7 @@
                                             formatStatus(
                                                 getRequirementStatus(
                                                     student,
-                                                    "picture_2x2",
+                                                    "good_moral_certificate",
                                                 ),
                                             )
                                         }}
@@ -190,7 +190,7 @@
                                         :class="
                                             getRequirementStatus(
                                                 student,
-                                                'good_moral_certificate',
+                                                'accomplishment_credentials',
                                             )
                                         "
                                     >
@@ -198,7 +198,7 @@
                                             formatStatus(
                                                 getRequirementStatus(
                                                     student,
-                                                    "good_moral_certificate",
+                                                    "accomplishment_credentials",
                                                 ),
                                             )
                                         }}
@@ -221,8 +221,9 @@
                                             ></div>
                                         </div>
                                         <span class="progress-text">
-                                            {{ getVerifiedCount(student) }}/{{
-                                                requirementTypes.length
+                                            {{ getCompletedCount(student) }}/{{
+                                                requiredTypesForStudent(student)
+                                                    .length
                                             }}
                                         </span>
                                     </div>
@@ -236,7 +237,9 @@
                                     <div class="requirements-detail">
                                         <div class="requirement-cards">
                                             <div
-                                                v-for="reqType in requirementTypes"
+                                                v-for="reqType in requiredTypesForStudent(
+                                                    student,
+                                                )"
                                                 :key="reqType.key"
                                                 class="requirement-card"
                                                 :class="
@@ -756,10 +759,28 @@ const props = defineProps({
 // Requirement types
 const requirementTypes = [
     { key: "form_137", label: "Form 137" },
-    { key: "picture_2x2", label: "2x2 Picture" },
-    { key: "birth_certificate", label: "Birth Certificate" },
     { key: "good_moral_certificate", label: "Good Moral Certificate" },
+    { key: "birth_certificate", label: "Birth Certificate" },
+    { key: "accomplishment_credentials", label: "Accomplishment Credentials" },
 ];
+
+const isSeniorHighYearLevel = (yearLevel) => {
+    const value = (yearLevel || "").toLowerCase();
+    return value.includes("grade 11") || value.includes("grade 12") || value.includes("senior");
+};
+
+const requiredTypesForStudent = (student) => {
+    const yearLevel = student.user?.year_level_applying;
+    const keys = isSeniorHighYearLevel(yearLevel)
+        ? ["accomplishment_credentials", "birth_certificate"]
+        : [
+              "form_137",
+              "good_moral_certificate",
+              "birth_certificate",
+          ];
+
+    return requirementTypes.filter((type) => keys.includes(type.key));
+};
 
 // State
 const searchQuery = ref("");
@@ -872,20 +893,32 @@ const getRequirement = (student, type) => {
     return student.requirements?.find((r) => r.requirement_type === type);
 };
 
-const getRequirementStatus = (student, type) => {
-    const req = getRequirement(student, type);
-    return req?.status || "pending";
+const isRequirementComplete = (req) => {
+    if (!req) return false;
+    if (req.file_path) return true;
+    return req.status === "submitted" || req.status === "verified";
 };
 
-const getVerifiedCount = (student) => {
-    return (
-        student.requirements?.filter((r) => r.status === "verified").length || 0
+const getRequirementStatus = (student, type) => {
+    const required = requiredTypesForStudent(student).some(
+        (item) => item.key === type,
     );
+    if (!required) return "na";
+    const req = getRequirement(student, type);
+    if (!req) return "pending";
+    if (req.status === "pending" && req.file_path) return "submitted";
+    return req.status || "pending";
+};
+
+const getCompletedCount = (student) => {
+    return requiredTypesForStudent(student).filter((type) =>
+        isRequirementComplete(getRequirement(student, type.key)),
+    ).length;
 };
 
 const getProgressPercentage = (student) => {
-    const verified = getVerifiedCount(student);
-    return (verified / requirementTypes.length) * 100;
+    const total = requiredTypesForStudent(student).length || 1;
+    return (getCompletedCount(student) / total) * 100;
 };
 
 const getProgressClass = (student) => {
@@ -897,6 +930,7 @@ const getProgressClass = (student) => {
 
 const formatStatus = (status) => {
     if (!status) return "Pending";
+    if (status === "na") return "N/A";
     return status.charAt(0).toUpperCase() + status.slice(1);
 };
 
@@ -1192,12 +1226,19 @@ const rejectRequirement = () => {
     border: 1px solid #c5c5c5;
 }
 
-.progress-fill,
-.progress-fill.low,
-.progress-fill.half,
-.progress-fill.complete {
+.progress-fill {
     height: 100%;
-    background: #003366;
+    width: 0;
+    background: #9a6700;
+    transition: width 0.25s ease;
+}
+
+.progress-fill.half {
+    background: #c9a227;
+}
+
+.progress-fill.complete {
+    background: #1f6b3a;
 }
 
 .progress-text {

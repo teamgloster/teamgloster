@@ -76,13 +76,6 @@
                     </Link>
                 </div>
             </nav>
-
-            <div class="sidebar-footer">
-                <button @click="logout" class="logout-btn">
-                    <LogOut class="nav-icon" :size="20" />
-                    <span class="nav-text">Logout</span>
-                </button>
-            </div>
         </aside>
 
         <!-- Mobile Overlay -->
@@ -106,22 +99,32 @@
                         <h1>{{ pageTitle }}</h1>
                     </div>
                 </div>
-                <div class="user-info">
-                    <div class="user-meta">
-                        <span class="user-role">Registrar</span>
-                        <span class="user-name"
-                            >{{ user.first_name }} {{ user.last_name }}</span
-                        >
+                <div class="header-right">
+                    <div class="user-info">
+                        <div class="user-meta">
+                            <span class="user-role">Registrar</span>
+                            <span class="user-name"
+                                >{{ user.first_name }} {{ user.last_name }}</span
+                            >
+                        </div>
+                        <div class="user-avatar">
+                            <img
+                                v-if="profilePhotoUrl"
+                                :src="profilePhotoUrl"
+                                alt="Profile"
+                                class="avatar-img"
+                            />
+                            <span v-else>{{ userInitials }}</span>
+                        </div>
                     </div>
-                    <div class="user-avatar">
-                        <img
-                            v-if="profilePhotoUrl"
-                            :src="profilePhotoUrl"
-                            alt="Profile"
-                            class="avatar-img"
-                        />
-                        <span v-else>{{ userInitials }}</span>
-                    </div>
+                    <button
+                        type="button"
+                        class="header-logout-btn"
+                        @click="logout"
+                    >
+                        <LogOut :size="16" />
+                        <span class="logout-text">Logout</span>
+                    </button>
                 </div>
             </header>
 
@@ -186,274 +189,6 @@ const logout = () => {
 };
 </script>
 
-<style scoped>
-.dashboard-layout {
-    display: flex;
-    min-height: 100vh;
-    background: #ececec;
-}
-
-.sidebar {
-    width: 230px;
-    background: #003366;
-    color: white;
-    display: flex;
-    flex-direction: column;
-    position: fixed;
-    top: 0;
-    left: 0;
-    height: 100vh;
-    z-index: 100;
-    border-right: 1px solid #002244;
-}
-
-.sidebar-header {
-    padding: 0.9rem 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    border-bottom: 3px solid #c9a227;
-}
-
-.logo {
-    width: 42px;
-    height: 42px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid white;
-}
-
-.school-info h2 {
-    font-size: 1.05rem;
-    font-weight: 700;
-    margin: 0;
-    color: #fff;
-}
-
-.school-info p {
-    font-size: 0.75rem;
-    opacity: 0.85;
-    margin: 0.15rem 0 0 0;
-}
-
-.sidebar-nav {
-    flex: 1;
-    padding: 0.35rem 0 0.75rem;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-}
-
-.nav-group {
-    padding: 0.15rem 0 0.25rem;
-}
-
-.nav-group + .nav-group {
-    margin-top: 0.2rem;
-    border-top: 1px solid #1a4a73;
-    padding-top: 0.35rem;
-}
-
-.nav-group-label {
-    display: block;
-    padding: 0.4rem 1rem 0.2rem;
-    font-size: 0.65rem;
-    font-weight: 700;
-    letter-spacing: 0.07em;
-    text-transform: uppercase;
-    color: #c9a227;
-}
-
-.nav-item {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.5rem 1rem;
-    color: #e8eef4;
-    text-decoration: none;
-    font-weight: 500;
-    border-left: 4px solid transparent;
-}
-
-.nav-item:hover {
-    background: #00264d;
-    color: white;
-}
-
-.nav-item.active {
-    background: #002244;
-    color: white;
-    border-left-color: #c9a227;
-}
-
-.nav-icon {
-    flex-shrink: 0;
-}
-
-.nav-text {
-    font-size: 0.86rem;
-}
-
-.sidebar-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #00264d;
-}
-
-.logout-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.55rem 0;
-    width: 100%;
-    border: none;
-    background: transparent;
-    color: #e8eef4;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.86rem;
-}
-
-.logout-btn:hover {
-    color: #fff;
-    text-decoration: underline;
-}
-
-.main-wrapper {
-    flex: 1;
-    margin-left: 230px;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-}
-
-.dashboard-header {
-    background: white;
-    padding: 0.7rem 1.5rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border-bottom: 3px solid #c9a227;
-    position: sticky;
-    top: 0;
-    z-index: 50;
-}
-
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.mobile-menu-btn {
-    display: none;
-    background: none;
-    border: none;
-    color: #003366;
-    cursor: pointer;
-    padding: 0.5rem;
-}
-
-.header-content h1 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #003366;
-    margin: 0;
-}
-
-.user-info {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-}
-
-.user-meta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    line-height: 1.2;
-}
-
-.user-role {
-    font-size: 0.7rem;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: #666;
-}
-
-.user-name {
-    font-weight: 600;
-    color: #003366;
-    font-size: 0.88rem;
-}
-
-.user-avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 0;
-    background: #003366;
-    color: white;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 0.78rem;
-    overflow: hidden;
-}
-
-.avatar-img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.dashboard-main {
-    flex: 1;
-    padding: 1.25rem 1.5rem 2rem;
-}
-
-.mobile-overlay {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0, 0, 0, 0.5);
-    z-index: 99;
-}
-
-@media (max-width: 992px) {
-    .sidebar {
-        transform: translateX(-100%);
-        transition: transform 0.2s ease;
-    }
-
-    .sidebar.mobile-open {
-        transform: translateX(0);
-    }
-
-    .main-wrapper {
-        margin-left: 0;
-    }
-
-    .mobile-menu-btn {
-        display: block;
-    }
-
-    .mobile-overlay.active {
-        display: block;
-    }
-}
-
-@media (max-width: 768px) {
-    .dashboard-main {
-        padding: 1rem;
-    }
-
-    .dashboard-header {
-        padding: 0.7rem 1rem;
-    }
-
-    .user-name,
-    .user-role {
-        display: none;
-    }
-}
+<style>
+@import "@/Styles/portal-layout.css";
 </style>

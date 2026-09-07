@@ -168,6 +168,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/enrollments/{enrollment}/enroll', [AdminController::class, 'enrollStudent']);
         Route::post('/enrollments/enroll-selected', [AdminController::class, 'enrollSelected']);
         Route::post('/enrollments/{enrollment}/assign-section', [AdminController::class, 'assignSection']);
+        Route::post('/enrollments/{enrollment}/transfer-section', [AdminController::class, 'transferSection']);
         Route::post('/enrollments/auto-assign-sections', [AdminController::class, 'autoAssignSections']);
         Route::post('/enrollments/reshuffle-by-grades', [AdminController::class, 'reshuffleSectionsByGrades']);
         Route::post('/enrollments/{enrollment}/drop', [AdminController::class, 'dropEnrollment']);

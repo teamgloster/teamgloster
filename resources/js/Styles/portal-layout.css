@@ -53,6 +53,37 @@
     display: flex;
     flex-direction: column;
     overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #c9a227 #002244;
+}
+
+.sidebar-nav::-webkit-scrollbar {
+    width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+    background: #002244;
+    border-radius: 8px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+    background: #c9a227;
+    border-radius: 8px;
+    border: 2px solid #002244;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+    background: #e0b93a;
+}
+
+.sidebar-nav::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+}
+
+.sidebar-nav::-webkit-scrollbar-corner {
+    background: transparent;
 }
 
 .nav-group {
@@ -105,30 +136,6 @@
     font-size: 0.86rem;
 }
 
-.sidebar-footer {
-    padding: 0.75rem 1rem;
-    border-top: 1px solid #00264d;
-}
-
-.logout-btn {
-    display: flex;
-    align-items: center;
-    gap: 0.65rem;
-    padding: 0.55rem 0;
-    width: 100%;
-    border: none;
-    background: transparent;
-    color: #e8eef4;
-    cursor: pointer;
-    font-weight: 500;
-    font-size: 0.86rem;
-}
-
-.logout-btn:hover {
-    color: #fff;
-    text-decoration: underline;
-}
-
 .main-wrapper {
     flex: 1;
     margin-left: 230px;
@@ -153,6 +160,12 @@
     display: flex;
     align-items: center;
     gap: 1rem;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
 }
 
 .mobile-menu-btn {
@@ -217,6 +230,27 @@
     object-fit: cover;
 }
 
+.header-logout-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.42rem 0.85rem;
+    border: none;
+    border-radius: 6px;
+    background: #003366;
+    color: #fff;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.82rem;
+    font-family: inherit;
+    white-space: nowrap;
+}
+
+.header-logout-btn:hover {
+    background: #c9a227;
+    color: #003366;
+}
+
 .dashboard-main {
     flex: 1;
     padding: 1.25rem 1.5rem 2rem;
@@ -265,5 +299,13 @@
     .user-name,
     .user-role {
         display: none;
+    }
+
+    .header-logout-btn .logout-text {
+        display: none;
+    }
+
+    .header-logout-btn {
+        padding: 0.42rem 0.55rem;
     }
 }

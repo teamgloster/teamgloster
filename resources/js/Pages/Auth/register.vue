@@ -667,17 +667,46 @@
                             <div class="form-row">
                                 <div class="form-group">
                                     <label for="password">Password</label>
-                                    <input
-                                        id="password"
-                                        v-model="form.password"
-                                        type="password"
-                                        required
-                                        placeholder="Enter password"
-                                        class="form-input"
-                                        :class="{
-                                            'input-error': errors.password,
-                                        }"
-                                    />
+                                    <div class="password-input-wrapper">
+                                        <input
+                                            id="password"
+                                            v-model="form.password"
+                                            :type="
+                                                showPassword
+                                                    ? 'text'
+                                                    : 'password'
+                                            "
+                                            required
+                                            placeholder="Enter password"
+                                            class="form-input password-input"
+                                            :class="{
+                                                'input-error': errors.password,
+                                            }"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="password-toggle"
+                                            @click="
+                                                showPassword = !showPassword
+                                            "
+                                            :aria-label="
+                                                showPassword
+                                                    ? 'Hide password'
+                                                    : 'Show password'
+                                            "
+                                            :title="
+                                                showPassword
+                                                    ? 'Hide password'
+                                                    : 'Show password'
+                                            "
+                                        >
+                                            <EyeOff
+                                                v-if="showPassword"
+                                                :size="18"
+                                            />
+                                            <Eye v-else :size="18" />
+                                        </button>
+                                    </div>
                                     <span
                                         v-if="errors.password"
                                         class="error-message"
@@ -689,14 +718,44 @@
                                     <label for="password_confirmation"
                                         >Confirm Password</label
                                     >
-                                    <input
-                                        id="password_confirmation"
-                                        v-model="form.password_confirmation"
-                                        type="password"
-                                        required
-                                        placeholder="Confirm password"
-                                        class="form-input"
-                                    />
+                                    <div class="password-input-wrapper">
+                                        <input
+                                            id="password_confirmation"
+                                            v-model="form.password_confirmation"
+                                            :type="
+                                                showConfirmPassword
+                                                    ? 'text'
+                                                    : 'password'
+                                            "
+                                            required
+                                            placeholder="Confirm password"
+                                            class="form-input password-input"
+                                        />
+                                        <button
+                                            type="button"
+                                            class="password-toggle"
+                                            @click="
+                                                showConfirmPassword =
+                                                    !showConfirmPassword
+                                            "
+                                            :aria-label="
+                                                showConfirmPassword
+                                                    ? 'Hide confirm password'
+                                                    : 'Show confirm password'
+                                            "
+                                            :title="
+                                                showConfirmPassword
+                                                    ? 'Hide confirm password'
+                                                    : 'Show confirm password'
+                                            "
+                                        >
+                                            <EyeOff
+                                                v-if="showConfirmPassword"
+                                                :size="18"
+                                            />
+                                            <Eye v-else :size="18" />
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="form-group"></div>
@@ -720,9 +779,7 @@
                                     Required Documents
                                 </h3>
                                 <p class="section-description">
-                                    Please upload the following documents to
-                                    complete your application. You may skip this
-                                    step and upload documents later.
+                                    {{ documentsStepDescription }}
                                 </p>
                             </div>
 
@@ -737,225 +794,44 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td>Form 137 (Permanent Record)</td>
-                                            <td>PDF</td>
+                                        <tr
+                                            v-for="doc in requiredAdmissionDocuments"
+                                            :key="doc.key"
+                                        >
+                                            <td>{{ doc.label }}</td>
+                                            <td>{{ doc.format }}</td>
                                             <td>
                                                 <input
                                                     type="file"
-                                                    ref="form137Input"
+                                                    :id="doc.key + '_file'"
+                                                    class="file-input"
+                                                    :accept="doc.accept"
                                                     @change="
                                                         handleFileUpload(
                                                             $event,
-                                                            'form_137',
+                                                            doc.key,
                                                         )
                                                     "
-                                                    accept="application/pdf"
-                                                    class="file-input"
-                                                    id="form_137_file"
                                                 />
                                                 <label
-                                                    for="form_137_file"
+                                                    :for="doc.key + '_file'"
                                                     class="file-label"
                                                 >
                                                     Choose File
                                                 </label>
                                                 <span
                                                     v-if="
-                                                        documents.form_137.name
+                                                        documents[doc.key].name
                                                     "
                                                     class="file-name"
                                                     >{{
-                                                        documents.form_137.name
+                                                        documents[doc.key].name
                                                     }}</span
                                                 >
                                             </td>
                                             <td>
                                                 {{
-                                                    documents.form_137.name
-                                                        ? "Uploaded"
-                                                        : "Not uploaded"
-                                                }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>2x2 Picture</td>
-                                            <td>JPG / PNG</td>
-                                            <td>
-                                                <input
-                                                    type="file"
-                                                    ref="pictureInput"
-                                                    @change="
-                                                        handleFileUpload(
-                                                            $event,
-                                                            'picture_2x2',
-                                                        )
-                                                    "
-                                                    accept="image/jpeg,image/png,image/jpg"
-                                                    class="file-input"
-                                                    id="picture_2x2_file"
-                                                />
-                                                <label
-                                                    for="picture_2x2_file"
-                                                    class="file-label"
-                                                >
-                                                    Choose File
-                                                </label>
-                                                <span
-                                                    v-if="
-                                                        documents.picture_2x2
-                                                            .name
-                                                    "
-                                                    class="file-name"
-                                                    >{{
-                                                        documents.picture_2x2
-                                                            .name
-                                                    }}</span
-                                                >
-                                            </td>
-                                            <td>
-                                                {{
-                                                    documents.picture_2x2.name
-                                                        ? "Uploaded"
-                                                        : "Not uploaded"
-                                                }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>Medical Certificate</td>
-                                            <td>PDF</td>
-                                            <td>
-                                                <input
-                                                    type="file"
-                                                    ref="medicalInput"
-                                                    @change="
-                                                        handleFileUpload(
-                                                            $event,
-                                                            'medical_certificate',
-                                                        )
-                                                    "
-                                                    accept="application/pdf"
-                                                    class="file-input"
-                                                    id="medical_certificate_file"
-                                                />
-                                                <label
-                                                    for="medical_certificate_file"
-                                                    class="file-label"
-                                                >
-                                                    Choose File
-                                                </label>
-                                                <span
-                                                    v-if="
-                                                        documents
-                                                            .medical_certificate
-                                                            .name
-                                                    "
-                                                    class="file-name"
-                                                    >{{
-                                                        documents
-                                                            .medical_certificate
-                                                            .name
-                                                    }}</span
-                                                >
-                                            </td>
-                                            <td>
-                                                {{
-                                                    documents
-                                                        .medical_certificate
-                                                        .name
-                                                        ? "Uploaded"
-                                                        : "Not uploaded"
-                                                }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>PSA Birth Certificate</td>
-                                            <td>PDF</td>
-                                            <td>
-                                                <input
-                                                    type="file"
-                                                    ref="birthCertInput"
-                                                    @change="
-                                                        handleFileUpload(
-                                                            $event,
-                                                            'birth_certificate',
-                                                        )
-                                                    "
-                                                    accept="application/pdf"
-                                                    class="file-input"
-                                                    id="birth_certificate_file"
-                                                />
-                                                <label
-                                                    for="birth_certificate_file"
-                                                    class="file-label"
-                                                >
-                                                    Choose File
-                                                </label>
-                                                <span
-                                                    v-if="
-                                                        documents
-                                                            .birth_certificate
-                                                            .name
-                                                    "
-                                                    class="file-name"
-                                                    >{{
-                                                        documents
-                                                            .birth_certificate
-                                                            .name
-                                                    }}</span
-                                                >
-                                            </td>
-                                            <td>
-                                                {{
-                                                    documents.birth_certificate
-                                                        .name
-                                                        ? "Uploaded"
-                                                        : "Not uploaded"
-                                                }}
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td>Good Moral Certificate</td>
-                                            <td>PDF</td>
-                                            <td>
-                                                <input
-                                                    type="file"
-                                                    ref="goodMoralInput"
-                                                    @change="
-                                                        handleFileUpload(
-                                                            $event,
-                                                            'good_moral_certificate',
-                                                        )
-                                                    "
-                                                    accept="application/pdf"
-                                                    class="file-input"
-                                                    id="good_moral_certificate_file"
-                                                />
-                                                <label
-                                                    for="good_moral_certificate_file"
-                                                    class="file-label"
-                                                >
-                                                    Choose File
-                                                </label>
-                                                <span
-                                                    v-if="
-                                                        documents
-                                                            .good_moral_certificate
-                                                            .name
-                                                    "
-                                                    class="file-name"
-                                                    >{{
-                                                        documents
-                                                            .good_moral_certificate
-                                                            .name
-                                                    }}</span
-                                                >
-                                            </td>
-                                            <td>
-                                                {{
-                                                    documents
-                                                        .good_moral_certificate
-                                                        .name
+                                                    documents[doc.key].name
                                                         ? "Uploaded"
                                                         : "Not uploaded"
                                                 }}
@@ -1104,93 +980,34 @@
                                     <h4>Uploaded Documents</h4>
                                     <div class="review-documents">
                                         <div
+                                            v-for="doc in requiredAdmissionDocuments"
+                                            v-show="documents[doc.key].name"
+                                            :key="'review-' + doc.key"
                                             class="doc-review-item"
-                                            v-if="documents.form_137.name"
                                         >
                                             <CheckCircle
                                                 :size="18"
                                                 class="doc-check"
                                             />
                                             <span
-                                                >Form 137:
+                                                >{{ doc.short }}:
                                                 {{
-                                                    documents.form_137.name
+                                                    documents[doc.key].name
                                                 }}</span
                                             >
                                         </div>
-                                        <div
-                                            class="doc-review-item"
-                                            v-if="documents.picture_2x2.name"
-                                        >
-                                            <CheckCircle
-                                                :size="18"
-                                                class="doc-check"
-                                            />
-                                            <span
-                                                >2x2 Picture:
-                                                {{
-                                                    documents.picture_2x2.name
-                                                }}</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="doc-review-item"
+                                        <p
                                             v-if="
-                                                documents.medical_certificate
-                                                    .name
+                                                !requiredAdmissionDocuments.some(
+                                                    (doc) =>
+                                                        documents[doc.key]
+                                                            .name,
+                                                )
                                             "
+                                            class="section-description"
                                         >
-                                            <CheckCircle
-                                                :size="18"
-                                                class="doc-check"
-                                            />
-                                            <span
-                                                >Medical Certificate:
-                                                {{
-                                                    documents
-                                                        .medical_certificate
-                                                        .name
-                                                }}</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="doc-review-item"
-                                            v-if="
-                                                documents.birth_certificate.name
-                                            "
-                                        >
-                                            <CheckCircle
-                                                :size="18"
-                                                class="doc-check"
-                                            />
-                                            <span
-                                                >Birth Certificate:
-                                                {{
-                                                    documents.birth_certificate
-                                                        .name
-                                                }}</span
-                                            >
-                                        </div>
-                                        <div
-                                            class="doc-review-item"
-                                            v-if="
-                                                documents.good_moral_certificate
-                                                    .name
-                                            "
-                                        >
-                                            <CheckCircle
-                                                :size="18"
-                                                class="doc-check"
-                                            />
-                                            <span
-                                                >Good Moral:
-                                                {{
-                                                    documents
-                                                        .good_moral_certificate
-                                                        .name
-                                                }}</span
-                                            >
-                                        </div>
+                                            No documents uploaded yet.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
@@ -1241,10 +1058,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, onMounted, watch, markRaw } from "vue";
 import { router, Head, usePage } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
-import { CheckCircle, Download } from "lucide-vue-next";
+import { CheckCircle, Download, Eye, EyeOff } from "lucide-vue-next";
 import { jsPDF } from "jspdf";
 
 const toast = useToast();
@@ -1269,14 +1086,91 @@ const currentStep = ref(1);
 // Document Upload State
 const documents = ref({
     form_137: { file: null, name: "" },
-    picture_2x2: { file: null, name: "" },
-    medical_certificate: { file: null, name: "" },
     birth_certificate: { file: null, name: "" },
     good_moral_certificate: { file: null, name: "" },
+    accomplishment_credentials: { file: null, name: "" },
 });
 
+// Keep raw File objects out of Vue reactivity so Inertia can send them as uploads.
+const documentFiles = {};
+
 const allDocumentsUploaded = computed(() => {
-    return Object.values(documents.value).every((doc) => doc.file !== null);
+    return requiredAdmissionDocuments.value.every(
+        (doc) => documents.value[doc.key]?.file,
+    );
+});
+
+const isSeniorHigh = computed(() => {
+    return (
+        form.value.year_level_applying === "Grade 11" ||
+        form.value.year_level_applying === "Grade 12"
+    );
+});
+
+const applicantDocumentCategory = computed(() => {
+    if (isSeniorHigh.value) {
+        return "senior_high";
+    }
+    if (form.value.year_level_applying === "Grade 7") {
+        return "incoming_grade_7";
+    }
+    return "transferee";
+});
+
+const requiredAdmissionDocuments = computed(() => {
+    const common = [
+        {
+            key: "birth_certificate",
+            label: "PSA Birth Certificate",
+            short: "Birth Certificate",
+            accept: "application/pdf",
+            format: "PDF",
+        },
+    ];
+
+    if (applicantDocumentCategory.value === "senior_high") {
+        return [
+            {
+                key: "accomplishment_credentials",
+                label: "Accomplishment Credentials",
+                short: "Accomplishment Credentials",
+                accept: "application/pdf",
+                format: "PDF",
+            },
+            ...common,
+        ];
+    }
+
+    return [
+        {
+            key: "form_137",
+            label: "Form 137 (Permanent Record)",
+            short: "Form 137",
+            accept: "application/pdf",
+            format: "PDF",
+        },
+        {
+            key: "good_moral_certificate",
+            label: "Good Moral Certificate",
+            short: "Good Moral",
+            accept: "application/pdf",
+            format: "PDF",
+        },
+        ...common,
+    ];
+});
+
+const documentsStepDescription = computed(() => {
+    if (!form.value.year_level_applying) {
+        return "Select a year level in Step 1 to see the documents you need. You may skip this step and upload later.";
+    }
+    if (applicantDocumentCategory.value === "senior_high") {
+        return "Senior High School applicants (Grade 11-12) need accomplishment credentials and a PSA birth certificate. You may skip this step and upload later.";
+    }
+    if (applicantDocumentCategory.value === "incoming_grade_7") {
+        return "Incoming Grade 7 applicants need Form 137, a Good Moral Certificate, and a PSA birth certificate. You may skip this step and upload later.";
+    }
+    return "Transferees need Form 137, a Good Moral Certificate, and a PSA birth certificate. You may skip this step and upload later.";
 });
 
 const isAdmissionRoute = computed(() => {
@@ -1295,13 +1189,6 @@ const pageSubtitle = computed(() => {
         : "Complete this form to create a student account.";
 });
 
-const isSeniorHigh = computed(() => {
-    return (
-        form.value.year_level_applying === "Grade 11" ||
-        form.value.year_level_applying === "Grade 12"
-    );
-});
-
 const schoolYearOptions = computed(() => {
     if (!props.currentSchoolYear) {
         return [];
@@ -1316,6 +1203,8 @@ const barangays = ref([]);
 const loadingProvinces = ref(false);
 const loadingMunicipalities = ref(false);
 const loadingBarangays = ref(false);
+const showPassword = ref(false);
+const showConfirmPassword = ref(false);
 
 const form = ref({
     first_name: "",
@@ -1451,6 +1340,16 @@ watch(
         if (newValue !== "Grade 11" && newValue !== "Grade 12") {
             form.value.preferred_strand = "";
         }
+
+        const allowed = new Set(
+            requiredAdmissionDocuments.value.map((doc) => doc.key),
+        );
+        Object.keys(documents.value).forEach((key) => {
+            if (!allowed.has(key)) {
+                delete documentFiles[key];
+                documents.value[key] = { file: null, name: "" };
+            }
+        });
     },
 );
 
@@ -1493,10 +1392,11 @@ const nextStep = () => {
                 !form.value.last_name ||
                 !form.value.email ||
                 !form.value.password ||
+                !form.value.year_level_applying ||
                 !/^\d{12}$/.test(form.value.lrn)
             ) {
                 toast.error(
-                    "Please fill in all required fields, including a unique 12-digit LRN.",
+                    "Please fill in all required fields, including a unique 12-digit LRN and year level.",
                 );
                 return;
             }
@@ -1517,16 +1417,8 @@ const previousStep = () => {
 const handleFileUpload = (event, documentType) => {
     const file = event.target.files[0];
     if (file) {
-        // Validate file type
-        const allowedTypes =
-            documentType === "picture_2x2"
-                ? ["image/jpeg", "image/jpg", "image/png"]
-                : ["application/pdf"];
-
-        if (!allowedTypes.includes(file.type)) {
-            toast.error(
-                `Invalid file type for ${documentType}. Please upload the correct format.`,
-            );
+        if (file.type !== "application/pdf") {
+            toast.error("Please upload a PDF file.");
             event.target.value = "";
             return;
         }
@@ -1539,11 +1431,12 @@ const handleFileUpload = (event, documentType) => {
             return;
         }
 
+        documentFiles[documentType] = file;
         documents.value[documentType] = {
-            file: file,
+            file: markRaw(file),
             name: file.name,
         };
-        toast.success(`${file.name} uploaded successfully`);
+        toast.success(`${file.name} selected`);
     }
 };
 
@@ -1984,10 +1877,9 @@ const downloadAsPDF = async () => {
         .map(([key, doc]) => {
             const labels = {
                 form_137: "Form 137",
-                picture_2x2: "2x2 Picture",
-                medical_certificate: "Medical Certificate",
                 birth_certificate: "Birth Certificate",
                 good_moral_certificate: "Good Moral Certificate",
+                accomplishment_credentials: "Accomplishment Credentials",
             };
             return { label: labels[key], name: doc.name };
         });
@@ -2110,8 +2002,14 @@ const submit = () => {
     };
 
     Object.keys(documents.value).forEach((key) => {
-        if (documents.value[key].file) {
-            payload[key] = documents.value[key].file;
+        if (
+            !requiredAdmissionDocuments.value.some((doc) => doc.key === key)
+        ) {
+            return;
+        }
+        const file = documentFiles[key] || documents.value[key].file;
+        if (file instanceof File) {
+            payload[key] = file;
         }
     });
 
@@ -2266,6 +2164,33 @@ const submit = () => {
 
 .form-input.input-error {
     border-color: #9b1c1c;
+}
+
+.password-input-wrapper {
+    position: relative;
+}
+
+.password-input {
+    padding-right: 2.6rem;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.4rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.2rem;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: #003366;
 }
 
 .error-message {
