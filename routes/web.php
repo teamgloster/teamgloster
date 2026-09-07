@@ -57,7 +57,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/school-forms/sf2/{section}', [SchoolFormController::class, 'adminSf2'])->name('admin.school-forms.sf2');
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'adminSf9'])->name('admin.students.sf9');
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'adminSf10'])->name('admin.students.sf10');
-        Route::get('/permanent-records', [PermanentRecordController::class, 'adminIndex'])->name('admin.permanent-records');
+        Route::get('/permanent-records', fn () => redirect()->route('admin.school-forms'))->name('admin.permanent-records');
         Route::post('/students/{student}/permanent-records', [PermanentRecordController::class, 'store'])->name('admin.permanent-records.store');
         Route::get('/permanent-records/{record}/download', [PermanentRecordController::class, 'download'])->name('admin.permanent-records.download');
         Route::delete('/permanent-records/{record}', [PermanentRecordController::class, 'destroy'])->name('admin.permanent-records.destroy');

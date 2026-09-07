@@ -52,33 +52,10 @@ beforeEach(function () {
     SchoolSetting::current()->update(['current_school_year' => '2025-2026']);
 });
 
-test('admin can open the SP-10 finder for all students', function () {
-    $admin = recordAdmin();
-    $student = recordStudent();
-    $grade7 = YearLevel::create([
-        'name' => 'Grade 7',
-        'code' => 'G7-SP10',
-        'level_type' => 'junior_high',
-        'is_active' => true,
-    ]);
-    Enrollment::create([
-        'user_id' => $student->id,
-        'year_level_id' => $grade7->id,
-        'school_year' => '2025-2026',
-        'semester' => 'first',
-        'status' => 'enrolled',
-        'enrollment_type' => 'old',
-    ]);
-
-    $this->actingAs($admin)
+test('admin SP-10 finder redirects to school forms', function () {
+    $this->actingAs(recordAdmin())
         ->get('/admin/permanent-records')
-        ->assertSuccessful()
-        ->assertInertia(fn ($page) => $page
-            ->component('Dashboard/PermanentRecords/Index')
-            ->where('viewer', 'admin')
-            ->has('students', 1)
-            ->where('students.0.lrn', '111111111111')
-        );
+        ->assertRedirect(route('admin.school-forms'));
 });
 
 test('registrar can open the SP-10 finder', function () {
@@ -118,7 +95,7 @@ test('admin can upload and download an old SP-10 file', function () {
         ->assertSuccessful();
 });
 
-test('teacher cannot open the admin SP-10 finder', function () {
+test('teacher cannot open admin school forms through the old SP-10 path', function () {
     $teacher = User::create([
         'first_name' => 'Maria',
         'last_name' => 'Santos',
@@ -133,7 +110,6 @@ test('teacher cannot open the admin SP-10 finder', function () {
 });
 
 test('finder marks learners who already have encoded grades', function () {
-    $admin = recordAdmin();
     $student = recordStudent('333333333333');
     $grade7 = YearLevel::create([
         'name' => 'Grade 7',
@@ -166,8 +142,8 @@ test('finder marks learners who already have encoded grades', function () {
         'final_grade' => 88,
     ]);
 
-    $this->actingAs($admin)
-        ->get('/admin/permanent-records')
+    $this->actingAs(recordRegistrar())
+        ->get('/registrar/permanent-records')
         ->assertInertia(fn ($page) => $page
             ->where('students.0.has_grades', true)
         );

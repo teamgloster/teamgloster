@@ -16,12 +16,6 @@
             grades are entered once and apply to both the report card and the
             permanent record.
         </p>
-        <p v-if="viewer !== 'teacher'" class="hub-intro">
-            <Link :href="`${basePath}/permanent-records`" class="hub-inline">
-                Open the SP-10 finder
-            </Link>
-            to search all Tambo NHS learners and upload old Form 137 files.
-        </p>
 
         <div class="form-cards">
             <button
@@ -443,11 +437,6 @@ const studentName = (student) => {
     margin: 0 0 0.85rem;
     color: #444;
     font-size: 0.88rem;
-}
-
-.hub-inline {
-    color: #003366;
-    font-weight: 700;
 }
 
 .form-cards {

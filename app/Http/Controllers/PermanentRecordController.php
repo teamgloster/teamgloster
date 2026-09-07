@@ -17,11 +17,6 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PermanentRecordController extends Controller
 {
-    public function adminIndex(Request $request): Response
-    {
-        return $this->index($request, 'admin');
-    }
-
     public function registrarIndex(Request $request): Response
     {
         return $this->index($request, 'registrar');
