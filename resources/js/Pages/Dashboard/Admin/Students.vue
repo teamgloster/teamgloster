@@ -112,11 +112,21 @@
                         <button
                             type="button"
                             class="btn-success"
-                            :disabled="filteredEligibleStudents.length === 0"
+                            :disabled="studentsToPromote.length === 0"
                             @click="openBulkPromoteModal"
                         >
                             <TrendingUp :size="18" />
-                            Promote Eligible
+                            {{
+                                selectedIds.length
+                                    ? "Promote Selected"
+                                    : "Promote Eligible"
+                            }}
+                            <span
+                                v-if="studentsToPromote.length"
+                                class="selection-count"
+                            >
+                                ({{ studentsToPromote.length }})
+                            </span>
                         </button>
                         <button
                             class="btn-primary"
@@ -134,6 +144,18 @@
                 <table class="data-table">
                     <thead>
                         <tr>
+                            <th class="col-check">
+                                <input
+                                    type="checkbox"
+                                    :checked="allFilteredSelected"
+                                    :indeterminate.prop="
+                                        selectAllIndeterminate
+                                    "
+                                    :disabled="filteredStudents.length === 0"
+                                    @change="toggleSelectAllFiltered"
+                                    title="Select all visible students"
+                                />
+                            </th>
                             <th>Student</th>
                             <th>Year Level</th>
                             <th>Promotion</th>
@@ -151,6 +173,18 @@
                             v-for="student in filteredStudents"
                             :key="student.id"
                         >
+                            <td class="col-check">
+                                <input
+                                    type="checkbox"
+                                    :checked="isSelected(student.id)"
+                                    @change="toggleSelect(student.id)"
+                                    :title="
+                                        student.promotion?.can_promote
+                                            ? 'Select student to promote'
+                                            : 'Select student'
+                                    "
+                                />
+                            </td>
                             <td>
                                 <div class="user-cell">
                                     <div class="user-avatar-sm">
@@ -311,7 +345,7 @@
                             </td>
                         </tr>
                         <tr v-if="filteredStudents.length === 0">
-                            <td colspan="10" class="empty-table">
+                            <td colspan="11" class="empty-table">
                                 <div class="empty-message">
                                     <Users :size="40" />
                                     <p>No students found</p>
@@ -327,6 +361,9 @@
                 <span class="record-count">
                     Showing {{ filteredStudents.length }} of
                     {{ students.length }} students
+                    <template v-if="selectedIds.length">
+                        · {{ selectedIds.length }} selected
+                    </template>
                 </span>
             </div>
         </div>
@@ -444,6 +481,15 @@
                                             selectedStudent.promotion
                                                 ?.current_year_level?.name ||
                                             "Not enrolled"
+                                        }}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Previous School</label>
+                                        <span>{{
+                                            selectedStudent.previous_school ||
+                                            selectedStudent.current_enrollment
+                                                ?.previous_school ||
+                                            "Not provided"
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
@@ -962,13 +1008,24 @@
                                 <p>
                                     Promote
                                     <strong>{{
-                                        filteredEligibleStudents.length
+                                        studentsToPromote.length
                                     }}</strong>
                                     student(s) who have passed their current
                                     year level to the next grade for School Year
                                     {{ currentSchoolYear }}?
                                 </p>
-                                <p class="description-text">
+                                <p
+                                    v-if="
+                                        selectedIds.length &&
+                                        selectedIneligibleCount > 0
+                                    "
+                                    class="description-text"
+                                >
+                                    {{ selectedIneligibleCount }} selected
+                                    student(s) will be skipped because they are
+                                    not eligible to promote.
+                                </p>
+                                <p v-else class="description-text">
                                     Students who failed or still have incomplete
                                     final grades will not be promoted.
                                 </p>
@@ -1065,6 +1122,7 @@ const promotionRemarks = ref("");
 const showYearLevelModal = ref(false);
 const studentToChange = ref(null);
 const showBulkPromoteModal = ref(false);
+const selectedIds = ref([]);
 const isSubmitting = ref(false);
 const yearLevelForm = ref({
     year_level_id: "",
@@ -1231,6 +1289,81 @@ const promotedCount = computed(
 const filteredEligibleStudents = computed(() =>
     filteredStudents.value.filter((student) => student.promotion?.can_promote),
 );
+
+const filteredStudentIds = computed(() =>
+    filteredStudents.value.map((student) => Number(student.id)),
+);
+
+const selectedStudents = computed(() => {
+    const ids = new Set(selectedIds.value.map((id) => Number(id)));
+    return props.students.filter((student) => ids.has(Number(student.id)));
+});
+
+const selectedEligibleStudents = computed(() =>
+    selectedStudents.value.filter((student) => student.promotion?.can_promote),
+);
+
+const selectedIneligibleCount = computed(
+    () => selectedStudents.value.length - selectedEligibleStudents.value.length,
+);
+
+const studentsToPromote = computed(() =>
+    selectedIds.value.length
+        ? selectedEligibleStudents.value
+        : filteredEligibleStudents.value,
+);
+
+const allFilteredSelected = computed(
+    () =>
+        filteredStudentIds.value.length > 0 &&
+        filteredStudentIds.value.every((id) =>
+            selectedIds.value.map((selected) => Number(selected)).includes(id),
+        ),
+);
+
+const selectAllIndeterminate = computed(() => {
+    const selectedVisible = filteredStudentIds.value.filter((id) =>
+        selectedIds.value.map((selected) => Number(selected)).includes(id),
+    ).length;
+
+    return (
+        selectedVisible > 0 && selectedVisible < filteredStudentIds.value.length
+    );
+});
+
+const isSelected = (id) => {
+    return selectedIds.value
+        .map((selected) => Number(selected))
+        .includes(Number(id));
+};
+
+const toggleSelect = (id) => {
+    const numericId = Number(id);
+    if (isSelected(numericId)) {
+        selectedIds.value = selectedIds.value.filter(
+            (selected) => Number(selected) !== numericId,
+        );
+        return;
+    }
+    selectedIds.value = [...selectedIds.value, numericId];
+};
+
+const toggleSelectAllFiltered = () => {
+    if (allFilteredSelected.value) {
+        const visible = new Set(filteredStudentIds.value);
+        selectedIds.value = selectedIds.value.filter(
+            (id) => !visible.has(Number(id)),
+        );
+        return;
+    }
+
+    selectedIds.value = [
+        ...new Set([
+            ...selectedIds.value.map((id) => Number(id)),
+            ...filteredStudentIds.value,
+        ]),
+    ];
+};
 
 const changeableYearLevels = computed(() => props.yearLevels || []);
 
@@ -1448,8 +1581,12 @@ const submitYearLevelChange = () => {
 };
 
 const openBulkPromoteModal = () => {
-    if (filteredEligibleStudents.value.length === 0) {
-        toast.error("No eligible students in the current list.");
+    if (studentsToPromote.value.length === 0) {
+        toast.error(
+            selectedIds.value.length
+                ? "None of the selected students are eligible to promote."
+                : "No eligible students in the current list.",
+        );
         return;
     }
 
@@ -1457,9 +1594,7 @@ const openBulkPromoteModal = () => {
 };
 
 const promoteEligibleStudents = () => {
-    const studentIds = filteredEligibleStudents.value.map(
-        (student) => student.id,
-    );
+    const studentIds = studentsToPromote.value.map((student) => student.id);
     if (studentIds.length === 0) return;
 
     isSubmitting.value = true;
@@ -1469,8 +1604,13 @@ const promoteEligibleStudents = () => {
         {
             preserveScroll: true,
             onSuccess: () => {
-                toast.success("Eligible students were promoted.");
+                toast.success(
+                    selectedIds.value.length
+                        ? "Selected eligible students were promoted."
+                        : "Eligible students were promoted.",
+                );
                 showBulkPromoteModal.value = false;
+                selectedIds.value = [];
             },
             onError: (errors) => {
                 const firstError = Object.values(errors)[0];
@@ -1566,6 +1706,22 @@ const deleteStudent = () => {
     justify-content: flex-end;
     gap: 0.5rem;
     margin-top: 1rem;
+}
+
+.col-check {
+    width: 2.25rem;
+    text-align: center;
+}
+
+.col-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #003366;
+}
+
+.selection-count {
+    font-weight: 600;
 }
 
 .form-group textarea {
