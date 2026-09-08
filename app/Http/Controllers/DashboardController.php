@@ -370,17 +370,6 @@ class DashboardController extends Controller
      */
     public function adminTeacherAssignments()
     {
-        $currentSchoolYear = $this->getCurrentSchoolYear();
-
-        $teacherSubjects = TeacherSubject::with(['teacher', 'subject.yearLevel'])
-            ->get();
-
-        $sectionSubjectTeachers = SectionSubjectTeacher::with(['section.yearLevel', 'subject', 'teacher'])
-            ->where('school_year', $currentSchoolYear)
-            ->orderBy('section_id')
-            ->get();
-
-        // Get teachers with their teachable subjects - map to 'subjects' for frontend
         $teachersWithSubjects = User::where('role', 'teacher')
             ->with(['teachableSubjects.yearLevel'])
             ->orderBy('last_name')
@@ -397,24 +386,13 @@ class DashboardController extends Controller
             ->orderBy('name')
             ->get();
 
-        $sections = Section::with(['yearLevel'])
-            ->where('school_year', $currentSchoolYear)
-            ->orderBy('year_level_id')
-            ->orderBy('name')
-            ->get();
-
         $yearLevels = YearLevel::ordered()->get();
 
         return Inertia::render('Dashboard/Admin/TeacherAssignments', [
             'user' => Auth::user(),
-            'teacherSubjects' => $teacherSubjects,
-            'sectionSubjectTeachers' => $sectionSubjectTeachers,
             'teachersWithSubjects' => $teachersWithSubjects,
-            'teachers' => $teachersWithSubjects,
             'subjects' => $subjects,
-            'sections' => $sections,
             'yearLevels' => $yearLevels,
-            'currentSchoolYear' => $currentSchoolYear,
         ]);
     }
 
@@ -513,17 +491,12 @@ class DashboardController extends Controller
             : collect();
 
         $currentSchoolYear = $this->getCurrentSchoolYear();
-        $teachableSubjects = $user->teachableSubjects()->with('yearLevel')->get();
+        $teachableSubjects = $user->teachableSubjects()
+            ->with('yearLevel')
+            ->orderBy('subjects.year_level_id')
+            ->orderBy('subjects.name')
+            ->get();
         $studentGrades = $this->teacherGradeRows($user, $teachableSubjects, $currentSchoolYear);
-
-        // The Subjects Handled card and grade filters should only reflect
-        // what this teacher is actually teaching in the admin-set school
-        // year — not every subject they *could* teach.
-        $teacherSubjects = $studentGrades
-            ->pluck('subject')
-            ->filter()
-            ->unique(fn ($subject) => $subject->id)
-            ->values();
 
         $teacherSections = $studentGrades
             ->pluck('section')
@@ -535,7 +508,7 @@ class DashboardController extends Controller
             'user' => $user,
             'advisorySection' => $advisorySection,
             'advisoryStudents' => $advisoryStudents,
-            'teacherSubjects' => $teacherSubjects,
+            'teacherSubjects' => $teachableSubjects,
             'teacherSections' => $teacherSections,
             'studentGrades' => $studentGrades,
             'currentSchoolYear' => $currentSchoolYear,
@@ -627,8 +600,6 @@ class DashboardController extends Controller
                         'name' => $subject->name,
                         'description' => $subject->description,
                         'type' => $subject->subject_type,
-                        'units' => $subject->units,
-                        'hours_per_week' => $subject->hours_per_week,
                         'semester' => $subject->semester,
                     ];
                 });
@@ -849,8 +820,6 @@ class DashboardController extends Controller
                         'name' => $subject->name,
                         'description' => $subject->description,
                         'type' => $subject->subject_type,
-                        'units' => $subject->units,
-                        'hours_per_week' => $subject->hours_per_week,
                         'semester' => $subject->semester,
                     ];
                 });
@@ -1104,12 +1073,10 @@ class DashboardController extends Controller
      */
     private function teacherGradeRows(User $teacher, $teacherSubjects, string $schoolYear)
     {
-        $allAssignments = SectionSubjectTeacher::query()
+        $currentAssignments = SectionSubjectTeacher::query()
             ->where('teacher_id', $teacher->id)
             ->with(['section.yearLevel', 'subject'])
-            ->get();
-
-        $assignments = $allAssignments
+            ->get()
             ->filter(fn (SectionSubjectTeacher $assignment) => $this->assignmentMatchesSchoolYear($assignment, $schoolYear))
             ->values();
 
@@ -1143,50 +1110,54 @@ class DashboardController extends Controller
             ]);
         };
 
-        foreach ($assignments as $assignment) {
-            $section = $assignment->section;
-            $subject = $assignment->subject;
-            if (! $section || ! $subject) {
+        foreach ($teacherSubjects as $subject) {
+            if (! $subject) {
+                continue;
+            }
+
+            $subjectAssignments = $currentAssignments->filter(
+                fn (SectionSubjectTeacher $assignment) => (int) $assignment->subject_id === (int) $subject->id
+            );
+
+            if ($subjectAssignments->isNotEmpty()) {
+                foreach ($subjectAssignments as $assignment) {
+                    $section = $assignment->section;
+                    $assignedSubject = $assignment->subject ?: $subject;
+                    if (! $section) {
+                        continue;
+                    }
+
+                    $enrollments = Enrollment::query()
+                        ->where('section_id', $section->id)
+                        ->where('school_year', $schoolYear)
+                        ->where('status', 'enrolled')
+                        ->with('user')
+                        ->get();
+
+                    foreach ($enrollments as $enrollment) {
+                        if ($enrollment->user) {
+                            $pushRow($enrollment->user, $section, $assignedSubject, $enrollment);
+                        }
+                    }
+                }
+
+                continue;
+            }
+
+            if (! $subject->year_level_id) {
                 continue;
             }
 
             $enrollments = Enrollment::query()
-                ->where('section_id', $section->id)
+                ->where('year_level_id', $subject->year_level_id)
                 ->where('school_year', $schoolYear)
                 ->where('status', 'enrolled')
-                ->with('user')
+                ->with(['user', 'section.yearLevel'])
                 ->get();
 
             foreach ($enrollments as $enrollment) {
                 if ($enrollment->user) {
-                    $pushRow($enrollment->user, $section, $subject, $enrollment);
-                }
-            }
-        }
-
-        // Only fall back to a raw year-level roster when this teacher has
-        // NEVER been assigned to any section (i.e. bootstrap / brand-new
-        // teacher). If they have assignments in other school years, that is
-        // a data issue — surface an empty list for the current SY so the
-        // admin sees they need to add current-SY assignments, rather than
-        // silently dumping every enrolled student in the year level.
-        if ($rows->isEmpty() && $allAssignments->isEmpty()) {
-            foreach ($teacherSubjects as $subject) {
-                if (! $subject->year_level_id) {
-                    continue;
-                }
-
-                $enrollments = Enrollment::query()
-                    ->where('year_level_id', $subject->year_level_id)
-                    ->where('school_year', $schoolYear)
-                    ->where('status', 'enrolled')
-                    ->with(['user', 'section.yearLevel'])
-                    ->get();
-
-                foreach ($enrollments as $enrollment) {
-                    if ($enrollment->user) {
-                        $pushRow($enrollment->user, $enrollment->section, $subject, $enrollment);
-                    }
+                    $pushRow($enrollment->user, $enrollment->section, $subject, $enrollment);
                 }
             }
         }

@@ -40,8 +40,6 @@ test('enrollment summary counts promotion dropout completion and graduation', fu
         'code' => 'MATH7SUM',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -50,8 +48,6 @@ test('enrollment summary counts promotion dropout completion and graduation', fu
         'code' => 'MATH10SUM',
         'year_level_id' => $grade10->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -60,8 +56,6 @@ test('enrollment summary counts promotion dropout completion and graduation', fu
         'code' => 'MATH12SUM',
         'year_level_id' => $grade12->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);

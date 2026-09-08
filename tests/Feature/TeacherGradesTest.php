@@ -45,8 +45,6 @@ function gradesCatalog(): array
         'code' => 'MATH7-TG',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -55,8 +53,6 @@ function gradesCatalog(): array
         'code' => 'CONARTS-TG',
         'year_level_id' => $grade12->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -162,15 +158,13 @@ test('teacher grades only include students from current school year assignments'
             ->where('studentGrades.0.student.id', $currentStudent->id)
             ->where('studentGrades.0.subject.id', $math->id)
             ->where('studentGrades.0.section.name', 'Rosal')
-            // teacherSubjects reflects what they are actually teaching now.
-            ->has('teacherSubjects', 1)
-            ->where('teacherSubjects.0.id', $math->id)
+            ->has('teacherSubjects', 2)
         );
 });
 
-test('teacher with no assignments in current school year sees no students', function () {
+test('teacher assigned a subject sees current school year students for that year level', function () {
     $teacher = gradesTeacher();
-    ['math' => $math, 'arts' => $arts, 'gawgaw' => $gawgaw] = gradesCatalog();
+    ['math' => $math, 'arts' => $arts, 'gawgaw' => $gawgaw, 'currentStudent' => $currentStudent] = gradesCatalog();
 
     TeacherSubject::create([
         'teacher_id' => $teacher->id,
@@ -181,7 +175,8 @@ test('teacher with no assignments in current school year sees no students', func
         'subject_id' => $arts->id,
     ]);
 
-    // Only a future-year assignment — current SY must be empty.
+    // Only a future-year section assignment — current SY students still
+    // come from the Teacher-Subject year level roster.
     SectionSubjectTeacher::create([
         'teacher_id' => $teacher->id,
         'subject_id' => $arts->id,
@@ -195,8 +190,10 @@ test('teacher with no assignments in current school year sees no students', func
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Dashboard/Teacher')
-            ->has('studentGrades', 0)
-            ->has('teacherSubjects', 0)
+            ->has('studentGrades', 1)
+            ->where('studentGrades.0.student.id', $currentStudent->id)
+            ->where('studentGrades.0.subject.id', $math->id)
+            ->has('teacherSubjects', 2)
         );
 });
 
@@ -217,5 +214,43 @@ test('brand-new teacher with no assignments still sees enrolled students in the 
             ->has('studentGrades', 1)
             ->where('studentGrades.0.student.id', $currentStudent->id)
             ->where('studentGrades.0.subject.id', $math->id)
+            ->has('teacherSubjects', 1)
+            ->where('teacherSubjects.0.id', $math->id)
+        );
+});
+
+test('assigned subjects appear on the teacher dashboard even without enrolled students', function () {
+    SchoolSetting::current()->update(['current_school_year' => '2025-2026']);
+
+    $teacher = gradesTeacher();
+    $grade7 = YearLevel::create([
+        'name' => 'Grade 7',
+        'code' => 'G7-EMPTY',
+        'level_type' => 'junior_high',
+        'is_active' => true,
+    ]);
+    $math = Subject::create([
+        'name' => 'Mathematics 7',
+        'code' => 'MATH7-EMPTY',
+        'year_level_id' => $grade7->id,
+        'subject_type' => 'core',
+        'semester' => 'full_year',
+        'is_active' => true,
+    ]);
+
+    TeacherSubject::create([
+        'teacher_id' => $teacher->id,
+        'subject_id' => $math->id,
+    ]);
+
+    $this->actingAs($teacher)
+        ->get('/dashboard/teacher')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Teacher')
+            ->has('teacherSubjects', 1)
+            ->where('teacherSubjects.0.id', $math->id)
+            ->where('teacherSubjects.0.name', 'Mathematics 7')
+            ->has('studentGrades', 0)
         );
 });

@@ -64,8 +64,6 @@ function createYearLevelsAndSubjects(): array
         'code' => 'MATH7',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -74,8 +72,6 @@ function createYearLevelsAndSubjects(): array
         'code' => 'ENG7',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -271,8 +267,6 @@ test('admin cannot promote a grade 12 student who already passed', function () {
         'code' => 'RES12',
         'year_level_id' => $grade12->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);

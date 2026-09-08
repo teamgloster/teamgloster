@@ -133,7 +133,9 @@
                         </p>
                         <div class="gov-pagehead-row">
                             <h2>Teacher Dashboard</h2>
-                            <span class="gov-sy">School Year 2025-2026</span>
+                            <span class="gov-sy"
+                                >School Year {{ currentSchoolYear }}</span
+                            >
                         </div>
                     </div>
 
@@ -226,7 +228,9 @@
                         <div class="advisory-header-right">
                             <div class="school-year-display">
                                 <Calendar :size="18" />
-                                <span class="sy-value">S.Y. 2025-2026</span>
+                                <span class="sy-value"
+                                    >S.Y. {{ currentSchoolYear }}</span
+                                >
                             </div>
                         </div>
                     </div>
@@ -528,7 +532,9 @@
                         <div class="subjects-header-right">
                             <div class="school-year-display">
                                 <Calendar :size="18" />
-                                <span class="sy-value">S.Y. 2025-2026</span>
+                                <span class="sy-value"
+                                    >S.Y. {{ currentSchoolYear }}</span
+                                >
                             </div>
                         </div>
                     </div>
@@ -4316,7 +4322,7 @@ const printGrades = () => {
             <div class="header">
                 <h1>Tambo National High School</h1>
                 <h2>Student Grades Report${subjectName}</h2>
-                <div class="school-year">School Year 2025-2026</div>
+                <div class="school-year">School Year ${props.currentSchoolYear || ""}</div>
             </div>
     `;
 
@@ -4607,7 +4613,7 @@ const printSelectedSections = () => {
             <div class="header">
                 <h1>Tambo National High School</h1>
                 <h2>Student Grades Report${subjectName}</h2>
-                <div class="school-year">School Year 2025-2026</div>
+                <div class="school-year">School Year ${props.currentSchoolYear || ""}</div>
             </div>
     `;
 

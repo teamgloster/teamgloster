@@ -86,9 +86,7 @@
                             <th>Subject</th>
                             <th>Year Level</th>
                             <th>Type</th>
-                            <th>Semester</th>
-                            <th>Units</th>
-                            <th>Hours/Week</th>
+                            <th>Term</th>
                             <th>Status</th>
                             <th>Actions</th>
                         </tr>
@@ -136,8 +134,6 @@
                                     {{ formatSemester(subject.semester) }}
                                 </span>
                             </td>
-                            <td>{{ subject.units }}</td>
-                            <td>{{ subject.hours_per_week }}</td>
                             <td>
                                 <span
                                     class="status-badge"
@@ -183,7 +179,7 @@
                             </td>
                         </tr>
                         <tr v-if="filteredSubjects.length === 0">
-                            <td colspan="8" class="empty-table">
+                            <td colspan="6" class="empty-table">
                                 <div class="empty-message">
                                     <BookOpen :size="40" />
                                     <p>No subjects found</p>
@@ -282,21 +278,11 @@
                                         </span>
                                     </div>
                                     <div class="detail-item">
-                                        <label>Semester</label>
+                                        <label>Term</label>
                                         <span>{{
                                             formatSemester(
                                                 selectedSubject.semester,
                                             )
-                                        }}</span>
-                                    </div>
-                                    <div class="detail-item">
-                                        <label>Units</label>
-                                        <span>{{ selectedSubject.units }}</span>
-                                    </div>
-                                    <div class="detail-item">
-                                        <label>Hours per Week</label>
-                                        <span>{{
-                                            selectedSubject.hours_per_week
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
@@ -315,15 +301,6 @@
                                                     : "Inactive"
                                             }}
                                         </span>
-                                    </div>
-                                    <div
-                                        class="detail-item full-width"
-                                        v-if="selectedSubject.description"
-                                    >
-                                        <label>Description</label>
-                                        <span>{{
-                                            selectedSubject.description
-                                        }}</span>
                                     </div>
                                 </div>
                             </div>
@@ -418,39 +395,7 @@
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label
-                                            >Units
-                                            <span class="required"
-                                                >*</span
-                                            ></label
-                                        >
-                                        <input
-                                            v-model="subjectForm.units"
-                                            type="number"
-                                            min="1"
-                                            required
-                                            placeholder="Number of units"
-                                        />
-                                    </div>
-                                    <div class="form-group">
-                                        <label
-                                            >Hours per Week
-                                            <span class="required"
-                                                >*</span
-                                            ></label
-                                        >
-                                        <input
-                                            v-model="subjectForm.hours_per_week"
-                                            type="number"
-                                            min="1"
-                                            required
-                                            placeholder="Hours per week"
-                                        />
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group">
-                                        <label
-                                            >Semester
+                                            >Term
                                             <span class="required"
                                                 >*</span
                                             ></label
@@ -460,13 +405,13 @@
                                             required
                                         >
                                             <option value="">
-                                                Select semester
+                                                Select term
                                             </option>
                                             <option value="first">
-                                                First Semester
+                                                First Term
                                             </option>
                                             <option value="second">
-                                                Second Semester
+                                                Second Term
                                             </option>
                                             <option value="full_year">
                                                 Full Year
@@ -483,16 +428,6 @@
                                                 Inactive
                                             </option>
                                         </select>
-                                    </div>
-                                </div>
-                                <div class="form-row">
-                                    <div class="form-group full-width">
-                                        <label>Description</label>
-                                        <textarea
-                                            v-model="subjectForm.description"
-                                            rows="3"
-                                            placeholder="Enter subject description (optional)"
-                                        ></textarea>
                                     </div>
                                 </div>
                             </form>
@@ -658,8 +593,6 @@ const subjectForm = ref({
     description: "",
     year_level_id: "",
     subject_type: "",
-    units: "",
-    hours_per_week: "",
     semester: "",
     is_active: true,
 });
@@ -722,8 +655,8 @@ const formatSubjectType = (type) => {
 const formatSemester = (semester) => {
     if (!semester) return "-";
     const semesterMap = {
-        first: "1st Semester",
-        second: "2nd Semester",
+        first: "1st Term",
+        second: "2nd Term",
         full_year: "Full Year",
     };
     return semesterMap[semester] || semester;
@@ -736,8 +669,6 @@ const resetSubjectForm = () => {
         description: "",
         year_level_id: "",
         subject_type: "",
-        units: "",
-        hours_per_week: "",
         semester: "",
         is_active: true,
     };
@@ -754,8 +685,6 @@ const openSubjectModal = (mode, subject = null) => {
             description: subject.description || "",
             year_level_id: subject.year_level_id || "",
             subject_type: subject.subject_type || "",
-            units: subject.units || "",
-            hours_per_week: subject.hours_per_week || "",
             semester: subject.semester || "",
             is_active: subject.is_active ?? true,
         };

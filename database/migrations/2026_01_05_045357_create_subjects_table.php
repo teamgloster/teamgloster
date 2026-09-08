@@ -18,8 +18,6 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->foreignId('year_level_id')->nullable()->constrained('year_levels')->onDelete('set null');
             $table->enum('subject_type', ['core', 'specialized', 'applied', 'elective'])->default('core');
-            $table->integer('units')->default(1);
-            $table->integer('hours_per_week')->default(4);
             $table->enum('semester', ['first', 'second', 'full_year'])->default('full_year');
             $table->boolean('is_active')->default(true);
             $table->timestamps();

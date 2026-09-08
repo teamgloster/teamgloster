@@ -13,16 +13,12 @@ class Subject extends Model
         'description',
         'year_level_id',
         'subject_type',
-        'units',
-        'hours_per_week',
         'semester',
         'is_active',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
-        'units' => 'integer',
-        'hours_per_week' => 'integer',
     ];
 
     /**

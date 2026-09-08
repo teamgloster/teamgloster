@@ -41,8 +41,6 @@ test('reshuffle groups highest teacher grades together', function () {
         'code' => 'ENG7RESH',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -141,8 +139,6 @@ test('admin can reshuffle sections from the enrollments page', function () {
         'code' => 'FIL7RESH',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);

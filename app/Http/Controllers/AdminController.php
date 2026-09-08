@@ -710,8 +710,6 @@ class AdminController extends Controller
             'description' => 'nullable|string|max:500',
             'year_level_id' => 'required|exists:year_levels,id',
             'subject_type' => 'required|in:core,specialized,applied,elective',
-            'units' => 'required|integer|min:1|max:10',
-            'hours_per_week' => 'required|integer|min:1|max:10',
             'semester' => 'nullable|in:first,second,full_year',
             'is_active' => 'boolean',
         ]);
@@ -729,8 +727,6 @@ class AdminController extends Controller
             'description' => 'nullable|string|max:500',
             'year_level_id' => 'required|exists:year_levels,id',
             'subject_type' => 'required|in:core,specialized,applied,elective',
-            'units' => 'required|integer|min:1|max:10',
-            'hours_per_week' => 'required|integer|min:1|max:10',
             'semester' => 'nullable|in:first,second,full_year',
             'is_active' => 'boolean',
         ]);
@@ -790,6 +786,21 @@ class AdminController extends Controller
             return back()->with('error', 'This teacher is already assigned to this subject.');
         }
 
+        $takenByOther = TeacherSubject::where('subject_id', $validated['subject_id'])
+            ->where('teacher_id', '!=', $validated['teacher_id'])
+            ->with('teacher')
+            ->first();
+
+        if ($takenByOther) {
+            $teacherName = trim(($takenByOther->teacher?->last_name ?? '').', '.($takenByOther->teacher?->first_name ?? ''), ' ,');
+
+            return back()->withErrors([
+                'subject_id' => $teacherName !== ''
+                    ? "This subject is already assigned to {$teacherName}."
+                    : 'This subject is already assigned to another teacher.',
+            ]);
+        }
+
         TeacherSubject::create($validated);
 
         return back()->with('success', 'Subject assigned to teacher successfully.');
@@ -818,11 +829,34 @@ class AdminController extends Controller
             return back()->with('error', 'Invalid teacher selected.');
         }
 
-        // Remove existing assignments
+        $subjectIds = array_values(array_unique($validated['subject_ids'] ?? []));
+
+        $takenSubjects = TeacherSubject::query()
+            ->whereIn('subject_id', $subjectIds)
+            ->where('teacher_id', '!=', $validated['teacher_id'])
+            ->with(['subject', 'teacher'])
+            ->get();
+
+        if ($takenSubjects->isNotEmpty()) {
+            $names = $takenSubjects
+                ->map(function (TeacherSubject $row) {
+                    $subjectName = $row->subject?->name ?: 'a subject';
+                    $teacherName = trim(($row->teacher?->last_name ?? '').', '.($row->teacher?->first_name ?? ''), ' ,');
+
+                    return $teacherName !== ''
+                        ? "{$subjectName} ({$teacherName})"
+                        : $subjectName;
+                })
+                ->unique()
+                ->implode(', ');
+
+            return back()->withErrors([
+                'subject_ids' => "These subjects are already assigned to another teacher: {$names}.",
+            ]);
+        }
+
         TeacherSubject::where('teacher_id', $validated['teacher_id'])->delete();
 
-        // Create new assignments if subjects are provided
-        $subjectIds = $validated['subject_ids'] ?? [];
         foreach ($subjectIds as $subjectId) {
             TeacherSubject::create([
                 'teacher_id' => $validated['teacher_id'],
@@ -841,7 +875,6 @@ class AdminController extends Controller
         $validated = $request->validate([
             'section_id' => 'required|exists:sections,id',
             'subject_id' => 'required|exists:subjects,id',
-            'teacher_id' => 'required|exists:users,id',
             'school_year' => ['required', 'string', 'max:20', function (string $attribute, mixed $value, $fail) {
                 if (! SchoolYear::isValid((string) $value)) {
                     $fail('School year must be consecutive calendar years, e.g. 2026-2027.');
@@ -855,14 +888,18 @@ class AdminController extends Controller
 
         $validated['school_year'] = SchoolYear::normalize($validated['school_year']);
 
-        // Verify teacher can teach this subject
-        $canTeach = TeacherSubject::where('teacher_id', $validated['teacher_id'])
-            ->where('subject_id', $validated['subject_id'])
-            ->exists();
+        $teacherIds = TeacherSubject::where('subject_id', $validated['subject_id'])
+            ->pluck('teacher_id');
 
-        if (! $canTeach) {
-            return back()->withErrors(['teacher_id' => 'This teacher is not assigned to teach this subject. Please assign the subject to the teacher first.']);
+        if ($teacherIds->isEmpty()) {
+            return back()->withErrors(['subject_id' => 'This subject has no teacher yet. Assign it on the Teacher-Subject tab first.']);
         }
+
+        if ($teacherIds->count() > 1) {
+            return back()->withErrors(['subject_id' => 'More than one teacher is assigned to this subject. Keep only one teacher on the Teacher-Subject tab.']);
+        }
+
+        $validated['teacher_id'] = $teacherIds->first();
 
         // Check if assignment already exists
         $exists = SectionSubjectTeacher::where('section_id', $validated['section_id'])

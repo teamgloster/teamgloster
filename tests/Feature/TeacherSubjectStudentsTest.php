@@ -38,8 +38,6 @@ function subjectStudentsCatalog(): array
         'code' => 'CONARTS12',
         'year_level_id' => $grade12->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);

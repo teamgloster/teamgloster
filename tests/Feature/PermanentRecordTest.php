@@ -130,8 +130,6 @@ test('finder marks learners who already have encoded grades', function () {
         'code' => 'SCI7SP10',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);

@@ -351,14 +351,43 @@
                                                 >*</span
                                             ></label
                                         >
-                                        <input
-                                            v-model="teacherForm.password"
-                                            type="password"
-                                            :required="
-                                                teacherModalMode === 'add'
-                                            "
-                                            placeholder="Minimum 8 characters"
-                                        />
+                                        <div class="password-input-wrapper">
+                                            <input
+                                                v-model="teacherForm.password"
+                                                :type="
+                                                    showPassword
+                                                        ? 'text'
+                                                        : 'password'
+                                                "
+                                                :required="
+                                                    teacherModalMode === 'add'
+                                                "
+                                                placeholder="Minimum 8 characters"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="password-toggle"
+                                                @click="
+                                                    showPassword = !showPassword
+                                                "
+                                                :aria-label="
+                                                    showPassword
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                "
+                                                :title="
+                                                    showPassword
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                "
+                                            >
+                                                <EyeOff
+                                                    v-if="showPassword"
+                                                    :size="16"
+                                                />
+                                                <Eye v-else :size="16" />
+                                            </button>
+                                        </div>
                                     </div>
                                     <div class="form-group">
                                         <label
@@ -367,16 +396,48 @@
                                                 >*</span
                                             ></label
                                         >
-                                        <input
-                                            v-model="
-                                                teacherForm.password_confirmation
-                                            "
-                                            type="password"
-                                            :required="
-                                                teacherModalMode === 'add'
-                                            "
-                                            placeholder="Confirm password"
-                                        />
+                                        <div class="password-input-wrapper">
+                                            <input
+                                                v-model="
+                                                    teacherForm.password_confirmation
+                                                "
+                                                :type="
+                                                    showPasswordConfirmation
+                                                        ? 'text'
+                                                        : 'password'
+                                                "
+                                                :required="
+                                                    teacherModalMode === 'add'
+                                                "
+                                                placeholder="Confirm password"
+                                            />
+                                            <button
+                                                type="button"
+                                                class="password-toggle"
+                                                @click="
+                                                    showPasswordConfirmation =
+                                                        !showPasswordConfirmation
+                                                "
+                                                :aria-label="
+                                                    showPasswordConfirmation
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                "
+                                                :title="
+                                                    showPasswordConfirmation
+                                                        ? 'Hide password'
+                                                        : 'Show password'
+                                                "
+                                            >
+                                                <EyeOff
+                                                    v-if="
+                                                        showPasswordConfirmation
+                                                    "
+                                                    :size="16"
+                                                />
+                                                <Eye v-else :size="16" />
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             </form>
@@ -499,6 +560,7 @@ import {
     Search,
     UserPlus,
     Eye,
+    EyeOff,
     Pencil,
     Trash2,
     X,
@@ -528,6 +590,8 @@ const selectedTeacher = ref(null);
 const showDeleteModal = ref(false);
 const teacherToDelete = ref(null);
 const isSubmitting = ref(false);
+const showPassword = ref(false);
+const showPasswordConfirmation = ref(false);
 
 const teacherForm = ref({
     first_name: "",
@@ -587,6 +651,8 @@ const filteredTeachers = computed(() => {
 
 const openTeacherModal = (mode, teacher = null) => {
     teacherModalMode.value = mode;
+    showPassword.value = false;
+    showPasswordConfirmation.value = false;
     if (mode === "edit" && teacher) {
         selectedTeacher.value = teacher;
         teacherForm.value = {
@@ -620,6 +686,8 @@ const closeTeacherModal = () => {
     showTeacherModal.value = false;
     resetTeacherForm();
     selectedTeacher.value = null;
+    showPassword.value = false;
+    showPasswordConfirmation.value = false;
 };
 
 const submitTeacherForm = () => {
@@ -690,4 +758,32 @@ const deleteTeacher = () => {
 
 <style scoped>
 @import "@/Styles/admin-common.css";
+
+.password-input-wrapper {
+    position: relative;
+}
+
+.password-input-wrapper input {
+    padding-right: 2.4rem;
+    width: 100%;
+}
+
+.password-toggle {
+    position: absolute;
+    top: 50%;
+    right: 0.4rem;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.15rem;
+    border: none;
+    background: transparent;
+    color: #555;
+    cursor: pointer;
+}
+
+.password-toggle:hover {
+    color: #003366;
+}
 </style>

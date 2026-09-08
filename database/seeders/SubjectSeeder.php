@@ -40,8 +40,6 @@ class SubjectSeeder extends Seeder
                             'description' => $subject['name'] . ' for Grade ' . $gradeNum,
                             'year_level_id' => $yearLevel->id,
                             'subject_type' => $subject['type'],
-                            'units' => 1,
-                            'hours_per_week' => 4,
                             'semester' => 'full_year',
                         ]
                     );
@@ -75,8 +73,6 @@ class SubjectSeeder extends Seeder
                         'description' => $subject['name'] . ' for Grade 11',
                         'year_level_id' => $grade11->id,
                         'subject_type' => 'core',
-                        'units' => 1,
-                        'hours_per_week' => 4,
                         'semester' => $subject['semester'],
                     ]
                 );
@@ -105,8 +101,6 @@ class SubjectSeeder extends Seeder
                         'description' => $subject['name'] . ' for Grade 12',
                         'year_level_id' => $grade12->id,
                         'subject_type' => 'core',
-                        'units' => 1,
-                        'hours_per_week' => 4,
                         'semester' => $subject['semester'],
                     ]
                 );

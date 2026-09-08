@@ -50,24 +50,6 @@
                                 <span class="stat-label">Total Subjects</span>
                             </div>
                         </div>
-                        <div class="stat-item">
-                            <div class="stat-icon green">
-                                <BarChart3 :size="22" />
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-value">{{ totalUnits }}</span>
-                                <span class="stat-label">Total Units</span>
-                            </div>
-                        </div>
-                        <div class="stat-item">
-                            <div class="stat-icon purple">
-                                <Clock :size="22" />
-                            </div>
-                            <div class="stat-info">
-                                <span class="stat-value">{{ totalHours }}</span>
-                                <span class="stat-label">Hours/Week</span>
-                            </div>
-                        </div>
                     </div>
 
                     <!-- Subjects List by Type -->
@@ -93,19 +75,11 @@
                                         }}</span>
                                     </div>
                                 </div>
-                                <div class="subject-details">
+                                <div
+                                    class="subject-details"
+                                    v-if="subject.teacher_name"
+                                >
                                     <div class="detail">
-                                        <span class="label">Units:</span>
-                                        {{ subject.units }}
-                                    </div>
-                                    <div class="detail">
-                                        <span class="label">Hours:</span>
-                                        {{ subject.hours_per_week }}/week
-                                    </div>
-                                    <div
-                                        v-if="subject.teacher_name"
-                                        class="detail"
-                                    >
                                         <span class="label">Teacher:</span>
                                         {{ subject.teacher_name }}
                                     </div>
@@ -141,16 +115,6 @@
                                         }}</span>
                                     </div>
                                 </div>
-                                <div class="subject-details">
-                                    <div class="detail">
-                                        <span class="label">Units:</span>
-                                        {{ subject.units }}
-                                    </div>
-                                    <div class="detail">
-                                        <span class="label">Hours:</span>
-                                        {{ subject.hours_per_week }}/week
-                                    </div>
-                                </div>
                             </div>
                         </div>
                     </div>
@@ -178,16 +142,6 @@
                                         <span class="subject-code">{{
                                             subject.code
                                         }}</span>
-                                    </div>
-                                </div>
-                                <div class="subject-details">
-                                    <div class="detail">
-                                        <span class="label">Units:</span>
-                                        {{ subject.units }}
-                                    </div>
-                                    <div class="detail">
-                                        <span class="label">Hours:</span>
-                                        {{ subject.hours_per_week }}/week
                                     </div>
                                 </div>
                             </div>
@@ -218,9 +172,7 @@ import { Link } from "@inertiajs/vue3";
 import StudentLayout from "@/Layouts/StudentLayout.vue";
 import {
     BookOpen,
-    BarChart3,
     Calendar,
-    Clock,
     GraduationCap,
 } from "lucide-vue-next";
 
@@ -241,12 +193,6 @@ const specializedSubjects = computed(() =>
 );
 const appliedSubjects = computed(() =>
     props.subjects.filter((s) => s.type === "applied"),
-);
-const totalUnits = computed(() =>
-    props.subjects.reduce((sum, s) => sum + (s.units || 0), 0),
-);
-const totalHours = computed(() =>
-    props.subjects.reduce((sum, s) => sum + (s.hours_per_week || 0), 0),
 );
 </script>
 

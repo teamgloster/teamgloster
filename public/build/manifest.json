@@ -6,8 +6,8 @@
       "_vue-vendor-BkZGW4gH.js"
     ]
   },
-  "_ui-vendor-DxR0TMBM.js": {
-    "file": "assets/ui-vendor-DxR0TMBM.js",
+  "_ui-vendor-ChsLQW7i.js": {
+    "file": "assets/ui-vendor-ChsLQW7i.js",
     "name": "ui-vendor",
     "imports": [
       "_vue-vendor-BkZGW4gH.js"
@@ -18,14 +18,14 @@
     "name": "vue-vendor"
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-BH9CC3XF.js",
+    "file": "assets/index.es-xjG92_Wk.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
     "imports": [
       "_vue-vendor-BkZGW4gH.js",
       "resources/js/app.js",
-      "_ui-vendor-DxR0TMBM.js",
+      "_ui-vendor-ChsLQW7i.js",
       "_chart-vendor-D-qiXzB8.js"
     ]
   },
@@ -51,13 +51,13 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-C1v0bs1H.js",
+    "file": "assets/app-CoLNN8ja.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
     "imports": [
       "_vue-vendor-BkZGW4gH.js",
-      "_ui-vendor-DxR0TMBM.js",
+      "_ui-vendor-ChsLQW7i.js",
       "_chart-vendor-D-qiXzB8.js"
     ],
     "dynamicImports": [
@@ -66,7 +66,7 @@
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/app-CAFLcAhu.css"
+      "assets/app-BI35YhDW.css"
     ]
   }
 }

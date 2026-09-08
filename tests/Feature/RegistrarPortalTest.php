@@ -62,8 +62,6 @@ function seedRegistrarCatalog(): array
         'code' => 'MATH7R',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
@@ -196,8 +194,6 @@ test('registrar can promote a student who passed', function () {
         'code' => 'ENG7R',
         'year_level_id' => $grade7->id,
         'subject_type' => 'core',
-        'units' => 1,
-        'hours_per_week' => 4,
         'semester' => 'full_year',
         'is_active' => true,
     ]);
