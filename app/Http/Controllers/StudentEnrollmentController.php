@@ -83,6 +83,7 @@ class StudentEnrollmentController extends Controller
         
         $subjects = Subject::where('year_level_id', $yearLevelId)
             ->where('is_active', true)
+            ->when($request->filled('section_id'), fn ($query) => $query->forSection($request->integer('section_id')))
             ->where(function ($query) use ($semester) {
                 $query->where('semester', $semester)
                     ->orWhere('semester', 'full_year');

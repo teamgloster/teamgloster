@@ -85,6 +85,7 @@
                         <tr>
                             <th>Subject</th>
                             <th>Year Level</th>
+                            <th>Sections</th>
                             <th>Type</th>
                             <th>Term</th>
                             <th>Status</th>
@@ -118,6 +119,11 @@
                                 <span class="year-level-badge">
                                     {{ subject.year_level?.name || "-" }}
                                 </span>
+                            </td>
+                            <td>
+                                <span class="sections-cell">{{
+                                    formatSubjectSections(subject)
+                                }}</span>
                             </td>
                             <td>
                                 <span
@@ -179,7 +185,7 @@
                             </td>
                         </tr>
                         <tr v-if="filteredSubjects.length === 0">
-                            <td colspan="6" class="empty-table">
+                            <td colspan="7" class="empty-table">
                                 <div class="empty-message">
                                     <BookOpen :size="40" />
                                     <p>No subjects found</p>
@@ -260,6 +266,14 @@
                                         <span>{{
                                             selectedSubject.year_level?.name ||
                                             "Not set"
+                                        }}</span>
+                                    </div>
+                                    <div class="detail-item">
+                                        <label>Sections</label>
+                                        <span>{{
+                                            formatSubjectSections(
+                                                selectedSubject,
+                                            )
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
@@ -390,6 +404,69 @@
                                                 Elective
                                             </option>
                                         </select>
+                                    </div>
+                                </div>
+                                <div class="form-row">
+                                    <div class="form-group full-width">
+                                        <div class="section-select-header">
+                                            <label>Sections</label>
+                                            <button
+                                                v-if="
+                                                    availableSections.length
+                                                "
+                                                type="button"
+                                                class="link-btn"
+                                                @click="toggleAllSections"
+                                            >
+                                                {{
+                                                    allAvailableSectionsSelected
+                                                        ? "Clear"
+                                                        : "Select all"
+                                                }}
+                                            </button>
+                                        </div>
+                                        <p class="field-hint">
+                                            Choose one or more sections for this
+                                            year level. Leave empty to apply to
+                                            all sections.
+                                        </p>
+                                        <p
+                                            v-if="!subjectForm.year_level_id"
+                                            class="section-empty"
+                                        >
+                                            Select a year level to see available
+                                            sections.
+                                        </p>
+                                        <p
+                                            v-else-if="
+                                                availableSections.length === 0
+                                            "
+                                            class="section-empty"
+                                        >
+                                            No sections available for this year
+                                            level.
+                                        </p>
+                                        <div
+                                            v-else
+                                            class="section-checkbox-grid"
+                                        >
+                                            <label
+                                                v-for="section in availableSections"
+                                                :key="section.id"
+                                                class="checkbox-label"
+                                            >
+                                                <input
+                                                    v-model="
+                                                        subjectForm.section_ids
+                                                    "
+                                                    type="checkbox"
+                                                    :value="section.id"
+                                                />
+                                                <span>{{
+                                                    sectionLabel(section)
+                                                }}</span>
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
                                 <div class="form-row">
@@ -540,7 +617,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
@@ -571,6 +648,14 @@ const props = defineProps({
         type: Array,
         default: () => [],
     },
+    sections: {
+        type: Array,
+        default: () => [],
+    },
+    currentSchoolYear: {
+        type: String,
+        default: "",
+    },
 });
 
 // Search & Filter State
@@ -595,6 +680,7 @@ const subjectForm = ref({
     subject_type: "",
     semester: "",
     is_active: true,
+    section_ids: [],
 });
 
 // Computed Stats
@@ -662,6 +748,72 @@ const formatSemester = (semester) => {
     return semesterMap[semester] || semester;
 };
 
+const sectionLabel = (section) => {
+    if (!section?.school_year) {
+        return section.name;
+    }
+
+    if (
+        props.currentSchoolYear &&
+        section.school_year === props.currentSchoolYear
+    ) {
+        return section.name;
+    }
+
+    return `${section.name} (S.Y. ${section.school_year})`;
+};
+
+const formatSubjectSections = (subject) => {
+    const assigned = subject?.sections || [];
+    if (!assigned.length) {
+        return "All sections";
+    }
+
+    return assigned.map((section) => sectionLabel(section)).join(", ");
+};
+
+const availableSections = computed(() => {
+    const yearLevelId = Number(subjectForm.value.year_level_id);
+    if (!yearLevelId) {
+        return [];
+    }
+
+    return props.sections.filter(
+        (section) => Number(section.year_level_id) === yearLevelId,
+    );
+});
+
+const allAvailableSectionsSelected = computed(() => {
+    const ids = availableSections.value.map((section) => section.id);
+    return (
+        ids.length > 0 &&
+        ids.every((id) => subjectForm.value.section_ids.includes(id))
+    );
+});
+
+const toggleAllSections = () => {
+    if (allAvailableSectionsSelected.value) {
+        subjectForm.value.section_ids = [];
+        return;
+    }
+
+    subjectForm.value.section_ids = availableSections.value.map(
+        (section) => section.id,
+    );
+};
+
+watch(
+    () => subjectForm.value.year_level_id,
+    () => {
+        const validIds = new Set(
+            availableSections.value.map((section) => section.id),
+        );
+        subjectForm.value.section_ids = subjectForm.value.section_ids.filter(
+            (id) => validIds.has(id),
+        );
+    },
+);
+
 const resetSubjectForm = () => {
     subjectForm.value = {
         name: "",
@@ -671,6 +823,7 @@ const resetSubjectForm = () => {
         subject_type: "",
         semester: "",
         is_active: true,
+        section_ids: [],
     };
 };
 
@@ -687,6 +840,7 @@ const openSubjectModal = (mode, subject = null) => {
             subject_type: subject.subject_type || "",
             semester: subject.semester || "",
             is_active: subject.is_active ?? true,
+            section_ids: (subject.sections || []).map((section) => section.id),
         };
     } else if (mode === "add") {
         resetSubjectForm();
@@ -839,5 +993,54 @@ const deleteSubject = () => {
 .delete-subject-info span {
     font-size: 0.875rem;
     color: #555;
+}
+
+.sections-cell {
+    color: #333;
+    font-size: 0.85rem;
+    line-height: 1.35;
+}
+
+.section-select-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+}
+
+.link-btn {
+    background: none;
+    border: 0;
+    padding: 0;
+    color: #003366;
+    font-size: 0.8rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.link-btn:hover {
+    text-decoration: underline;
+}
+
+.field-hint {
+    margin: 0;
+    color: #666;
+    font-size: 0.78rem;
+}
+
+.section-empty {
+    margin: 0.35rem 0 0;
+    color: #777;
+    font-size: 0.82rem;
+}
+
+.section-checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 0.45rem 0.75rem;
+    margin-top: 0.45rem;
+    padding: 0.65rem 0.75rem;
+    border: 1px solid #d5d5d5;
+    background: #fafafa;
 }
 </style>

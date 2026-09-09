@@ -35,21 +35,23 @@
                         or visit the school office.
                     </p>
                     <table class="help-table">
-                        <tr>
-                            <th>Email</th>
-                            <td>
-                                <a href="mailto:admin@tnhs.edu.ph"
-                                    >admin@tnhs.edu.ph</a
-                                >
-                            </td>
-                        </tr>
-                        <tr>
-                            <th>Office</th>
-                            <td>
-                                Tambo National High School<br />
-                                Buhi, Camarines Sur
-                            </td>
-                        </tr>
+                        <tbody>
+                            <tr>
+                                <th>Email</th>
+                                <td>
+                                    <a href="mailto:admin@tnhs.edu.ph"
+                                        >admin@tnhs.edu.ph</a
+                                    >
+                                </td>
+                            </tr>
+                            <tr>
+                                <th>Office</th>
+                                <td>
+                                    Tambo National High School<br />
+                                    Buhi, Camarines Sur
+                                </td>
+                            </tr>
+                        </tbody>
                     </table>
                 </div>
                 <div class="help-modal-actions">

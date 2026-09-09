@@ -575,17 +575,17 @@
                                         {{ subject.description }}
                                     </p>
                                 </div>
-                                <div
-                                    class="subject-sections"
-                                    v-if="
-                                        getSubjectSections(subject.id).length >
-                                        0
-                                    "
-                                >
+                                <div class="subject-sections">
                                     <span class="detail-label"
                                         >Assigned Sections</span
                                     >
-                                    <div class="section-tags">
+                                    <div
+                                        v-if="
+                                            getSubjectSections(subject.id)
+                                                .length
+                                        "
+                                        class="section-tags"
+                                    >
                                         <span
                                             v-for="section in getSubjectSections(
                                                 subject.id,
@@ -596,6 +596,13 @@
                                             {{ section.name }}
                                         </span>
                                     </div>
+                                    <p v-else class="detail-value">
+                                        All sections{{
+                                            subject.year_level?.name
+                                                ? ` of ${subject.year_level.name}`
+                                                : ""
+                                        }}
+                                    </p>
                                 </div>
                                 <div class="subject-card-actions">
                                     <Link
@@ -1932,10 +1939,37 @@ const getInitials = (user) => {
 };
 
 const getSubjectSections = (subjectId) => {
-    // Filter sections where this subject is taught by this teacher
+    const subject = (props.teacherSubjects || []).find(
+        (item) => item.id === subjectId,
+    );
+
+    if (subject?.sections?.length) {
+        return [...subject.sections].sort((a, b) =>
+            (a.name || "").localeCompare(b.name || ""),
+        );
+    }
+
+    const fromGrades = [];
+    const seen = new Set();
+
+    (props.studentGrades || []).forEach((grade) => {
+        const matchesSubject =
+            grade.subject_id === subjectId || grade.subject?.id === subjectId;
+        const section = grade.section;
+        if (!matchesSubject || !section?.id || seen.has(section.id)) {
+            return;
+        }
+
+        seen.add(section.id);
+        fromGrades.push(section);
+    });
+
+    if (fromGrades.length) {
+        return fromGrades;
+    }
+
     return (
         props.teacherSections?.filter((section) => {
-            // Check if this section has an assignment for this subject
             return section.subject_teachers?.some(
                 (st) =>
                     st.subject_id === subjectId &&

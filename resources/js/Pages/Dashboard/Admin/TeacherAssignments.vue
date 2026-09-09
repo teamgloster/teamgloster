@@ -221,6 +221,14 @@
                                                         subject.year_level?.name
                                                     }}</span
                                                 >
+                                                <span
+                                                    class="subject-card-sections"
+                                                    >{{
+                                                        formatAssignedSections(
+                                                            subject,
+                                                        )
+                                                    }}</span
+                                                >
                                             </div>
                                         </div>
                                     </div>
@@ -386,6 +394,14 @@
                                                             }}</span
                                                         >
                                                         <span
+                                                            class="subject-checkbox-sections"
+                                                            >{{
+                                                                formatAssignedSections(
+                                                                    subject,
+                                                                )
+                                                            }}</span
+                                                        >
+                                                        <span
                                                             v-if="
                                                                 isSubjectTakenByAnother(
                                                                     subject.id,
@@ -531,6 +547,17 @@ const getTeacherSubjectCount = (teacher) => {
 
 const getTeacherAllSubjects = (teacher) => {
     return teacher?.subjects || [];
+};
+
+const formatAssignedSections = (subject) => {
+    const sections = subject?.sections || [];
+    if (!sections.length) {
+        return subject?.year_level?.name
+            ? `All ${subject.year_level.name} sections`
+            : "All sections";
+    }
+
+    return sections.map((section) => section.name).join(", ");
 };
 
 const getSubjectsByYearLevel = (yearLevelId) => {
@@ -741,6 +768,12 @@ const saveTeacherSubjects = () => {
     color: #555;
 }
 
+.subject-card-sections {
+    font-size: 0.75rem;
+    color: #333;
+    line-height: 1.35;
+}
+
 .manage-subjects-form {
     display: flex;
     flex-direction: column;
@@ -900,6 +933,12 @@ const saveTeacherSubjects = () => {
     font-size: 0.75rem;
     color: #555;
     font-family: monospace;
+}
+
+.subject-checkbox-sections {
+    font-size: 0.72rem;
+    color: #444;
+    line-height: 1.3;
 }
 
 .subject-checkbox-owner {

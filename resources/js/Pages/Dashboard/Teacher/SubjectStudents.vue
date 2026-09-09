@@ -14,6 +14,7 @@
                         <template v-if="subject.year_level?.name">
                             · {{ subject.year_level.name }}
                         </template>
+                        · {{ subjectSectionsLabel }}
                         · {{ filteredStudents.length }} student{{
                             filteredStudents.length !== 1 ? "s" : ""
                         }}
@@ -165,6 +166,17 @@ const props = defineProps({
 
 const search = ref("");
 const selectedStudent = ref(null);
+
+const subjectSectionsLabel = computed(() => {
+    const sections = props.subject?.sections || [];
+    if (!sections.length) {
+        return props.subject?.year_level?.name
+            ? `All ${props.subject.year_level.name} sections`
+            : "All sections";
+    }
+
+    return sections.map((section) => section.name).join(", ");
+});
 
 const filteredStudents = computed(() => {
     const term = search.value.trim().toLowerCase();

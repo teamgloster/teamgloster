@@ -219,6 +219,62 @@ test('brand-new teacher with no assignments still sees enrolled students in the 
         );
 });
 
+test('teacher dashboard shows the sections assigned to a teachable subject', function () {
+    SchoolSetting::current()->update(['current_school_year' => '2025-2026']);
+
+    $teacher = gradesTeacher();
+    $grade7 = YearLevel::create([
+        'name' => 'Grade 7',
+        'code' => 'G7-SECS',
+        'level_type' => 'junior_high',
+        'is_active' => true,
+    ]);
+    $math = Subject::create([
+        'name' => 'Mathematics 7',
+        'code' => 'MATH7-SECS',
+        'year_level_id' => $grade7->id,
+        'subject_type' => 'core',
+        'semester' => 'full_year',
+        'is_active' => true,
+    ]);
+    $sectionA = Section::create([
+        'name' => 'Section A',
+        'code' => 'G7-A-SECS',
+        'year_level_id' => $grade7->id,
+        'school_year' => '2025-2026',
+        'capacity' => 40,
+        'is_active' => true,
+    ]);
+    $sectionB = Section::create([
+        'name' => 'Section B',
+        'code' => 'G7-B-SECS',
+        'year_level_id' => $grade7->id,
+        'school_year' => '2025-2026',
+        'capacity' => 40,
+        'is_active' => true,
+    ]);
+
+    $math->sections()->sync([$sectionA->id, $sectionB->id]);
+
+    TeacherSubject::create([
+        'teacher_id' => $teacher->id,
+        'subject_id' => $math->id,
+    ]);
+
+    $this->actingAs($teacher)
+        ->get('/dashboard/teacher')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Teacher')
+            ->has('teacherSubjects', 1)
+            ->where('teacherSubjects.0.id', $math->id)
+            ->has('teacherSubjects.0.sections', 2)
+            ->where('teacherSubjects.0.sections.0.name', 'Section A')
+            ->where('teacherSubjects.0.sections.1.name', 'Section B')
+            ->has('teacherSections', 2)
+        );
+});
+
 test('assigned subjects appear on the teacher dashboard even without enrolled students', function () {
     SchoolSetting::current()->update(['current_school_year' => '2025-2026']);
 

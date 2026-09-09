@@ -704,34 +704,20 @@ class AdminController extends Controller
 
     public function storeSubject(Request $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => 'required|string|max:20|unique:subjects,code',
-            'description' => 'nullable|string|max:500',
-            'year_level_id' => 'required|exists:year_levels,id',
-            'subject_type' => 'required|in:core,specialized,applied,elective',
-            'semester' => 'nullable|in:first,second,full_year',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $this->validatedSubjectPayload($request);
 
-        Subject::create($validated);
+        $subject = Subject::create(collect($validated)->except('section_ids')->all());
+        $this->syncSubjectSections($subject, $validated);
 
         return back()->with('success', 'Subject created successfully.');
     }
 
     public function updateSubject(Request $request, Subject $subject)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'code' => ['required', 'string', 'max:20', Rule::unique('subjects')->ignore($subject->id)],
-            'description' => 'nullable|string|max:500',
-            'year_level_id' => 'required|exists:year_levels,id',
-            'subject_type' => 'required|in:core,specialized,applied,elective',
-            'semester' => 'nullable|in:first,second,full_year',
-            'is_active' => 'boolean',
-        ]);
+        $validated = $this->validatedSubjectPayload($request, $subject);
 
-        $subject->update($validated);
+        $subject->update(collect($validated)->except('section_ids')->all());
+        $this->syncSubjectSections($subject, $validated);
 
         return back()->with('success', 'Subject updated successfully.');
     }
@@ -741,6 +727,42 @@ class AdminController extends Controller
         $subject->delete();
 
         return back()->with('success', 'Subject deleted successfully.');
+    }
+
+    private function validatedSubjectPayload(Request $request, ?Subject $subject = null): array
+    {
+        return $request->validate([
+            'name' => 'required|string|max:255',
+            'code' => $subject
+                ? ['required', 'string', 'max:20', Rule::unique('subjects')->ignore($subject->id)]
+                : 'required|string|max:20|unique:subjects,code',
+            'description' => 'nullable|string|max:500',
+            'year_level_id' => 'required|exists:year_levels,id',
+            'subject_type' => 'required|in:core,specialized,applied,elective',
+            'semester' => 'nullable|in:first,second,full_year',
+            'is_active' => 'boolean',
+            'section_ids' => 'nullable|array',
+            'section_ids.*' => [
+                'integer',
+                Rule::exists('sections', 'id')->where('year_level_id', $request->input('year_level_id')),
+            ],
+        ]);
+    }
+
+    private function syncSubjectSections(Subject $subject, array $validated): void
+    {
+        $sectionIds = collect($validated['section_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        $validIds = Section::query()
+            ->where('year_level_id', $validated['year_level_id'])
+            ->whereIn('id', $sectionIds)
+            ->pluck('id');
+
+        $subject->sections()->sync($validIds);
     }
 
     // ==================== RESET PASSWORD ====================

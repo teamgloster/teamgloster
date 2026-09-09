@@ -52,6 +52,7 @@ class User extends Authenticatable
         'year_level_applying',
         'preferred_strand',
         'previous_school',
+        'year_graduated',
         'school_year_applying',
         'role',
         'admission_status',

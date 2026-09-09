@@ -36,6 +36,7 @@ class SchoolFormService
         $subjects = $yearLevel
             ? Subject::query()
                 ->where('year_level_id', $yearLevel->id)
+                ->forSection($section?->id)
                 ->active()
                 ->orderBy('name')
                 ->get()
@@ -362,6 +363,7 @@ class SchoolFormService
 
             $subjects = Subject::query()
                 ->where('year_level_id', $enrollment->year_level_id)
+                ->forSection($enrollment->section_id)
                 ->active()
                 ->orderBy('name')
                 ->get();

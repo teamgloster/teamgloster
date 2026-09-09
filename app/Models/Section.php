@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Support\SchoolYear;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Section extends Model
@@ -62,6 +63,11 @@ class Section extends Model
     public function subjectTeachers(): HasMany
     {
         return $this->hasMany(SectionSubjectTeacher::class);
+    }
+
+    public function subjects(): BelongsToMany
+    {
+        return $this->belongsToMany(Subject::class)->withTimestamps();
     }
 
     /**

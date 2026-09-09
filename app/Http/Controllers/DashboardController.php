@@ -331,17 +331,30 @@ class DashboardController extends Controller
      */
     public function adminSubjects()
     {
-        $subjects = Subject::with('yearLevel')
+        $currentSchoolYear = $this->getCurrentSchoolYear();
+
+        $subjects = Subject::with(['yearLevel', 'sections' => function ($query) {
+            $query->orderBy('name');
+        }])
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
 
         $yearLevels = YearLevel::ordered()->get();
 
+        $sections = Section::query()
+            ->where('is_active', true)
+            ->orderBy('year_level_id')
+            ->orderBy('school_year')
+            ->orderBy('name')
+            ->get(['id', 'name', 'code', 'year_level_id', 'school_year']);
+
         return Inertia::render('Dashboard/Admin/Subjects', [
             'user' => Auth::user(),
             'subjects' => $subjects,
             'yearLevels' => $yearLevels,
+            'sections' => $sections,
+            'currentSchoolYear' => $currentSchoolYear,
         ]);
     }
 
@@ -371,7 +384,10 @@ class DashboardController extends Controller
     public function adminTeacherAssignments()
     {
         $teachersWithSubjects = User::where('role', 'teacher')
-            ->with(['teachableSubjects.yearLevel'])
+            ->with([
+                'teachableSubjects.yearLevel',
+                'teachableSubjects.sections' => fn ($query) => $query->orderBy('name'),
+            ])
             ->orderBy('last_name')
             ->get()
             ->map(function ($teacher) {
@@ -381,7 +397,10 @@ class DashboardController extends Controller
                 return $teacherArray;
             });
 
-        $subjects = Subject::with('yearLevel')
+        $subjects = Subject::with([
+            'yearLevel',
+            'sections' => fn ($query) => $query->orderBy('name'),
+        ])
             ->orderBy('year_level_id')
             ->orderBy('name')
             ->get();
@@ -492,7 +511,10 @@ class DashboardController extends Controller
 
         $currentSchoolYear = $this->getCurrentSchoolYear();
         $teachableSubjects = $user->teachableSubjects()
-            ->with('yearLevel')
+            ->with([
+                'yearLevel',
+                'sections' => fn ($query) => $query->orderBy('name')->with('yearLevel'),
+            ])
             ->orderBy('subjects.year_level_id')
             ->orderBy('subjects.name')
             ->get();
@@ -501,7 +523,9 @@ class DashboardController extends Controller
         $teacherSections = $studentGrades
             ->pluck('section')
             ->filter()
+            ->concat($teachableSubjects->flatMap->sections)
             ->unique(fn ($section) => $section->id)
+            ->sortBy('name')
             ->values();
 
         return Inertia::render('Dashboard/Teacher', [
@@ -523,7 +547,10 @@ class DashboardController extends Controller
         $this->assertTeacherHandlesSubject($teacher, $subject);
 
         $schoolYear = $this->getCurrentSchoolYear();
-        $subject->load('yearLevel');
+        $subject->load([
+            'yearLevel',
+            'sections' => fn ($query) => $query->orderBy('name'),
+        ]);
 
         return Inertia::render('Dashboard/Teacher/SubjectStudents', [
             'user' => $teacher,
@@ -589,6 +616,7 @@ class DashboardController extends Controller
 
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
+                ->forSection($currentEnrollment->section_id)
                 ->active()
                 ->orderBy('subject_type')
                 ->orderBy('name')
@@ -659,6 +687,7 @@ class DashboardController extends Controller
 
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
+                ->forSection($currentEnrollment->section_id)
                 ->active()
                 ->orderBy('subject_type')
                 ->orderBy('name')
@@ -809,6 +838,7 @@ class DashboardController extends Controller
 
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
             $enrolledSubjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
+                ->forSection($currentEnrollment->section_id)
                 ->active()
                 ->orderBy('subject_type')
                 ->orderBy('name')
@@ -852,8 +882,9 @@ class DashboardController extends Controller
         $grades = collect();
 
         if ($currentEnrollment && $currentEnrollment->status === 'enrolled') {
-            // Get all subjects for the student's year level
+            // Get all subjects for the student's year level and section
             $subjects = Subject::where('year_level_id', $currentEnrollment->year_level_id)
+                ->forSection($currentEnrollment->section_id)
                 ->active()
                 ->orderBy('subject_type')
                 ->orderBy('name')
@@ -1148,10 +1179,15 @@ class DashboardController extends Controller
                 continue;
             }
 
+            $sectionIds = $subject->relationLoaded('sections')
+                ? $subject->sections->pluck('id')
+                : $subject->sections()->pluck('sections.id');
+
             $enrollments = Enrollment::query()
                 ->where('year_level_id', $subject->year_level_id)
                 ->where('school_year', $schoolYear)
                 ->where('status', 'enrolled')
+                ->when($sectionIds->isNotEmpty(), fn ($query) => $query->whereIn('section_id', $sectionIds))
                 ->with(['user', 'section.yearLevel'])
                 ->get();
 
@@ -1199,10 +1235,13 @@ class DashboardController extends Controller
                 }
             }
         } elseif ($subject->year_level_id) {
+            $sectionIds = $subject->sections()->pluck('sections.id');
+
             $enrollments = Enrollment::query()
                 ->where('year_level_id', $subject->year_level_id)
                 ->where('school_year', $schoolYear)
                 ->whereIn('status', ['enrolled', 'approved'])
+                ->when($sectionIds->isNotEmpty(), fn ($query) => $query->whereIn('section_id', $sectionIds))
                 ->with(['user', 'section'])
                 ->get();
 

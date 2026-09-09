@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Subject extends Model
 {
@@ -27,6 +28,27 @@ class Subject extends Model
     public function yearLevel(): BelongsTo
     {
         return $this->belongsTo(YearLevel::class);
+    }
+
+    public function sections(): BelongsToMany
+    {
+        return $this->belongsToMany(Section::class)->withTimestamps();
+    }
+
+    /**
+     * Subjects with no section links apply to every section of the year level.
+     */
+    public function scopeForSection($query, $sectionId)
+    {
+        return $query->where(function ($q) use ($sectionId) {
+            $q->whereDoesntHave('sections');
+
+            if ($sectionId) {
+                $q->orWhereHas('sections', function ($sections) use ($sectionId) {
+                    $sections->where('sections.id', $sectionId);
+                });
+            }
+        });
     }
 
     /**

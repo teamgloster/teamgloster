@@ -50,6 +50,7 @@ return new class extends Migration
             $table->string('year_level_applying')->nullable();
             $table->string('preferred_strand')->nullable();
             $table->string('previous_school')->nullable();
+            $table->unsignedSmallInteger('year_graduated')->nullable();
             $table->string('school_year_applying')->nullable();
             
             $table->enum('role', ['administrator', 'teacher', 'student'])->default('student');

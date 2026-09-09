@@ -123,6 +123,7 @@ class AuthController extends Controller
             'year_level_applying' => 'nullable|string|max:50',
             'preferred_strand' => 'nullable|string|max:100',
             'previous_school' => 'nullable|string|max:255',
+            'year_graduated' => 'nullable|integer|min:1990|max:'.(date('Y') + 1),
             'school_year_applying' => 'nullable|string|max:20',
             'password' => 'required|string|min:8|confirmed',
             'form_137' => 'nullable|file|mimes:pdf|max:5120',
@@ -172,6 +173,7 @@ class AuthController extends Controller
             'year_level_applying' => $this->nullableString($request, $validated, 'year_level_applying'),
             'preferred_strand' => $this->nullableString($request, $validated, 'preferred_strand'),
             'previous_school' => $this->nullableString($request, $validated, 'previous_school'),
+            'year_graduated' => $this->nullableYear($request, $validated, 'year_graduated'),
             'school_year_applying' => $this->nullableString($request, $validated, 'school_year_applying'),
             'password' => $validated['password'],
             'role' => 'student',
@@ -194,6 +196,17 @@ class AuthController extends Controller
         }
 
         return $value === '' || $value === null ? null : (string) $value;
+    }
+
+    private function nullableYear(Request $request, array $validated, string $key): ?int
+    {
+        $value = $request->input($key, $validated[$key] ?? null);
+
+        if ($value === '' || $value === null) {
+            return null;
+        }
+
+        return (int) $value;
     }
 
     private function storeAdmissionDocuments(Request $request, User $user): void

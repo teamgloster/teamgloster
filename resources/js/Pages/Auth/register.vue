@@ -645,6 +645,20 @@
                                     />
                                 </div>
                                 <div class="form-group">
+                                    <label for="year_graduated"
+                                        >Year Graduated</label
+                                    >
+                                    <input
+                                        id="year_graduated"
+                                        v-model="form.year_graduated"
+                                        type="number"
+                                        min="1990"
+                                        :max="maxGraduationYear"
+                                        placeholder="e.g., 2025"
+                                        class="form-input"
+                                    />
+                                </div>
+                                <div class="form-group">
                                     <label for="previous_gwa"
                                         >Previous GWA</label
                                     >
@@ -656,7 +670,6 @@
                                         class="form-input"
                                     />
                                 </div>
-                                <div class="form-group"></div>
                             </div>
 
                             <!-- Password Section -->
@@ -973,6 +986,14 @@
                                                 form.previous_school
                                             }}</span>
                                         </div>
+                                        <div class="review-item">
+                                            <span class="review-label"
+                                                >Year Graduated:</span
+                                            >
+                                            <span class="review-value">{{
+                                                form.year_graduated
+                                            }}</span>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -1205,6 +1226,7 @@ const loadingMunicipalities = ref(false);
 const loadingBarangays = ref(false);
 const showPassword = ref(false);
 const showConfirmPassword = ref(false);
+const maxGraduationYear = new Date().getFullYear() + 1;
 
 const form = ref({
     first_name: "",
@@ -1242,6 +1264,7 @@ const form = ref({
     year_level_applying: "",
     preferred_strand: "",
     previous_school: "",
+    year_graduated: "",
     school_year_applying: props.currentSchoolYear || "",
     password: "",
     password_confirmation: "",
@@ -1861,6 +1884,13 @@ const downloadAsPDF = async () => {
             yPosition,
         );
     }
+    if (form.value.year_graduated) {
+        yPosition += addText(
+            `Year Graduated: ${form.value.year_graduated}`,
+            margin,
+            yPosition,
+        );
+    }
     if (form.value.previous_gwa) {
         yPosition += addText(
             `Previous GWA: ${form.value.previous_gwa}`,
@@ -1996,6 +2026,7 @@ const submit = () => {
         year_level_applying: form.value.year_level_applying,
         preferred_strand: form.value.preferred_strand,
         previous_school: form.value.previous_school,
+        year_graduated: form.value.year_graduated,
         school_year_applying: form.value.school_year_applying,
         password: form.value.password,
         password_confirmation: form.value.password_confirmation,

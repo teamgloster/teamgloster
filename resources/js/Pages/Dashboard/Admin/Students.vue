@@ -493,6 +493,13 @@
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
+                                        <label>Year Graduated</label>
+                                        <span>{{
+                                            selectedStudent.year_graduated ||
+                                            "Not provided"
+                                        }}</span>
+                                    </div>
+                                    <div class="detail-item">
                                         <label>Promotion Status</label>
                                         <span>{{
                                             selectedStudent.promotion

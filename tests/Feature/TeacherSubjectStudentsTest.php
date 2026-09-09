@@ -95,6 +95,27 @@ test('teacher can open a subject students page instead of staying on the dashboa
             ->where('students.0.id', $student->id));
 });
 
+test('subject students page includes the sections assigned to that subject', function () {
+    $teacher = subjectStudentsTeacher();
+    ['subject' => $subject, 'section' => $section] = subjectStudentsCatalog();
+
+    $subject->sections()->sync([$section->id]);
+
+    TeacherSubject::create([
+        'teacher_id' => $teacher->id,
+        'subject_id' => $subject->id,
+    ]);
+
+    $this->actingAs($teacher)
+        ->get("/teacher/subjects/{$subject->id}/students")
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Teacher/SubjectStudents')
+            ->has('subject.sections', 1)
+            ->where('subject.sections.0.id', $section->id)
+            ->where('subject.sections.0.name', 'STEM-A'));
+});
+
 test('teachers cannot view students for a subject they do not handle', function () {
     $teacher = subjectStudentsTeacher();
     ['subject' => $subject] = subjectStudentsCatalog();

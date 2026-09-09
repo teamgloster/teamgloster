@@ -290,6 +290,13 @@
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
+                                        <label>Year Graduated</label>
+                                        <span>{{
+                                            selectedApplicant?.year_graduated ||
+                                            "-"
+                                        }}</span>
+                                    </div>
+                                    <div class="detail-item">
                                         <label>Previous GWA</label>
                                         <span>{{
                                             selectedApplicant?.previous_gwa ||
