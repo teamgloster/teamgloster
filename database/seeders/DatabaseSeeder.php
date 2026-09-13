@@ -41,30 +41,5 @@ class DatabaseSeeder extends Seeder
         $this->command->info('✓ Administrator account created!');
         $this->command->info('  Email: admin@tnhs.edu.ph');
         $this->command->info('  Password: admin123');
-
-        User::updateOrCreate(
-            ['email' => 'registrar@tnhs.edu.ph'],
-            [
-                'first_name' => 'School',
-                'middle_name' => null,
-                'last_name' => 'Registrar',
-                'suffix' => null,
-                'email' => 'registrar@tnhs.edu.ph',
-                'phone_no' => '09123456780',
-                'date_of_birth' => '1992-01-01',
-                'gender' => 'female',
-                'province' => 'Camarines Sur',
-                'municipality' => 'Buhi',
-                'barangay' => 'Tambo',
-                'lrn' => null,
-                'role' => 'registrar',
-                'admission_status' => null,
-                'password' => Hash::make('registrar123'),
-            ]
-        );
-
-        $this->command->info('✓ Registrar account created!');
-        $this->command->info('  Email: registrar@tnhs.edu.ph');
-        $this->command->info('  Password: registrar123');
     }
 }
