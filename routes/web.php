@@ -51,6 +51,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/year-levels', [DashboardController::class, 'adminYearLevels'])->name('admin.year-levels');
         Route::get('/teacher-assignments', [DashboardController::class, 'adminTeacherAssignments'])->name('admin.teacher-assignments');
         Route::get('/requirements', [DashboardController::class, 'adminRequirements'])->name('admin.requirements');
+        Route::get('/accounts', [DashboardController::class, 'adminAccounts'])->name('admin.accounts');
         Route::get('/settings', [DashboardController::class, 'adminSettings'])->name('admin.settings');
         Route::get('/school-forms', [SchoolFormController::class, 'adminIndex'])->name('admin.school-forms');
         Route::get('/school-forms/sf1/{section}', [SchoolFormController::class, 'adminSf1'])->name('admin.school-forms.sf1');
@@ -156,6 +157,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/teachers', [AdminController::class, 'storeTeacher']);
         Route::put('/teachers/{teacher}', [AdminController::class, 'updateTeacher']);
         Route::delete('/teachers/{teacher}', [AdminController::class, 'deleteTeacher']);
+
+        // Staff accounts (administrator and registrar)
+        Route::post('/accounts', [AdminController::class, 'storeAccount'])->name('admin.accounts.store');
+        Route::put('/accounts/{account}', [AdminController::class, 'updateAccount'])->name('admin.accounts.update');
+        Route::delete('/accounts/{account}', [AdminController::class, 'deleteAccount'])->name('admin.accounts.destroy');
 
         // Admission management
         Route::post('/admissions/{student}/approve', [AdminController::class, 'approveAdmission']);

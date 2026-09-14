@@ -21,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class AdminController extends Controller
 {
@@ -134,6 +135,109 @@ class AdminController extends Controller
         $teacher->delete();
 
         return back()->with('success', 'Teacher deleted successfully.');
+    }
+
+    // ==================== STAFF ACCOUNTS ====================
+
+    public function storeAccount(Request $request)
+    {
+        $validated = $request->validate($this->staffAccountRules());
+
+        $validated['password'] = Hash::make($validated['password']);
+        $validated['admission_status'] = null;
+
+        User::create($validated);
+
+        return back()->with('success', $this->staffAccountLabel($validated['role']).' account created successfully.');
+    }
+
+    public function updateAccount(Request $request, User $account)
+    {
+        $this->assertStaffAccount($account);
+
+        $validated = $request->validate($this->staffAccountRules($account));
+
+        if ($account->id === auth()->id() && $validated['role'] !== $account->role) {
+            throw ValidationException::withMessages([
+                'role' => 'You cannot change the role of your own account.',
+            ]);
+        }
+
+        if (
+            $account->role === 'administrator'
+            && $validated['role'] !== 'administrator'
+            && $this->administratorCount() <= 1
+        ) {
+            throw ValidationException::withMessages([
+                'role' => 'At least one administrator account must remain.',
+            ]);
+        }
+
+        $account->update($validated);
+
+        return back()->with('success', $this->staffAccountLabel($validated['role']).' account updated successfully.');
+    }
+
+    public function deleteAccount(User $account)
+    {
+        $this->assertStaffAccount($account);
+
+        if ($account->id === auth()->id()) {
+            throw ValidationException::withMessages([
+                'account' => 'You cannot delete your own account.',
+            ]);
+        }
+
+        if ($account->role === 'administrator' && $this->administratorCount() <= 1) {
+            throw ValidationException::withMessages([
+                'account' => 'At least one administrator account must remain.',
+            ]);
+        }
+
+        $account->delete();
+
+        return back()->with('success', $this->staffAccountLabel($account->role).' account deleted successfully.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function staffAccountRules(?User $account = null): array
+    {
+        $rules = [
+            'first_name' => 'required|string|max:255',
+            'middle_name' => 'nullable|string|max:255',
+            'last_name' => 'required|string|max:255',
+            'suffix' => 'nullable|string|max:10',
+            'email' => ['required', 'email', Rule::unique('users', 'email')->ignore($account?->id)],
+            'phone_no' => 'nullable|string|max:20',
+            'date_of_birth' => 'nullable|date',
+            'gender' => 'nullable|in:male,female',
+            'role' => 'required|in:administrator,registrar',
+        ];
+
+        if (! $account) {
+            $rules['password'] = 'required|string|min:8|confirmed';
+        }
+
+        return $rules;
+    }
+
+    private function assertStaffAccount(User $account): void
+    {
+        if (! in_array($account->role, ['administrator', 'registrar'], true)) {
+            abort(404);
+        }
+    }
+
+    private function administratorCount(): int
+    {
+        return User::where('role', 'administrator')->count();
+    }
+
+    private function staffAccountLabel(string $role): string
+    {
+        return $role === 'administrator' ? 'Administrator' : 'Registrar';
     }
 
     // ==================== ADMISSION MANAGEMENT ====================

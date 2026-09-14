@@ -127,6 +127,14 @@
                 <div class="nav-group">
                     <span class="nav-group-label">System</span>
                     <Link
+                        :href="route('admin.accounts')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'accounts' }"
+                    >
+                        <Shield class="nav-icon" :size="20" />
+                        <span class="nav-text">Accounts</span>
+                    </Link>
+                    <Link
                         :href="route('admin.settings')"
                         class="nav-item"
                         :class="{ active: currentPage === 'settings' }"
@@ -214,6 +222,7 @@ import {
     FileText,
     BarChart3,
     Settings,
+    Shield,
 } from "lucide-vue-next";
 
 const props = defineProps({

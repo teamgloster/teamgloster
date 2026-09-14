@@ -187,6 +187,7 @@ class DashboardController extends Controller
             ->map(fn (User $student) => $student->currentEnrollment?->school_year)
             ->filter()
             ->push($currentSchoolYear)
+            ->toBase()
             ->unique()
             ->values();
 
@@ -456,6 +457,21 @@ class DashboardController extends Controller
     /**
      * Admin Settings Page
      */
+    public function adminAccounts()
+    {
+        $accounts = User::query()
+            ->whereIn('role', ['administrator', 'registrar'])
+            ->orderByRaw("CASE role WHEN 'administrator' THEN 0 ELSE 1 END")
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        return Inertia::render('Dashboard/Admin/Accounts', [
+            'user' => Auth::user(),
+            'accounts' => $accounts,
+        ]);
+    }
+
     public function adminSettings()
     {
         $current = SchoolSetting::currentSchoolYear();
