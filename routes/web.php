@@ -49,6 +49,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sections', [DashboardController::class, 'adminSections'])->name('admin.sections');
         Route::get('/subjects', [DashboardController::class, 'adminSubjects'])->name('admin.subjects');
         Route::get('/year-levels', [DashboardController::class, 'adminYearLevels'])->name('admin.year-levels');
+        Route::get('/strands', [DashboardController::class, 'adminStrands'])->name('admin.strands');
         Route::get('/teacher-assignments', [DashboardController::class, 'adminTeacherAssignments'])->name('admin.teacher-assignments');
         Route::get('/requirements', [DashboardController::class, 'adminRequirements'])->name('admin.requirements');
         Route::get('/accounts', [DashboardController::class, 'adminAccounts'])->name('admin.accounts');
@@ -183,6 +184,11 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/year-levels', [AdminController::class, 'storeYearLevel']);
         Route::put('/year-levels/{yearLevel}', [AdminController::class, 'updateYearLevel']);
         Route::delete('/year-levels/{yearLevel}', [AdminController::class, 'deleteYearLevel']);
+
+        // Strand management
+        Route::post('/strands', [AdminController::class, 'storeStrand']);
+        Route::put('/strands/{strand}', [AdminController::class, 'updateStrand']);
+        Route::delete('/strands/{strand}', [AdminController::class, 'deleteStrand']);
 
         // Section management
         Route::post('/sections', [AdminController::class, 'storeSection']);

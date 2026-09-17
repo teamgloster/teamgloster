@@ -107,6 +107,14 @@
                         <span class="nav-text">Year Levels</span>
                     </Link>
                     <Link
+                        :href="route('admin.strands')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'strands' }"
+                    >
+                        <Waypoints class="nav-icon" :size="20" />
+                        <span class="nav-text">Academic Tracks</span>
+                    </Link>
+                    <Link
                         :href="route('admin.sections')"
                         class="nav-item"
                         :class="{ active: currentPage === 'sections' }"
@@ -223,6 +231,7 @@ import {
     BarChart3,
     Settings,
     Shield,
+    Waypoints,
 } from "lucide-vue-next";
 
 const props = defineProps({

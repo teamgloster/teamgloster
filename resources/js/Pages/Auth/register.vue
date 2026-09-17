@@ -579,7 +579,7 @@
 
                                 <div class="form-group">
                                     <label for="preferred_strand"
-                                        >Preferred Strand (for Grade
+                                        >Preferred Academic Track (for Grade
                                         11-12)</label
                                     >
                                     <select
@@ -588,12 +588,26 @@
                                         class="form-input"
                                         :disabled="!isSeniorHigh"
                                     >
-                                        <option value="">Select Strand</option>
-                                        <option value="STEM">STEM</option>
-                                        <option value="HUMSS">HUMSS</option>
-                                        <option value="ABM">ABM</option>
-                                        <option value="GAS">GAS</option>
-                                        <option value="TVL">TVL</option>
+                                        <option value="">
+                                            Select Academic Track
+                                        </option>
+                                        <option
+                                            v-if="
+                                                isSeniorHigh &&
+                                                strands.length === 0
+                                            "
+                                            value=""
+                                            disabled
+                                        >
+                                            No academic tracks available
+                                        </option>
+                                        <option
+                                            v-for="strand in strands"
+                                            :key="strand.id"
+                                            :value="strand.code"
+                                        >
+                                            {{ strandLabel(strand) }}
+                                        </option>
                                     </select>
                                 </div>
 
@@ -964,10 +978,10 @@
                                             v-if="form.preferred_strand"
                                         >
                                             <span class="review-label"
-                                                >Preferred Strand:</span
+                                                >Preferred Academic Track:</span>
                                             >
                                             <span class="review-value">{{
-                                                form.preferred_strand
+                                                preferredStrandLabel
                                             }}</span>
                                         </div>
                                         <div class="review-item">
@@ -1097,6 +1111,10 @@ const props = defineProps({
         type: String,
         default: "",
     },
+    strands: {
+        type: Array,
+        default: () => [],
+    },
 });
 
 const logo = "/images/311494412_220590550318716_333223840059485017_n.jpg";
@@ -1126,6 +1144,28 @@ const isSeniorHigh = computed(() => {
         form.value.year_level_applying === "Grade 11" ||
         form.value.year_level_applying === "Grade 12"
     );
+});
+
+const strandLabel = (strand) => {
+    if (!strand) {
+        return "";
+    }
+
+    if (!strand.name || strand.name === strand.code) {
+        return strand.code;
+    }
+
+    return `${strand.code} — ${strand.name}`;
+};
+
+const preferredStrandLabel = computed(() => {
+    const selected = props.strands.find(
+        (strand) => strand.code === form.value.preferred_strand,
+    );
+
+    return selected
+        ? strandLabel(selected)
+        : form.value.preferred_strand;
 });
 
 const applicantDocumentCategory = computed(() => {
@@ -1867,7 +1907,7 @@ const downloadAsPDF = async () => {
     );
     if (form.value.preferred_strand) {
         yPosition += addText(
-            `Preferred Strand: ${form.value.preferred_strand}`,
+            `Preferred Academic Track: ${preferredStrandLabel.value}`,
             margin,
             yPosition,
         );

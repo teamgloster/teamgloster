@@ -269,7 +269,7 @@
                                         }}</span>
                                     </div>
                                     <div class="detail-item">
-                                        <label>Preferred Strand</label>
+                                        <label>Preferred Academic Track</label>
                                         <span>{{
                                             selectedApplicant?.preferred_strand ||
                                             "-"

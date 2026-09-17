@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\SchoolSetting;
+use App\Models\Strand;
 use App\Models\StudentRequirement;
 use App\Models\User;
 use App\Support\AdmissionDocuments;
@@ -31,6 +32,10 @@ class AuthController extends Controller
     {
         return Inertia::render('Auth/register', [
             'currentSchoolYear' => SchoolSetting::currentSchoolYear(),
+            'strands' => Strand::query()
+                ->active()
+                ->ordered()
+                ->get(['id', 'name', 'code']),
         ]);
     }
 
@@ -121,7 +126,12 @@ class AuthController extends Controller
             'emergency_contact_person' => 'nullable|string|max:255',
             'emergency_contact_number' => 'nullable|string|max:30',
             'year_level_applying' => 'nullable|string|max:50',
-            'preferred_strand' => 'nullable|string|max:100',
+            'preferred_strand' => [
+                'nullable',
+                'string',
+                'max:100',
+                Rule::exists('strands', 'code')->where('is_active', true),
+            ],
             'previous_school' => 'nullable|string|max:255',
             'year_graduated' => 'nullable|integer|min:1990|max:'.(date('Y') + 1),
             'school_year_applying' => 'nullable|string|max:20',
@@ -134,6 +144,7 @@ class AuthController extends Controller
             'lrn.required' => 'LRN is required.',
             'lrn.digits' => 'LRN must be exactly 12 digits.',
             'lrn.unique' => 'This LRN is already registered. Each learner must have a unique LRN.',
+            'preferred_strand.exists' => 'Please choose a valid academic track.',
         ]);
 
         $gender = $validated['gender'] ?? null;

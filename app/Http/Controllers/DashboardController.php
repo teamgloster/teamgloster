@@ -8,6 +8,7 @@ use App\Models\Grade;
 use App\Models\SchoolSetting;
 use App\Models\Section;
 use App\Models\SectionSubjectTeacher;
+use App\Models\Strand;
 use App\Models\StudentRequirement;
 use App\Models\Subject;
 use App\Models\TeacherSubject;
@@ -376,6 +377,36 @@ class DashboardController extends Controller
             'user' => Auth::user(),
             'yearLevels' => $yearLevels,
             'currentSchoolYear' => $currentSchoolYear,
+        ]);
+    }
+
+    /**
+     * Admin Strands Management Page
+     */
+    public function adminStrands()
+    {
+        $applicantCounts = User::query()
+            ->where('role', 'student')
+            ->whereNotNull('preferred_strand')
+            ->selectRaw('preferred_strand, COUNT(*) as aggregate')
+            ->groupBy('preferred_strand')
+            ->pluck('aggregate', 'preferred_strand');
+
+        $strands = Strand::query()
+            ->ordered()
+            ->get()
+            ->map(function (Strand $strand) use ($applicantCounts) {
+                $strand->setAttribute(
+                    'applicants_count',
+                    (int) ($applicantCounts[$strand->code] ?? $applicantCounts[$strand->name] ?? 0)
+                );
+
+                return $strand;
+            });
+
+        return Inertia::render('Dashboard/Admin/Strands', [
+            'user' => Auth::user(),
+            'strands' => $strands,
         ]);
     }
 

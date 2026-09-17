@@ -5,10 +5,10 @@ namespace App\Http\Controllers;
 use App\Exceptions\StudentPromotionException;
 use App\Models\AcademicYear;
 use App\Models\Enrollment;
-use App\Models\Grade;
 use App\Models\SchoolSetting;
 use App\Models\Section;
 use App\Models\SectionSubjectTeacher;
+use App\Models\Strand;
 use App\Models\StudentRequirement;
 use App\Models\Subject;
 use App\Models\TeacherSubject;
@@ -737,6 +737,70 @@ class AdminController extends Controller
         $yearLevel->delete();
 
         return back()->with('success', 'Year level deleted successfully.');
+    }
+
+    // ==================== STRAND MANAGEMENT ====================
+
+    public function storeStrand(Request $request)
+    {
+        Strand::create($this->validatedStrandPayload($request));
+
+        return back()->with('success', 'Academic track created successfully.');
+    }
+
+    public function updateStrand(Request $request, Strand $strand)
+    {
+        $strand->update($this->validatedStrandPayload($request, $strand));
+
+        return back()->with('success', 'Academic track updated successfully.');
+    }
+
+    public function deleteStrand(Strand $strand)
+    {
+        $inUse = User::query()
+            ->where(function ($query) use ($strand) {
+                $query->where('preferred_strand', $strand->code)
+                    ->orWhere('preferred_strand', $strand->name);
+            })
+            ->exists();
+
+        if ($inUse) {
+            return back()->withErrors([
+                'strand' => 'Cannot delete an academic track that students have already selected. Deactivate it instead.',
+            ]);
+        }
+
+        $strand->delete();
+
+        return back()->with('success', 'Academic track deleted successfully.');
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function validatedStrandPayload(Request $request, ?Strand $strand = null): array
+    {
+        $request->merge([
+            'name' => trim((string) $request->input('name', '')),
+            'code' => strtoupper(trim((string) $request->input('code', ''))),
+        ]);
+
+        return $request->validate([
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('strands', 'name')->ignore($strand?->id),
+            ],
+            'code' => [
+                'required',
+                'string',
+                'max:30',
+                Rule::unique('strands', 'code')->ignore($strand?->id),
+            ],
+            'description' => 'nullable|string|max:500',
+            'is_active' => 'boolean',
+        ]);
     }
 
     // ==================== SECTION MANAGEMENT ====================
