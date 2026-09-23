@@ -106,6 +106,22 @@
                                 }}</span>
                             </div>
                         </div>
+                        <div
+                            v-if="academicTrackLabel"
+                            class="detail-card"
+                        >
+                            <div class="detail-icon blue">
+                                <GraduationCap :size="20" />
+                            </div>
+                            <div class="detail-content">
+                                <span class="detail-label"
+                                    >Academic Track</span
+                                >
+                                <span class="detail-value">{{
+                                    academicTrackLabel
+                                }}</span>
+                            </div>
+                        </div>
                     </div>
 
                     <div
@@ -294,6 +310,43 @@
                                 Information
                             </h4>
                             <div class="form-grid">
+                                <div
+                                    v-if="isSelectedSeniorHigh"
+                                    class="form-group"
+                                >
+                                    <label for="preferred_strand"
+                                        >Academic Track
+                                        <span class="required">*</span></label
+                                    >
+                                    <select
+                                        id="preferred_strand"
+                                        v-model="enrollmentForm.preferred_strand"
+                                        class="form-select"
+                                        :required="isSelectedSeniorHigh"
+                                    >
+                                        <option value="">
+                                            Select Academic Track
+                                        </option>
+                                        <option
+                                            v-if="strands.length === 0"
+                                            value=""
+                                            disabled
+                                        >
+                                            No academic tracks available
+                                        </option>
+                                        <option
+                                            v-for="strand in strands"
+                                            :key="strand.id"
+                                            :value="strand.code"
+                                        >
+                                            {{ strandLabel(strand) }}
+                                        </option>
+                                    </select>
+                                    <span class="input-hint"
+                                        >Required for Grade 11 and Grade
+                                        12</span
+                                    >
+                                </div>
                                 <div class="form-group">
                                     <label for="previous_gwa"
                                         >Previous GWA</label
@@ -396,6 +449,7 @@
                                 <tr>
                                     <th>School Year</th>
                                     <th>Year Level</th>
+                                    <th>Academic Track</th>
                                     <th>Section</th>
                                     <th>Status</th>
                                 </tr>
@@ -413,6 +467,14 @@
                                     </td>
                                     <td>
                                         {{ record.year_level?.name || "N/A" }}
+                                    </td>
+                                    <td>
+                                        {{
+                                            record.year_level?.level_type ===
+                                            "senior_high"
+                                                ? academicTrackLabel || "N/A"
+                                                : "—"
+                                        }}
                                     </td>
                                     <td>{{ record.section?.name || "N/A" }}</td>
                                     <td>
@@ -505,7 +567,12 @@ const props = defineProps({
             currentSchoolYear: "",
             enrollmentOpen: true,
             previousYearLevel: null,
+            academicTrackLabel: "",
         }),
+    },
+    strands: {
+        type: Array,
+        default: () => [],
     },
 });
 
@@ -516,11 +583,59 @@ const enrollmentForm = ref({
     enrollment_type: "",
     previous_gwa: "",
     previous_school: "",
+    preferred_strand: "",
 });
 
 const previousYearLevel = computed(
     () => props.enrollment?.previousYearLevel || null,
 );
+
+const selectedYearLevel = computed(() => {
+    return (
+        props.enrollment.yearLevels.find(
+            (level) =>
+                String(level.id) ===
+                String(enrollmentForm.value.year_level_id),
+        ) || null
+    );
+});
+
+const isSelectedSeniorHigh = computed(() => {
+    return selectedYearLevel.value?.level_type === "senior_high";
+});
+
+const strandLabel = (strand) => {
+    if (!strand) {
+        return "";
+    }
+
+    if (strand.label) {
+        return strand.label;
+    }
+
+    if (!strand.name || strand.name === strand.code) {
+        return strand.code;
+    }
+
+    return `${strand.code} — ${strand.name}`;
+};
+
+const academicTrackLabel = computed(() => {
+    if (props.enrollment?.academicTrackLabel) {
+        return props.enrollment.academicTrackLabel;
+    }
+
+    const code = props.user?.preferred_strand;
+    if (!code) {
+        return "";
+    }
+
+    const selected = props.strands.find(
+        (strand) => strand.code === code || strand.name === code,
+    );
+
+    return selected ? strandLabel(selected) : code;
+});
 
 const admissionApproved = computed(
     () => props.user?.admission_status === "approved",
@@ -590,8 +705,20 @@ const submitEnrollment = () => {
         toast.error("Please enter your previous / old school.");
         return;
     }
+    if (
+        isSelectedSeniorHigh.value &&
+        props.strands.length > 0 &&
+        !enrollmentForm.value.preferred_strand
+    ) {
+        toast.error("Please choose an academic track.");
+        return;
+    }
     isSubmittingEnrollment.value = true;
-    router.post("/enrollment/submit", enrollmentForm.value, {
+    const payload = { ...enrollmentForm.value };
+    if (!isSelectedSeniorHigh.value) {
+        delete payload.preferred_strand;
+    }
+    router.post("/enrollment/submit", payload, {
         onSuccess: () => {
             isSubmittingEnrollment.value = false;
             toast.success("Enrollment submitted!");
@@ -600,6 +727,7 @@ const submitEnrollment = () => {
                 enrollment_type: "",
                 previous_gwa: "",
                 previous_school: "",
+                preferred_strand: props.user?.preferred_strand || "",
             };
         },
         onError: (errors) => {
@@ -630,6 +758,8 @@ onMounted(() => {
         enrollmentForm.value.previous_gwa = props.user.previous_gwa;
     if (props.user.previous_school)
         enrollmentForm.value.previous_school = props.user.previous_school;
+    if (props.user.preferred_strand)
+        enrollmentForm.value.preferred_strand = props.user.preferred_strand;
 });
 </script>
 

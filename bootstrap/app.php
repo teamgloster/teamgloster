@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             \App\Http\Middleware\HandleInertiaRequests::class,
         ]);
+        $middleware->redirectGuestsTo(fn () => route('home'));
         $middleware->alias([
             'role' => \App\Http\Middleware\CheckRole::class,
         ]);

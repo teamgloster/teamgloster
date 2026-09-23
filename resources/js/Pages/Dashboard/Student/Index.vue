@@ -57,6 +57,15 @@
                         {{ enrollmentStatusLabel }}
                     </div>
                 </div>
+                <div
+                    v-if="academicTrackLabel"
+                    class="gov-stat-box"
+                >
+                    <div class="gov-stat-label">Academic Track</div>
+                    <div class="gov-stat-value gov-stat-text">
+                        {{ academicTrackLabel }}
+                    </div>
+                </div>
                 <div class="gov-stat-box">
                     <div class="gov-stat-label">School Year</div>
                     <div class="gov-stat-value gov-stat-text">
@@ -170,6 +179,7 @@ const props = defineProps({
         default: () => ({
             current: null,
             currentSchoolYear: "",
+            academicTrackLabel: "",
         }),
     },
     subjects: {
@@ -202,6 +212,10 @@ const enrollmentStatusLabel = computed(() => {
     }
     return "Not Enrolled";
 });
+
+const academicTrackLabel = computed(
+    () => props.enrollment?.academicTrackLabel || props.user?.preferred_strand || "",
+);
 
 const gwaChartData = computed(() => {
     if (!props.gwaProgress.length) {

@@ -40,4 +40,30 @@ class Strand extends Model
     {
         return $query->orderBy('code')->orderBy('name');
     }
+
+    public static function formOptions()
+    {
+        return static::query()
+            ->active()
+            ->ordered()
+            ->get(['id', 'name', 'code']);
+    }
+
+    public static function labelFor(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        if ($value === '') {
+            return null;
+        }
+
+        $strand = static::query()
+            ->where(function (Builder $query) use ($value) {
+                $query->where('code', $value)
+                    ->orWhere('name', $value);
+            })
+            ->first();
+
+        return $strand?->label ?? $value;
+    }
 }

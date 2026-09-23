@@ -18,9 +18,13 @@ Route::get('/', function () {
 })->name('home');
 
 // Authentication routes
+Route::get('/login', function () {
+    return redirect()->route('home');
+})->name('login');
+
 Route::get('/login/{role}', [AuthController::class, 'showLogin'])
     ->where('role', 'administrator|registrar|teacher|student')
-    ->name('login');
+    ->name('login.role');
 
 Route::get('/register/student', [AuthController::class, 'showRegister'])
     ->name('register');
@@ -212,6 +216,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/subjects/{subject}/teachers', [AdminController::class, 'getTeachersForSubject']);
 
         // Student Requirements management
+        Route::get('/requirements/{requirement}/download', [AdminController::class, 'downloadRequirement'])->name('admin.requirements.download');
+        Route::get('/requirements/{requirement}/view', [AdminController::class, 'viewRequirement'])->name('admin.requirements.view');
         Route::put('/requirements/{requirement}/verify', [AdminController::class, 'verifyRequirement']);
         Route::put('/requirements/{requirement}/reject', [AdminController::class, 'rejectRequirement']);
 

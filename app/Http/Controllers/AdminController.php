@@ -17,9 +17,12 @@ use App\Models\YearLevel;
 use App\Services\SectionAssignmentService;
 use App\Services\StudentPromotionService;
 use App\Support\SchoolYear;
+use Illuminate\Filesystem\FilesystemAdapter;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -47,7 +50,7 @@ class AdminController extends Controller
         $validated['password'] = Hash::make($validated['password']);
         $validated['role'] = 'student';
         $validated['admission_status'] = 'approved';
-        $validated['admission_reviewed_by'] = auth()->id();
+        $validated['admission_reviewed_by'] = Auth::id();
         $validated['admission_reviewed_at'] = now();
 
         User::create($validated);
@@ -157,7 +160,7 @@ class AdminController extends Controller
 
         $validated = $request->validate($this->staffAccountRules($account));
 
-        if ($account->id === auth()->id() && $validated['role'] !== $account->role) {
+        if ($account->id === Auth::id() && $validated['role'] !== $account->role) {
             throw ValidationException::withMessages([
                 'role' => 'You cannot change the role of your own account.',
             ]);
@@ -182,7 +185,7 @@ class AdminController extends Controller
     {
         $this->assertStaffAccount($account);
 
-        if ($account->id === auth()->id()) {
+        if ($account->id === Auth::id()) {
             throw ValidationException::withMessages([
                 'account' => 'You cannot delete your own account.',
             ]);
@@ -255,7 +258,7 @@ class AdminController extends Controller
         $student->update([
             'admission_status' => 'approved',
             'admission_remarks' => $validated['remarks'] ?? null,
-            'admission_reviewed_by' => auth()->id(),
+            'admission_reviewed_by' => Auth::id(),
             'admission_reviewed_at' => now(),
         ]);
 
@@ -275,7 +278,7 @@ class AdminController extends Controller
         $student->update([
             'admission_status' => 'rejected',
             'admission_remarks' => $validated['remarks'],
-            'admission_reviewed_by' => auth()->id(),
+            'admission_reviewed_by' => Auth::id(),
             'admission_reviewed_at' => now(),
         ]);
 
@@ -487,7 +490,7 @@ class AdminController extends Controller
 
         $enrollment->update([
             'status' => 'approved',
-            'approved_by' => auth()->id(),
+            'approved_by' => Auth::id(),
         ]);
 
         return true;
@@ -506,7 +509,7 @@ class AdminController extends Controller
         $enrollment->update([
             'status' => 'enrolled',
             'enrolled_at' => now(),
-            'approved_by' => $enrollment->approved_by ?? auth()->id(),
+            'approved_by' => $enrollment->approved_by ?? Auth::id(),
         ]);
 
         return true;
@@ -1150,6 +1153,47 @@ class AdminController extends Controller
     }
 
     // ==================== STUDENT REQUIREMENTS MANAGEMENT ====================
+
+    public function downloadRequirement(StudentRequirement $requirement)
+    {
+        $path = $this->requirementFilePath($requirement);
+
+        return $this->publicDisk()->download(
+            $path,
+            $requirement->original_filename ?: basename($path),
+        );
+    }
+
+    public function viewRequirement(StudentRequirement $requirement)
+    {
+        $path = $this->requirementFilePath($requirement);
+
+        return $this->publicDisk()->response(
+            $path,
+            $requirement->original_filename ?: basename($path),
+        );
+    }
+
+    private function publicDisk(): FilesystemAdapter
+    {
+        $disk = Storage::disk('public');
+        abort_unless($disk instanceof FilesystemAdapter, 500);
+
+        return $disk;
+    }
+
+    private function requirementFilePath(StudentRequirement $requirement): string
+    {
+        $path = ltrim((string) $requirement->file_path, '/');
+
+        if (str_starts_with($path, 'storage/')) {
+            $path = substr($path, strlen('storage/'));
+        }
+
+        abort_if($path === '' || ! $this->publicDisk()->exists($path), 404, 'The uploaded file could not be found.');
+
+        return $path;
+    }
 
     public function verifyRequirement(StudentRequirement $requirement)
     {

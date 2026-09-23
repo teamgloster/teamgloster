@@ -84,6 +84,10 @@
                     <div class="detail-item">
                         <label>LRN</label><span>{{ user.lrn || "N/A" }}</span>
                     </div>
+                    <div v-if="user.preferred_strand" class="detail-item">
+                        <label>Academic Track</label>
+                        <span>{{ user.preferred_strand }}</span>
+                    </div>
                     <div class="detail-item">
                         <label>Address</label
                         ><span

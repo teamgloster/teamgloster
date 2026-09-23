@@ -469,6 +469,19 @@
                                                 ?.name || "-"
                                         }}</span>
                                     </div>
+                                    <div
+                                        v-if="
+                                            selectedEnrollment?.user
+                                                ?.preferred_strand
+                                        "
+                                        class="detail-item"
+                                    >
+                                        <label>Academic Track</label>
+                                        <span>{{
+                                            selectedEnrollment.user
+                                                .preferred_strand
+                                        }}</span>
+                                    </div>
                                     <div class="detail-item">
                                         <label>Section</label>
                                         <span>{{

@@ -18,7 +18,7 @@
     "name": "vue-vendor"
   },
   "node_modules/canvg/lib/index.es.js": {
-    "file": "assets/index.es-DfuVZMz0.js",
+    "file": "assets/index.es-CjFsRxBq.js",
     "name": "index.es",
     "src": "node_modules/canvg/lib/index.es.js",
     "isDynamicEntry": true,
@@ -51,7 +51,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-DhkzG65h.js",
+    "file": "assets/app-DXsvO5KQ.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true,
@@ -66,7 +66,7 @@
       "node_modules/canvg/lib/index.es.js"
     ],
     "css": [
-      "assets/app-kL9_H-cD.css"
+      "assets/app-CjPwiEFL.css"
     ]
   }
 }

@@ -32,10 +32,7 @@ class AuthController extends Controller
     {
         return Inertia::render('Auth/register', [
             'currentSchoolYear' => SchoolSetting::currentSchoolYear(),
-            'strands' => Strand::query()
-                ->active()
-                ->ordered()
-                ->get(['id', 'name', 'code']),
+            'strands' => Strand::formOptions(),
         ]);
     }
 

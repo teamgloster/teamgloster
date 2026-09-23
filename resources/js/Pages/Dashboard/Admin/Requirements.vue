@@ -507,8 +507,10 @@
                                     <div class="image-container">
                                         <img
                                             :src="
-                                                '/storage/' +
-                                                selectedRequirement?.file_path
+                                                requirementFileUrl(
+                                                    selectedRequirement,
+                                                    'view',
+                                                )
                                             "
                                             :style="{
                                                 transform: `scale(${zoomLevel / 100}) rotate(${rotationDegree}deg)`,
@@ -526,8 +528,10 @@
                                         )
                                     "
                                     :src="
-                                        '/storage/' +
-                                        selectedRequirement?.file_path
+                                        requirementFileUrl(
+                                            selectedRequirement,
+                                            'view',
+                                        )
                                     "
                                     class="preview-iframe"
                                 ></iframe>
@@ -556,6 +560,15 @@
                                 @click="closeViewModal"
                             >
                                 Close
+                            </button>
+                            <button
+                                v-if="selectedRequirement?.file_path"
+                                type="button"
+                                class="btn-primary"
+                                @click="downloadFile(selectedRequirement)"
+                            >
+                                <Download :size="18" />
+                                Download File
                             </button>
                         </div>
                     </div>
@@ -999,15 +1012,33 @@ const resetView = () => {
     rotationDegree.value = 0;
 };
 
-// Download File
+const requirementFileUrl = (requirement, mode = "view") => {
+    if (!requirement) {
+        return "";
+    }
+
+    if (mode === "download") {
+        return (
+            requirement.download_url ||
+            (requirement.id
+                ? `/admin/requirements/${requirement.id}/download`
+                : "")
+        );
+    }
+
+    return (
+        requirement.view_url ||
+        (requirement.id ? `/admin/requirements/${requirement.id}/view` : "")
+    );
+};
+
 const downloadFile = (requirement) => {
-    if (!requirement?.file_path) return;
-    const link = document.createElement("a");
-    link.href = "/storage/" + requirement.file_path;
-    link.download = requirement.original_filename || "download";
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const url = requirementFileUrl(requirement, "download");
+    if (!url) {
+        return;
+    }
+
+    window.location.assign(url);
 };
 
 // Verify Modal

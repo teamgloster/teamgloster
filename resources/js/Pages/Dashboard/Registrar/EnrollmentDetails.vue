@@ -122,6 +122,13 @@
                                     currentEnrollment.year_level?.name || "—"
                                 }}</span>
                             </div>
+                            <div
+                                v-if="student.preferred_strand"
+                                class="detail-item"
+                            >
+                                <label>Academic Track</label>
+                                <span>{{ student.preferred_strand }}</span>
+                            </div>
                             <div class="detail-item">
                                 <label>Section</label>
                                 <span>{{

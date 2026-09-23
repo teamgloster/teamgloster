@@ -472,6 +472,12 @@ class DashboardController extends Controller
                         'file_path' => $req->file_path,
                         'original_filename' => $req->original_filename,
                         'remarks' => $req->remarks,
+                        'download_url' => $req->file_path
+                            ? route('admin.requirements.download', $req)
+                            : null,
+                        'view_url' => $req->file_path
+                            ? route('admin.requirements.view', $req)
+                            : null,
                         'created_at' => $req->created_at,
                         'updated_at' => $req->updated_at,
                     ];
@@ -767,6 +773,7 @@ class DashboardController extends Controller
             'enrollment' => [
                 'current' => $currentEnrollment,
                 'currentSchoolYear' => $currentSchoolYear,
+                'academicTrackLabel' => Strand::labelFor($user->preferred_strand),
             ],
             'subjects' => $enrolledSubjects,
             'schedule' => $schedule,
@@ -857,6 +864,7 @@ class DashboardController extends Controller
 
         return Inertia::render('Dashboard/Student/Enrollment', [
             'user' => $user,
+            'strands' => Strand::formOptions(),
             'enrollment' => [
                 'current' => $currentEnrollment,
                 'yearLevels' => $yearLevels,
@@ -864,6 +872,7 @@ class DashboardController extends Controller
                 'currentSchoolYear' => $currentSchoolYear,
                 'enrollmentOpen' => SchoolSetting::enrollmentOpen(),
                 'previousYearLevel' => $previousYearLevel,
+                'academicTrackLabel' => Strand::labelFor($user->preferred_strand),
             ],
         ]);
     }
