@@ -74,7 +74,7 @@
                     </thead>
                     <tbody>
                         <template
-                            v-for="student in filteredStudents"
+                            v-for="student in paginatedStudents"
                             :key="student.user_id"
                         >
                             <tr
@@ -399,9 +399,43 @@
             <!-- Pagination Info -->
             <div class="table-footer">
                 <span class="record-count">
-                    Showing {{ filteredStudents.length }} of
-                    {{ studentRequirements.length }} students
+                    Showing {{ pageStart }}-{{ pageEnd }} of
+                    {{ filteredStudents.length }} students
                 </span>
+                <nav
+                    v-if="filteredStudents.length > 0"
+                    class="pagination"
+                    aria-label="Student requirements pagination"
+                >
+                    <button
+                        type="button"
+                        class="page-btn"
+                        :disabled="currentPage === 1"
+                        title="Previous page"
+                        @click="goToPage(currentPage - 1)"
+                    >
+                        <ChevronLeft :size="16" />
+                    </button>
+                    <button
+                        v-for="page in visiblePageNumbers"
+                        :key="page"
+                        type="button"
+                        class="page-btn"
+                        :class="{ active: page === currentPage }"
+                        @click="goToPage(page)"
+                    >
+                        {{ page }}
+                    </button>
+                    <button
+                        type="button"
+                        class="page-btn"
+                        :disabled="currentPage === totalPages"
+                        title="Next page"
+                        @click="goToPage(currentPage + 1)"
+                    >
+                        <ChevronRight :size="16" />
+                    </button>
+                </nav>
             </div>
         </div>
 
@@ -733,7 +767,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, watch } from "vue";
 import { router } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import AdminLayout from "@/Layouts/AdminLayout.vue";
@@ -746,6 +780,7 @@ import {
     X,
     Loader2,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     Download,
     FileText,
@@ -800,6 +835,8 @@ const searchQuery = ref("");
 const statusFilter = ref("all");
 const isSubmitting = ref(false);
 const expandedStudents = ref(new Set());
+const currentPage = ref(1);
+const pageSize = 15;
 
 // View Modal
 const showViewModal = ref(false);
@@ -883,6 +920,56 @@ const filteredStudents = computed(() => {
 
     return result;
 });
+
+const totalPages = computed(() => {
+    return Math.max(1, Math.ceil(filteredStudents.value.length / pageSize));
+});
+
+const paginatedStudents = computed(() => {
+    const start = (currentPage.value - 1) * pageSize;
+    return filteredStudents.value.slice(start, start + pageSize);
+});
+
+const pageStart = computed(() => {
+    if (filteredStudents.value.length === 0) return 0;
+    return (currentPage.value - 1) * pageSize + 1;
+});
+
+const pageEnd = computed(() => {
+    return Math.min(
+        currentPage.value * pageSize,
+        filteredStudents.value.length,
+    );
+});
+
+const visiblePageNumbers = computed(() => {
+    const total = totalPages.value;
+    const current = currentPage.value;
+    let start = Math.max(1, current - 2);
+    let end = Math.min(total, start + 4);
+    start = Math.max(1, end - 4);
+
+    const pages = [];
+    for (let page = start; page <= end; page++) {
+        pages.push(page);
+    }
+    return pages;
+});
+
+watch([searchQuery, statusFilter], () => {
+    currentPage.value = 1;
+});
+
+watch(totalPages, (pages) => {
+    if (currentPage.value > pages) {
+        currentPage.value = pages;
+    }
+});
+
+const goToPage = (page) => {
+    if (page < 1 || page > totalPages.value) return;
+    currentPage.value = page;
+};
 
 // Methods
 const getInitials = (user) => {
@@ -1448,6 +1535,49 @@ const rejectRequirement = () => {
 
 .confirm-icon {
     display: none;
+}
+
+.table-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.pagination {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.page-btn {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.45rem;
+    border: 1px solid #003366;
+    background: #fff;
+    color: #003366;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.page-btn.active {
+    background: #003366;
+    color: #fff;
+}
+
+.page-btn:hover:not(:disabled):not(.active) {
+    background: #e8eef4;
+}
+
+.page-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
 }
 
 @media (max-width: 768px) {
