@@ -454,13 +454,21 @@ class DashboardController extends Controller
     {
         $currentSchoolYear = $this->getCurrentSchoolYear();
 
-        $enrollments = Enrollment::query()
-            ->with(['user', 'yearLevel'])
+        $students = User::query()
+            ->where('role', 'student')
+            ->orderBy('last_name')
+            ->orderBy('first_name')
+            ->get();
+
+        $enrolledYearLevelByUser = Enrollment::query()
+            ->with('yearLevel')
             ->where('school_year', $currentSchoolYear)
             ->orderByDesc('created_at')
             ->get()
             ->unique('user_id')
-            ->values();
+            ->mapWithKeys(fn (Enrollment $enrollment) => [
+                (int) $enrollment->user_id => $enrollment->yearLevel?->name,
+            ]);
 
         $requirementsByUser = StudentRequirement::query()
             ->with('user')
@@ -468,22 +476,16 @@ class DashboardController extends Controller
             ->get()
             ->groupBy('user_id');
 
-        $rows = collect();
         $includedUserIds = [];
-
-        foreach ($enrollments as $enrollment) {
-            $user = $enrollment->user;
-            if (! $user) {
-                continue;
-            }
-
+        $rows = $students->map(function (User $user) use ($requirementsByUser, $enrolledYearLevelByUser, &$includedUserIds) {
             $includedUserIds[] = (int) $user->id;
-            $rows->push($this->requirementStudentRow(
+
+            return $this->requirementStudentRow(
                 $user,
                 $requirementsByUser->get($user->id, collect()),
-                $enrollment->yearLevel?->name,
-            ));
-        }
+                $enrolledYearLevelByUser->get((int) $user->id),
+            );
+        });
 
         foreach ($requirementsByUser as $userId => $userRequirements) {
             if (in_array((int) $userId, $includedUserIds, true)) {
@@ -495,7 +497,11 @@ class DashboardController extends Controller
                 continue;
             }
 
-            $rows->push($this->requirementStudentRow($user, $userRequirements));
+            $rows->push($this->requirementStudentRow(
+                $user,
+                $userRequirements,
+                $enrolledYearLevelByUser->get((int) $userId),
+            ));
         }
 
         $studentRequirements = $rows

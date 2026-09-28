@@ -106,7 +106,7 @@ test('admin requirements page includes download urls', function () {
         );
 });
 
-test('requirements page lists enrolled students who have not uploaded documents', function () {
+test('requirements page lists every student account even without uploads', function () {
     /** @var \Tests\TestCase $this */
     SchoolSetting::current()->update(['current_school_year' => '2026-2027']);
 
@@ -135,6 +135,17 @@ test('requirements page lists enrolled students who have not uploaded documents'
         'admission_status' => 'approved',
     ]);
 
+    $notEnrolled = User::create([
+        'first_name' => 'Cara',
+        'last_name' => 'Abad',
+        'email' => 'cara.abad@tnhs.test',
+        'password' => 'password',
+        'role' => 'student',
+        'lrn' => '123456789017',
+        'year_level_applying' => 'Grade 10',
+        'admission_status' => 'incomplete',
+    ]);
+
     foreach ([$withFile, $enrolledOnly] as $student) {
         Enrollment::create([
             'user_id' => $student->id,
@@ -151,12 +162,18 @@ test('requirements page lists enrolled students who have not uploaded documents'
         ->assertOk()
         ->assertInertia(fn ($page) => $page
             ->component('Dashboard/Admin/Requirements')
-            ->has('studentRequirements', 2)
-            ->where('studentRequirements.0.user.last_name', 'Cruz')
-            ->where('studentRequirements.0.user.year_level_applying', 'Grade 7')
+            ->has('studentRequirements', 3)
+            ->where('studentRequirements.0.user.last_name', 'Abad')
+            ->where('studentRequirements.0.user.year_level_applying', 'Grade 10')
             ->where('studentRequirements.0.requirements', [])
-            ->where('studentRequirements.1.user.last_name', 'Santos')
+            ->where('studentRequirements.1.user.last_name', 'Cruz')
+            ->where('studentRequirements.1.user.year_level_applying', 'Grade 7')
+            ->where('studentRequirements.1.requirements', [])
+            ->where('studentRequirements.2.user.last_name', 'Santos')
+            ->missing('studentRequirements.3')
         );
+
+    expect($notEnrolled->enrollments)->toHaveCount(0);
 });
 
 test('guests cannot download requirement files', function () {
