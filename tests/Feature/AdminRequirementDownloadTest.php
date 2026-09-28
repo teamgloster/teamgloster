@@ -1,7 +1,10 @@
 <?php
 
+use App\Models\Enrollment;
+use App\Models\SchoolSetting;
 use App\Models\StudentRequirement;
 use App\Models\User;
+use App\Models\YearLevel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -34,6 +37,7 @@ function makeRequirementsStudent(): User
 }
 
 test('admin can download a requirement uploaded by a student', function () {
+    /** @var \Tests\TestCase $this */
     Storage::fake('public');
 
     $admin = makeRequirementsAdmin();
@@ -56,6 +60,7 @@ test('admin can download a requirement uploaded by a student', function () {
 });
 
 test('admin can view a requirement file in the browser', function () {
+    /** @var \Tests\TestCase $this */
     Storage::fake('public');
 
     $admin = makeRequirementsAdmin();
@@ -76,6 +81,7 @@ test('admin can view a requirement file in the browser', function () {
 });
 
 test('admin requirements page includes download urls', function () {
+    /** @var \Tests\TestCase $this */
     Storage::fake('public');
 
     $admin = makeRequirementsAdmin();
@@ -100,7 +106,61 @@ test('admin requirements page includes download urls', function () {
         );
 });
 
+test('requirements page lists enrolled students who have not uploaded documents', function () {
+    /** @var \Tests\TestCase $this */
+    SchoolSetting::current()->update(['current_school_year' => '2026-2027']);
+
+    $admin = makeRequirementsAdmin();
+    $grade7 = YearLevel::create([
+        'name' => 'Grade 7',
+        'code' => 'G7-REQ',
+        'level_type' => 'junior_high',
+        'is_active' => true,
+    ]);
+
+    $withFile = makeRequirementsStudent();
+    StudentRequirement::create([
+        'user_id' => $withFile->id,
+        'requirement_type' => 'birth_certificate',
+        'status' => 'pending',
+    ]);
+
+    $enrolledOnly = User::create([
+        'first_name' => 'Ben',
+        'last_name' => 'Cruz',
+        'email' => 'ben.cruz@tnhs.test',
+        'password' => 'password',
+        'role' => 'student',
+        'lrn' => '123456789016',
+        'admission_status' => 'approved',
+    ]);
+
+    foreach ([$withFile, $enrolledOnly] as $student) {
+        Enrollment::create([
+            'user_id' => $student->id,
+            'year_level_id' => $grade7->id,
+            'school_year' => '2026-2027',
+            'semester' => 'first',
+            'status' => 'enrolled',
+            'enrollment_type' => 'new',
+        ]);
+    }
+
+    $this->actingAs($admin)
+        ->get('/admin/requirements')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dashboard/Admin/Requirements')
+            ->has('studentRequirements', 2)
+            ->where('studentRequirements.0.user.last_name', 'Cruz')
+            ->where('studentRequirements.0.user.year_level_applying', 'Grade 7')
+            ->where('studentRequirements.0.requirements', [])
+            ->where('studentRequirements.1.user.last_name', 'Santos')
+        );
+});
+
 test('guests cannot download requirement files', function () {
+    /** @var \Tests\TestCase $this */
     Storage::fake('public');
 
     $student = makeRequirementsStudent();

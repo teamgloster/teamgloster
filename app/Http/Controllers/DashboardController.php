@@ -452,43 +452,96 @@ class DashboardController extends Controller
      */
     public function adminRequirements()
     {
-        // Get all requirements grouped by user
-        $requirements = StudentRequirement::with('user')
-            ->orderBy('created_at', 'desc')
-            ->get();
+        $currentSchoolYear = $this->getCurrentSchoolYear();
 
-        // Group requirements by user_id
-        $studentRequirements = $requirements->groupBy('user_id')->map(function ($userRequirements) {
-            $firstReq = $userRequirements->first();
+        $enrollments = Enrollment::query()
+            ->with(['user', 'yearLevel'])
+            ->where('school_year', $currentSchoolYear)
+            ->orderByDesc('created_at')
+            ->get()
+            ->unique('user_id')
+            ->values();
 
-            return [
-                'user_id' => $firstReq->user_id,
-                'user' => $firstReq->user,
-                'requirements' => $userRequirements->map(function ($req) {
-                    return [
-                        'id' => $req->id,
-                        'requirement_type' => $req->requirement_type,
-                        'status' => $req->status,
-                        'file_path' => $req->file_path,
-                        'original_filename' => $req->original_filename,
-                        'remarks' => $req->remarks,
-                        'download_url' => $req->file_path
-                            ? route('admin.requirements.download', $req)
-                            : null,
-                        'view_url' => $req->file_path
-                            ? route('admin.requirements.view', $req)
-                            : null,
-                        'created_at' => $req->created_at,
-                        'updated_at' => $req->updated_at,
-                    ];
-                })->values()->toArray(),
-            ];
-        })->values()->toArray();
+        $requirementsByUser = StudentRequirement::query()
+            ->with('user')
+            ->orderByDesc('created_at')
+            ->get()
+            ->groupBy('user_id');
+
+        $rows = collect();
+        $includedUserIds = [];
+
+        foreach ($enrollments as $enrollment) {
+            $user = $enrollment->user;
+            if (! $user) {
+                continue;
+            }
+
+            $includedUserIds[] = (int) $user->id;
+            $rows->push($this->requirementStudentRow(
+                $user,
+                $requirementsByUser->get($user->id, collect()),
+                $enrollment->yearLevel?->name,
+            ));
+        }
+
+        foreach ($requirementsByUser as $userId => $userRequirements) {
+            if (in_array((int) $userId, $includedUserIds, true)) {
+                continue;
+            }
+
+            $user = $userRequirements->first()?->user;
+            if (! $user) {
+                continue;
+            }
+
+            $rows->push($this->requirementStudentRow($user, $userRequirements));
+        }
+
+        $studentRequirements = $rows
+            ->sortBy(fn (array $row) => strtolower(($row['user']['last_name'] ?? '').' '.($row['user']['first_name'] ?? '')))
+            ->values();
 
         return Inertia::render('Dashboard/Admin/Requirements', [
             'user' => Auth::user(),
             'studentRequirements' => $studentRequirements,
         ]);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, StudentRequirement>  $requirements
+     * @return array<string, mixed>
+     */
+    private function requirementStudentRow(User $user, $requirements, ?string $enrolledYearLevel = null): array
+    {
+        $userData = $user->toArray();
+
+        if (blank($userData['year_level_applying'] ?? null) && $enrolledYearLevel) {
+            $userData['year_level_applying'] = $enrolledYearLevel;
+        }
+
+        return [
+            'user_id' => $user->id,
+            'user' => $userData,
+            'requirements' => $requirements->map(function (StudentRequirement $req) {
+                return [
+                    'id' => $req->id,
+                    'requirement_type' => $req->requirement_type,
+                    'status' => $req->status,
+                    'file_path' => $req->file_path,
+                    'original_filename' => $req->original_filename,
+                    'remarks' => $req->remarks,
+                    'download_url' => $req->file_path
+                        ? route('admin.requirements.download', $req)
+                        : null,
+                    'view_url' => $req->file_path
+                        ? route('admin.requirements.view', $req)
+                        : null,
+                    'created_at' => $req->created_at,
+                    'updated_at' => $req->updated_at,
+                ];
+            })->values()->all(),
+        ];
     }
 
     /**
