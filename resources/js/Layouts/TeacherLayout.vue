@@ -54,6 +54,14 @@
                         <span class="nav-text">Student Grades</span>
                     </Link>
                     <Link
+                        :href="route('teacher.attendance')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'attendance' }"
+                    >
+                        <ClipboardCheck class="nav-icon" :size="20" />
+                        <span class="nav-text">Attendance</span>
+                    </Link>
+                    <Link
                         href="/dashboard/teacher?nav=school-forms"
                         class="nav-item"
                         :class="{ active: currentPage === 'school-forms' }"
@@ -140,6 +148,7 @@ import {
     Users,
     BookOpen,
     ClipboardList,
+    ClipboardCheck,
     FileText,
     KeyRound,
     LogOut,

@@ -8,6 +8,7 @@ use App\Http\Controllers\PermanentRecordController;
 use App\Http\Controllers\RegistrarController;
 use App\Http\Controllers\SchoolFormController;
 use App\Http\Controllers\StudentEnrollmentController;
+use App\Http\Controllers\TeacherAttendanceController;
 use App\Http\Controllers\TranscriptionController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -107,6 +108,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'teacherSf10'])->name('teacher.students.sf10');
         Route::get('/password', [AuthController::class, 'showChangePassword'])->name('teacher.password');
         Route::put('/password', [AuthController::class, 'updatePassword'])->name('teacher.password.update');
+        Route::get('/attendance', [TeacherAttendanceController::class, 'index'])->name('teacher.attendance');
+        Route::put('/attendance', [TeacherAttendanceController::class, 'update'])->name('teacher.attendance.update');
     });
 
     // Legacy student route - redirect to new dashboard
@@ -121,6 +124,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/enrollment', [DashboardController::class, 'studentEnrollment'])->name('student.enrollment');
         Route::get('/subjects', [DashboardController::class, 'studentSubjects'])->name('student.subjects');
         Route::get('/grades', [DashboardController::class, 'studentGrades'])->name('student.grades');
+        Route::get('/attendance', [TeacherAttendanceController::class, 'studentIndex'])->name('student.attendance');
         Route::get('/sf9', [SchoolFormController::class, 'studentSf9'])->name('student.sf9');
         Route::get('/sf10', [SchoolFormController::class, 'studentSf10'])->name('student.sf10');
         Route::get('/requirements', [DashboardController::class, 'studentRequirements'])->name('student.requirements');

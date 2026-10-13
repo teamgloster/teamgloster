@@ -70,6 +70,14 @@
                         <BarChart3 class="nav-icon" :size="20" />
                         <span class="nav-text">Grades</span>
                     </Link>
+                    <Link
+                        :href="route('student.attendance')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'attendance' }"
+                    >
+                        <ClipboardCheck class="nav-icon" :size="20" />
+                        <span class="nav-text">Attendance</span>
+                    </Link>
                 </div>
 
                 <div class="nav-group">
@@ -152,6 +160,7 @@ import {
     ClipboardList,
     BookOpen,
     BarChart3,
+    ClipboardCheck,
     FileText,
     KeyRound,
     LogOut,

@@ -58,6 +58,14 @@
                         <ClipboardList class="nav-icon" :size="20" />
                         <span class="nav-text">Student Grades</span>
                     </a>
+                    <Link
+                        href="/teacher/attendance"
+                        class="nav-item"
+                        :class="{ active: activeNav === 'attendance' }"
+                    >
+                        <ClipboardCheck class="nav-icon" :size="20" />
+                        <span class="nav-text">Attendance</span>
+                    </Link>
                     <a
                         href="#"
                         class="nav-item"
@@ -199,6 +207,9 @@
                             >
                                 Student Grades
                             </button>
+                            <Link href="/teacher/attendance" class="gov-link-box">
+                                Attendance
+                            </Link>
                             <button
                                 type="button"
                                 class="gov-link-box"
@@ -1543,6 +1554,7 @@ import {
     LayoutDashboard,
     Users,
     ClipboardList,
+    ClipboardCheck,
     BookOpen,
     Layers,
     FileText,
@@ -5134,6 +5146,8 @@ onUnmounted(() => {
     font-weight: 700;
     cursor: pointer;
     text-align: center;
+    text-decoration: none;
+    display: block;
 }
 
 .gov-link-box:hover {
