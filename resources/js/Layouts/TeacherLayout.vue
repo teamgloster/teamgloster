@@ -62,6 +62,18 @@
                         <span class="nav-text">School Forms</span>
                     </Link>
                 </div>
+
+                <div class="nav-group">
+                    <span class="nav-group-label">Account</span>
+                    <Link
+                        :href="route('teacher.password')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'password' }"
+                    >
+                        <KeyRound class="nav-icon" :size="20" />
+                        <span class="nav-text">Change Password</span>
+                    </Link>
+                </div>
             </nav>
         </aside>
 
@@ -129,6 +141,7 @@ import {
     BookOpen,
     ClipboardList,
     FileText,
+    KeyRound,
     LogOut,
     Menu,
 } from "lucide-vue-next";

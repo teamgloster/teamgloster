@@ -75,6 +75,18 @@
                         <span class="nav-text">Enrollment Summary</span>
                     </Link>
                 </div>
+
+                <div class="nav-group">
+                    <span class="nav-group-label">Account</span>
+                    <Link
+                        :href="route('registrar.password')"
+                        class="nav-item"
+                        :class="{ active: currentPage === 'password' }"
+                    >
+                        <KeyRound class="nav-icon" :size="20" />
+                        <span class="nav-text">Change Password</span>
+                    </Link>
+                </div>
             </nav>
         </aside>
 
@@ -146,6 +158,7 @@ import {
     Building,
     FolderSearch,
     BarChart3,
+    KeyRound,
     LogOut,
     Menu,
 } from "lucide-vue-next";

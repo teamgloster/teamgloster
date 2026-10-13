@@ -92,6 +92,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/permanent-records/{record}/download', [PermanentRecordController::class, 'download'])->name('registrar.permanent-records.download');
         Route::delete('/permanent-records/{record}', [PermanentRecordController::class, 'destroy'])->name('registrar.permanent-records.destroy');
         Route::get('/enrollment-summary', [EnrollmentSummaryController::class, 'registrarIndex'])->name('registrar.enrollment-summary');
+        Route::get('/password', [AuthController::class, 'showChangePassword'])->name('registrar.password');
+        Route::put('/password', [AuthController::class, 'updatePassword'])->name('registrar.password.update');
     });
 
     Route::get('/dashboard/teacher', [DashboardController::class, 'teacher'])
@@ -103,6 +105,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/school-forms/sf2/{section}', [SchoolFormController::class, 'teacherSf2'])->name('teacher.school-forms.sf2');
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'teacherSf9'])->name('teacher.students.sf9');
         Route::get('/students/{student}/sf10', [SchoolFormController::class, 'teacherSf10'])->name('teacher.students.sf10');
+        Route::get('/password', [AuthController::class, 'showChangePassword'])->name('teacher.password');
+        Route::put('/password', [AuthController::class, 'updatePassword'])->name('teacher.password.update');
     });
 
     // Legacy student route - redirect to new dashboard
@@ -120,6 +124,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/sf9', [SchoolFormController::class, 'studentSf9'])->name('student.sf9');
         Route::get('/sf10', [SchoolFormController::class, 'studentSf10'])->name('student.sf10');
         Route::get('/requirements', [DashboardController::class, 'studentRequirements'])->name('student.requirements');
+        Route::get('/password', [AuthController::class, 'showChangePassword'])->name('student.password');
+        Route::put('/password', [AuthController::class, 'updatePassword'])->name('student.password.update');
     });
 
     // Teacher grade update route

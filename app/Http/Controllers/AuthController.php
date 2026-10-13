@@ -393,6 +393,34 @@ class AuthController extends Controller
         return back()->with('success', 'Document removed successfully!');
     }
 
+    public function showChangePassword()
+    {
+        $user = $this->authenticatedUser();
+
+        return Inertia::render('Account/ChangePassword', [
+            'user' => $user,
+            'role' => $user->role,
+        ]);
+    }
+
+    public function updatePassword(Request $request)
+    {
+        $user = $this->authenticatedUser();
+
+        abort_unless(in_array($user->role, ['student', 'teacher', 'registrar'], true), 403);
+
+        $validated = $request->validate([
+            'current_password' => ['required', 'current_password'],
+            'password' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $user->update([
+            'password' => $validated['password'],
+        ]);
+
+        return back()->with('success', 'Password updated successfully.');
+    }
+
     private function authenticatedUser(): User
     {
         $user = Auth::user();
