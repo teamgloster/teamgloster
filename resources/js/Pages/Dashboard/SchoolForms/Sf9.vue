@@ -170,9 +170,9 @@
                             <th>Month</th>
                             <th
                                 v-for="month in attendance_months"
-                                :key="month"
+                                :key="month.label"
                             >
-                                {{ month }}
+                                {{ month.label }}
                             </th>
                         </tr>
                     </thead>
@@ -181,22 +181,28 @@
                             <td>No. of Class Days</td>
                             <td
                                 v-for="month in attendance_months"
-                                :key="`d-${month}`"
-                            ></td>
+                                :key="`d-${month.label}`"
+                            >
+                                {{ count(month.school_days) }}
+                            </td>
                         </tr>
                         <tr>
                             <td>No. of Days Present</td>
                             <td
                                 v-for="month in attendance_months"
-                                :key="`p-${month}`"
-                            ></td>
+                                :key="`p-${month.label}`"
+                            >
+                                {{ count(month.present) }}
+                            </td>
                         </tr>
                         <tr>
                             <td>No. of Days Absent</td>
                             <td
                                 v-for="month in attendance_months"
-                                :key="`a-${month}`"
-                            ></td>
+                                :key="`a-${month.label}`"
+                            >
+                                {{ count(month.absent) }}
+                            </td>
                         </tr>
                     </tbody>
                 </table>
@@ -346,6 +352,13 @@ const groupedAreas = computed(() => {
 const dash = (value) => {
     if (value === null || value === undefined || value === "") {
         return "—";
+    }
+    return value;
+};
+
+const count = (value) => {
+    if (value === null || value === undefined || value === "") {
+        return "";
     }
     return value;
 };

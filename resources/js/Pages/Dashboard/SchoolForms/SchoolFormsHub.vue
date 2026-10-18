@@ -79,9 +79,8 @@
             </div>
             <div class="panel-body">
                 <p class="panel-note">
-                    Monthly attendance sheet for the selected section. Daily
-                    marks can be written on the printed form until attendance is
-                    encoded in the system.
+                    Monthly attendance sheet for the selected section. Marks
+                    saved by the teacher appear on the generated form.
                 </p>
                 <div v-if="sections.length === 0" class="empty-note">
                     {{ emptySectionMessage }}

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Attendance;
 use App\Models\Enrollment;
 use App\Models\Grade;
 use App\Models\SchoolSetting;
@@ -96,7 +97,7 @@ class SchoolFormService
             'general_average_descriptor' => $this->descriptor($generalAverage),
             'general_average_remarks' => $this->remarks($generalAverage !== null ? (float) $generalAverage : null),
             'general_average_complete' => $subjects->isNotEmpty() && $finals->count() === $subjects->count(),
-            'attendance_months' => $this->sf9AttendanceMonths(),
+            'attendance_months' => $this->sf9AttendanceRecord($student, $section?->id, $schoolYear),
             'descriptors' => $this->sf9DescriptorScale(),
             'parent' => $student->guardian_full_name ?: $student->father_name ?: $student->mother_name,
             'school_head' => $settings->school_head,
@@ -271,11 +272,46 @@ class SchoolFormService
             })
             ->values();
 
+        $attendanceByStudent = Attendance::query()
+            ->where('section_id', $section->id)
+            ->where('school_year', $schoolYear)
+            ->whereDate('attendance_date', '>=', $start->toDateString())
+            ->whereDate('attendance_date', '<=', $start->copy()->endOfMonth()->toDateString())
+            ->get()
+            ->groupBy('student_id');
+
         $learners = $enrollments
             ->filter(fn (Enrollment $enrollment) => $enrollment->user)
             ->values()
-            ->map(function (Enrollment $enrollment, int $index) {
+            ->map(function (Enrollment $enrollment, int $index) use ($attendanceByStudent, $start, $daysInMonth) {
                 $user = $enrollment->user;
+                $byDate = ($attendanceByStudent->get($user->id) ?? collect())
+                    ->groupBy(fn (Attendance $row) => $row->attendance_date->toDateString());
+                $marks = [];
+                $absent = 0;
+                $tardy = 0;
+                $recorded = 0;
+
+                for ($day = 1; $day <= $daysInMonth; $day++) {
+                    $date = $start->copy()->day($day)->toDateString();
+                    $status = $this->dailyAttendanceStatus($byDate->get($date, collect()));
+                    $mark = $this->attendanceMark($status);
+
+                    if ($mark === null) {
+                        continue;
+                    }
+
+                    $marks[(string) $day] = $mark;
+                    $recorded++;
+
+                    if ($status === 'absent') {
+                        $absent++;
+                    }
+
+                    if ($status === 'late') {
+                        $tardy++;
+                    }
+                }
 
                 return [
                     'no' => $index + 1,
@@ -283,6 +319,9 @@ class SchoolFormService
                     'sex' => $this->sexLabel($user->gender),
                     'is_male' => strtolower((string) $user->gender) === 'male',
                     'remarks' => $this->enrollmentRemarks($enrollment),
+                    'marks' => $marks,
+                    'absent' => $recorded > 0 ? $absent : null,
+                    'tardy' => $recorded > 0 ? $tardy : null,
                 ];
             })
             ->all();
@@ -725,11 +764,150 @@ class SchoolFormService
     }
 
     /**
-     * @return list<string>
+     * One school-day status for a learner.
+     * The adviser's attendance is the day's mark. Subject classes are used only
+     * when the adviser did not record that day.
+     *
+     * @param  Collection<int, Attendance>  $rows
      */
-    private function sf9AttendanceMonths(): array
+    private function dailyAttendanceStatus(Collection $rows): ?string
     {
-        return ['Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec', 'Jan', 'Feb', 'Mar', 'Apr', 'Total'];
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        $advisory = $rows->first(function (Attendance $row) {
+            return $row->subject_id === null || str_ends_with((string) $row->class_key, '-advisory');
+        });
+
+        if ($advisory) {
+            return in_array($advisory->status, Attendance::STATUSES, true) ? $advisory->status : null;
+        }
+
+        $statuses = $rows->pluck('status')->unique();
+
+        if ($statuses->contains('present')) {
+            return $statuses->contains('late') && ! $statuses->contains('absent') ? 'late' : 'present';
+        }
+
+        if ($statuses->contains('late')) {
+            return 'late';
+        }
+
+        if ($statuses->contains('excused') && ! $statuses->contains('absent')) {
+            return 'excused';
+        }
+
+        if ($statuses->contains('absent')) {
+            return 'absent';
+        }
+
+        return null;
+    }
+
+    private function attendanceMark(?string $status): ?string
+    {
+        return match ($status) {
+            'present' => '✓',
+            'absent' => 'X',
+            'late' => 'T',
+            'excused' => 'E',
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<array{label: string, school_days: int|null, present: int|null, absent: int|null}>
+     */
+    private function sf9AttendanceRecord(User $student, ?int $sectionId, string $schoolYear): array
+    {
+        $months = [
+            ['label' => 'Jun', 'month' => 6],
+            ['label' => 'Jul', 'month' => 7],
+            ['label' => 'Aug', 'month' => 8],
+            ['label' => 'Sep', 'month' => 9],
+            ['label' => 'Oct', 'month' => 10],
+            ['label' => 'Nov', 'month' => 11],
+            ['label' => 'Dec', 'month' => 12],
+            ['label' => 'Jan', 'month' => 1],
+            ['label' => 'Feb', 'month' => 2],
+            ['label' => 'Mar', 'month' => 3],
+            ['label' => 'Apr', 'month' => 4],
+        ];
+
+        $blank = function (string $label): array {
+            return [
+                'label' => $label,
+                'school_days' => null,
+                'present' => null,
+                'absent' => null,
+            ];
+        };
+
+        if (! $sectionId) {
+            return [
+                ...array_map(fn (array $month) => $blank($month['label']), $months),
+                $blank('Total'),
+            ];
+        }
+
+        $byDate = Attendance::query()
+            ->where('section_id', $sectionId)
+            ->where('school_year', $schoolYear)
+            ->get()
+            ->groupBy(fn (Attendance $row) => $row->attendance_date->toDateString());
+
+        $rows = [];
+        $totalDays = 0;
+        $totalPresent = 0;
+        $totalAbsent = 0;
+        $recorded = false;
+
+        foreach ($months as $month) {
+            $year = $this->calendarYearForMonth($schoolYear, $month['month']);
+            $prefix = sprintf('%04d-%02d-', $year, $month['month']);
+            $dates = $byDate->keys()->filter(fn (string $date) => str_starts_with($date, $prefix))->values();
+            $schoolDays = $dates->count();
+            $present = 0;
+            $absent = 0;
+
+            foreach ($dates as $date) {
+                $status = $this->dailyAttendanceStatus(
+                    ($byDate->get($date) ?? collect())->where('student_id', $student->id)->values()
+                );
+
+                if ($status === 'present' || $status === 'late') {
+                    $present++;
+                } elseif ($status === 'absent' || $status === 'excused') {
+                    $absent++;
+                }
+            }
+
+            if ($schoolDays > 0) {
+                $recorded = true;
+                $totalDays += $schoolDays;
+                $totalPresent += $present;
+                $totalAbsent += $absent;
+            }
+
+            $rows[] = [
+                'label' => $month['label'],
+                'school_days' => $schoolDays > 0 ? $schoolDays : null,
+                'present' => $schoolDays > 0 ? $present : null,
+                'absent' => $schoolDays > 0 ? $absent : null,
+            ];
+        }
+
+        $rows[] = $recorded
+            ? [
+                'label' => 'Total',
+                'school_days' => $totalDays,
+                'present' => $totalPresent,
+                'absent' => $totalAbsent,
+            ]
+            : $blank('Total');
+
+        return $rows;
     }
 
     /**

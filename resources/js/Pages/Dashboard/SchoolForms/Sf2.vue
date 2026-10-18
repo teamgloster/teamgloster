@@ -77,10 +77,14 @@
                                 :class="{
                                     weekend: day.weekend,
                                     invalid: !day.valid,
+                                    absent: dayMark(learner, day) === 'X',
+                                    tardy: dayMark(learner, day) === 'T',
                                 }"
-                            ></td>
-                            <td></td>
-                            <td></td>
+                            >
+                                {{ dayMark(learner, day) }}
+                            </td>
+                            <td class="sf-center">{{ count(learner.absent) }}</td>
+                            <td class="sf-center">{{ count(learner.tardy) }}</td>
                             <td>{{ dash(learner.remarks) }}</td>
                         </tr>
                         <tr v-if="learners.length === 0">
@@ -91,10 +95,10 @@
                     </tbody>
                 </table>
                 <p class="sf-note">
-                    Legend: blank — Present; X — Absent; T — Tardy. Shaded
-                    columns are weekends or dates that do not exist in this
-                    month. Daily attendance is left blank until encoded in the
-                    system.
+                    Legend: ✓ Present; X Absent; T Tardy; E Excused. A blank
+                    cell has no attendance saved for that day. The adviser's
+                    attendance is used when it was recorded. Otherwise the day
+                    uses the subject classes saved for this section.
                 </p>
 
                 <div class="sf-sign-row">
@@ -139,6 +143,21 @@ const dash = (value) => {
     }
     return value;
 };
+
+const count = (value) => {
+    if (value === null || value === undefined || value === "") {
+        return "";
+    }
+    return value;
+};
+
+const dayMark = (learner, day) => {
+    if (!day.valid) {
+        return "";
+    }
+    const marks = learner.marks || {};
+    return marks[day.day] || marks[String(day.day)] || "";
+};
 </script>
 
 <style>
@@ -167,6 +186,14 @@ const dash = (value) => {
 
 .sf-attendance .invalid {
     background: #ccc;
+}
+
+.sf-attendance .absent {
+    font-weight: 700;
+}
+
+.sf-attendance .tardy {
+    font-weight: 700;
 }
 
 @media print {
