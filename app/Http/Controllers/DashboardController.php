@@ -653,6 +653,104 @@ class DashboardController extends Controller
         ]);
     }
 
+    public function teacherSchoolForms()
+    {
+        $user = $this->authenticatedUser();
+        $currentSchoolYear = $this->getCurrentSchoolYear();
+        $advisorySection = Section::where('adviser_id', $user->id)
+            ->with('yearLevel')
+            ->first();
+        $advisoryStudents = $advisorySection
+            ? Enrollment::where('section_id', $advisorySection->id)
+                ->where('status', 'enrolled')
+                ->with('user')
+                ->get()
+                ->map(fn ($enrollment) => $enrollment->user)
+                ->filter()
+            : collect();
+        $teachableSubjects = $user->teachableSubjects()
+            ->with([
+                'yearLevel',
+                'sections' => fn ($query) => $query->orderBy('name')->with('yearLevel'),
+            ])
+            ->orderBy('subjects.year_level_id')
+            ->orderBy('subjects.name')
+            ->get();
+        $studentGrades = $this->teacherGradeRows($user, $teachableSubjects, $currentSchoolYear);
+        $teacherSections = $studentGrades
+            ->pluck('section')
+            ->filter()
+            ->concat($teachableSubjects->flatMap->sections)
+            ->unique(fn ($section) => $section->id)
+            ->values();
+
+        $sections = [];
+        if ($advisorySection) {
+            $sections[] = [
+                'id' => $advisorySection->id,
+                'name' => $advisorySection->name,
+                'year_level' => $advisorySection->yearLevel?->name,
+                'enrolled_count' => $advisoryStudents->count(),
+            ];
+        }
+
+        $yearLevels = collect();
+        if ($advisorySection?->yearLevel) {
+            $yearLevels->push([
+                'id' => $advisorySection->yearLevel->id,
+                'name' => $advisorySection->yearLevel->name,
+            ]);
+        }
+        foreach ($teacherSections as $section) {
+            $yearLevel = $section->yearLevel;
+            $id = $yearLevel?->id ?: $section->year_level_id;
+            if ($id && ! $yearLevels->contains(fn ($level) => (int) $level['id'] === (int) $id)) {
+                $yearLevels->push([
+                    'id' => $id,
+                    'name' => $yearLevel?->name ?: $section->name,
+                ]);
+            }
+        }
+
+        $students = collect();
+        foreach ($advisoryStudents as $student) {
+            $students->put($student->id, [
+                'id' => $student->id,
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name,
+                'last_name' => $student->last_name,
+                'lrn' => $student->lrn,
+                'year_level_id' => $advisorySection?->year_level_id,
+                'year_level' => $advisorySection?->yearLevel?->name,
+            ]);
+        }
+        foreach ($studentGrades as $grade) {
+            $student = $grade['student'] ?? null;
+            if (! $student || $students->has($student->id)) {
+                continue;
+            }
+
+            $students->put($student->id, [
+                'id' => $student->id,
+                'first_name' => $student->first_name,
+                'middle_name' => $student->middle_name,
+                'last_name' => $student->last_name,
+                'lrn' => $student->lrn,
+                'year_level_id' => $grade['section']?->year_level_id ?: $grade['section']?->yearLevel?->id,
+                'year_level' => $grade['section']?->yearLevel?->name,
+            ]);
+        }
+
+        return Inertia::render('Dashboard/Teacher/SchoolForms', [
+            'user' => $user,
+            'currentSchoolYear' => $currentSchoolYear,
+            'currentTerm' => SchoolSetting::current()->current_term,
+            'sections' => $sections,
+            'yearLevels' => $yearLevels->values(),
+            'students' => $students->values(),
+        ]);
+    }
+
     public function teacherSubjectStudents(Subject $subject)
     {
         $teacher = $this->authenticatedUser();

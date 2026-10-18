@@ -159,7 +159,7 @@ class SchoolFormController extends Controller
             'Dashboard/SchoolForms/Sf1',
             $forms->sf1($section),
             'teacher',
-            '/dashboard/teacher?nav=school-forms'
+            route('teacher.school-forms')
         );
     }
 
@@ -171,7 +171,7 @@ class SchoolFormController extends Controller
             'Dashboard/SchoolForms/Sf2',
             $forms->sf2($section, (int) $request->query('month', now()->month)),
             'teacher',
-            '/dashboard/teacher?nav=school-forms'
+            route('teacher.school-forms')
         );
     }
 

@@ -62,7 +62,7 @@
                         <span class="nav-text">Attendance</span>
                     </Link>
                     <Link
-                        href="/dashboard/teacher?nav=school-forms"
+                        :href="route('teacher.school-forms')"
                         class="nav-item"
                         :class="{ active: currentPage === 'school-forms' }"
                     >

@@ -66,15 +66,24 @@
                         <ClipboardCheck class="nav-icon" :size="20" />
                         <span class="nav-text">Attendance</span>
                     </Link>
-                    <a
-                        href="#"
+                    <Link
+                        :href="route('teacher.school-forms')"
                         class="nav-item"
-                        :class="{ active: activeNav === 'school-forms' }"
-                        @click.prevent="handleNavClick('school-forms')"
                     >
                         <FileText class="nav-icon" :size="20" />
                         <span class="nav-text">School Forms</span>
-                    </a>
+                    </Link>
+                </div>
+
+                <div class="nav-group">
+                    <span class="nav-group-label">Account</span>
+                    <Link
+                        :href="route('teacher.password')"
+                        class="nav-item"
+                    >
+                        <KeyRound class="nav-icon" :size="20" />
+                        <span class="nav-text">Change Password</span>
+                    </Link>
                 </div>
             </nav>
         </aside>
@@ -210,13 +219,12 @@
                             <Link href="/teacher/attendance" class="gov-link-box">
                                 Attendance
                             </Link>
-                            <button
-                                type="button"
+                            <Link
+                                :href="route('teacher.school-forms')"
                                 class="gov-link-box"
-                                @click="handleNavClick('school-forms')"
                             >
                                 School Forms
-                            </button>
+                            </Link>
                         </div>
                     </div>
                 </div>
@@ -1555,6 +1563,7 @@ import {
     Users,
     ClipboardList,
     ClipboardCheck,
+    KeyRound,
     BookOpen,
     Layers,
     FileText,

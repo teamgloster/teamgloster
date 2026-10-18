@@ -102,6 +102,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::middleware('role:teacher')->prefix('teacher')->group(function () {
         Route::get('/subjects/{subject}/students', [DashboardController::class, 'teacherSubjectStudents'])->name('teacher.subjects.students');
+        Route::get('/school-forms', [DashboardController::class, 'teacherSchoolForms'])->name('teacher.school-forms');
         Route::get('/school-forms/sf1/{section}', [SchoolFormController::class, 'teacherSf1'])->name('teacher.school-forms.sf1');
         Route::get('/school-forms/sf2/{section}', [SchoolFormController::class, 'teacherSf2'])->name('teacher.school-forms.sf2');
         Route::get('/students/{student}/sf9', [SchoolFormController::class, 'teacherSf9'])->name('teacher.students.sf9');
