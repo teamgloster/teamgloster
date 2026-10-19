@@ -2402,6 +2402,16 @@ const uploadAudioChunk = async (blob, recordedMode = null) => {
 };
 
 const startGroqStream = async () => {
+    // If a previous stream exists but its tracks have ended (stale after
+    // Inertia SPA navigation or tab sleep), tear it down so we acquire a
+    // fresh one instead of silently reading dead audio.
+    if (groqActive.value && groqStream.value) {
+        const tracks = groqStream.value.getAudioTracks();
+        const allDead = tracks.length === 0 || tracks.every((t) => t.readyState === "ended");
+        if (allDead) {
+            stopGroqStream();
+        }
+    }
     if (groqActive.value) return true;
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         toast.error("Microphone is not available in this browser.");
@@ -2435,12 +2445,30 @@ const startGroqStream = async () => {
     try {
         const Ctx = window.AudioContext || window.webkitAudioContext;
         vadAudioCtx = new Ctx();
+
+        // Resume immediately — works when called inside a user gesture.
         if (vadAudioCtx.state === "suspended") {
-            // Chrome sometimes creates the context in a suspended state
-            try {
-                await vadAudioCtx.resume();
-            } catch (e) {}
+            try { await vadAudioCtx.resume(); } catch (e) {}
         }
+
+        // If still suspended (gesture expired or strict autoplay policy),
+        // hook the next click/keydown to resume. Without a running context
+        // the VAD sees silence forever.
+        if (vadAudioCtx.state === "suspended") {
+            const ctx = vadAudioCtx;
+            const resumeOnInteraction = async () => {
+                if (ctx.state === "suspended") {
+                    try { await ctx.resume(); } catch (e) {}
+                }
+                if (ctx.state === "running") {
+                    document.removeEventListener("click", resumeOnInteraction, true);
+                    document.removeEventListener("keydown", resumeOnInteraction, true);
+                }
+            };
+            document.addEventListener("click", resumeOnInteraction, true);
+            document.addEventListener("keydown", resumeOnInteraction, true);
+        }
+
         const source = vadAudioCtx.createMediaStreamSource(groqStream.value);
         vadAnalyser = vadAudioCtx.createAnalyser();
         vadAnalyser.fftSize = 512;
@@ -2616,6 +2644,14 @@ const startGroqStream = async () => {
     const tick = () => {
         if (!groqActive.value) return;
         if (analyserBuffer && vadAnalyser) {
+            // If the AudioContext is still suspended (autoplay policy),
+            // try to resume it on every tick until it's running. Without
+            // this the analyser returns all zeros and speech is never
+            // detected — the exact "need to refresh" symptom.
+            if (vadAudioCtx && vadAudioCtx.state === "suspended") {
+                vadAudioCtx.resume().catch(() => {});
+            }
+
             // While the app is speaking a prompt, pretend the mic is silent.
             // This prevents the VAD from cutting on our own TTS echo and
             // wipes any partial "speech" state we captured before muting.
@@ -4023,8 +4059,8 @@ const startTableVoiceRecognition = async (options = {}) => {
     currentVoiceMode = "table";
     const quiet = Boolean(options.quiet);
 
+    let prompt = null;
     if (!quiet) {
-        let prompt;
         if (!voiceGreetingSpoken) {
             voiceGreetingSpoken = true;
             prompt = `${buildTeacherGreeting()} What is the student's name?`;
@@ -4040,15 +4076,27 @@ const startTableVoiceRecognition = async (options = {}) => {
         }
         tablePromptCount++;
         tableVoiceStatus.value = prompt;
-        await speakPrompt(prompt);
     }
 
+    // Start the mic BEFORE TTS so getUserMedia and AudioContext run inside
+    // the user-gesture window (the click that toggled voice mode). If we
+    // speak first, the gesture expires and Chrome leaves AudioContext
+    // suspended — the VAD sees silence forever and nothing gets transcribed.
+    if (prompt) {
+        ttsSpeaking = true;
+    }
     const ok = await startGroqStream();
     if (!ok) {
+        ttsSpeaking = false;
         tableVoiceStatus.value = "Failed to start voice. Try again.";
         return;
     }
     tableVoiceActive.value = true;
+
+    if (prompt) {
+        await speakPrompt(prompt);
+    }
+
     tableVoiceStatus.value = focusedGradeRow.value
         ? `The system is listening — say the Term ${selectedTermNumber.value} grade`
         : "The system is listening — say a student name";
@@ -4792,6 +4840,17 @@ onMounted(() => {
 
 onUnmounted(() => {
     window.removeEventListener("keydown", handleKeyDown);
+
+    // Clean up all audio resources so they don't leak across Inertia
+    // SPA navigations. Without this, the old mic stream and AudioContext
+    // stay alive and the new component instance can't acquire fresh ones.
+    cancelSpeech();
+    stopGroqStream();
+    clearPendingTens();
+    if (statusTimeout) {
+        clearTimeout(statusTimeout);
+        statusTimeout = null;
+    }
 });
 </script>
 
