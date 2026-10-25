@@ -100,7 +100,9 @@
             <header class="dashboard-header">
                 <div class="header-left">
                     <button
+                        type="button"
                         class="mobile-menu-btn"
+                        :aria-label="isMobileMenuOpen ? 'Close menu' : 'Open menu'"
                         @click="isMobileMenuOpen = !isMobileMenuOpen"
                     >
                         <Menu :size="24" />
@@ -110,26 +112,12 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <div class="user-info">
-                        <div class="user-meta">
-                            <span class="user-role">Teacher</span>
-                            <span class="user-name"
-                                >{{ user.first_name }} {{ user.last_name }}</span
-                            >
-                        </div>
-                        <div class="user-avatar">
-                            <img
-                                v-if="profilePhotoUrl"
-                                :src="profilePhotoUrl"
-                                alt="Profile"
-                                class="avatar-img"
-                            />
-                            <span v-else>{{ userInitials }}</span>
-                        </div>
-                    </div>
+                    <TeacherAssistant role="teacher" :page-title="getPageTitle" />
+                    <TeacherAccountMenu :user="user" />
                     <button
                         type="button"
                         class="header-logout-btn"
+                        aria-label="Log out"
                         @click="logout"
                     >
                         <LogOut :size="16" />
@@ -159,7 +147,10 @@
                     <div class="gov-section">
                         <h3 class="gov-section-title">Assignment Summary</h3>
                         <div class="gov-stat-row">
-                            <div class="gov-stat-box">
+                            <div
+                                class="gov-stat-box"
+                                :data-talkback="`Advisory students. ${advisoryStudentsCount}.`"
+                            >
                                 <div class="gov-stat-label">
                                     Advisory Students
                                 </div>
@@ -167,7 +158,10 @@
                                     {{ advisoryStudentsCount }}
                                 </div>
                             </div>
-                            <div class="gov-stat-box">
+                            <div
+                                class="gov-stat-box"
+                                :data-talkback="`Assigned subjects. ${assignedSubjectsCount}.`"
+                            >
                                 <div class="gov-stat-label">
                                     Assigned Subjects
                                 </div>
@@ -175,7 +169,10 @@
                                     {{ assignedSubjectsCount }}
                                 </div>
                             </div>
-                            <div class="gov-stat-box">
+                            <div
+                                class="gov-stat-box"
+                                :data-talkback="`Sections handled. ${assignedSectionsCount}.`"
+                            >
                                 <div class="gov-stat-label">
                                     Sections Handled
                                 </div>
@@ -183,7 +180,10 @@
                                     {{ assignedSectionsCount }}
                                 </div>
                             </div>
-                            <div class="gov-stat-box">
+                            <div
+                                class="gov-stat-box"
+                                :data-talkback="`Pending grades. ${pendingGradesCount}.`"
+                            >
                                 <div class="gov-stat-label">Pending Grades</div>
                                 <div class="gov-stat-value">
                                     {{ pendingGradesCount }}
@@ -337,7 +337,11 @@
                                     >
                                         <td>
                                             <div class="user-cell">
-                                                <div class="user-avatar-sm">
+                                                <div
+                                                    class="user-avatar-sm"
+                                                    data-talkback-skip
+                                                    aria-hidden="true"
+                                                >
                                                     <img
                                                         v-if="
                                                             student.profile_photo
@@ -676,12 +680,14 @@
                                     v-model="gradeSearch"
                                     type="text"
                                     placeholder="Search students..."
+                                    aria-label="Search students"
                                     class="search-input"
                                 />
                             </div>
                             <select
                                 v-model="selectedSubjectFilter"
                                 class="filter-select"
+                                aria-label="Subject"
                             >
                                 <option value="all">All Subjects</option>
                                 <option
@@ -696,6 +702,7 @@
                             <select
                                 v-model="selectedSectionFilter"
                                 class="filter-select"
+                                aria-label="Section"
                             >
                                 <option value="all">All Sections</option>
                                 <option
@@ -710,6 +717,7 @@
                             <select
                                 v-model="selectedGradeTerm"
                                 class="filter-select"
+                                aria-label="Term"
                                 :class="{
                                     'term-required': !canEncodeGrades,
                                 }"
@@ -856,6 +864,13 @@
                                 }"
                                 :disabled="!canEncodeGrades"
                                 @click="toggleVoiceModeGlobal"
+                                :data-talkback="
+                                    !canEncodeGrades
+                                        ? 'Choose a term first. Then you can say the grades out loud.'
+                                        : voiceModeEnabled
+                                          ? 'Stop voice input. Click to turn the microphone off.'
+                                          : 'Say grades out loud. Click to turn the microphone on.'
+                                "
                                 :title="
                                     canEncodeGrades
                                         ? 'Start or stop voice grade entry (F2)'
@@ -978,7 +993,11 @@
                                     >
                                         <td>
                                             <div class="user-cell">
-                                                <div class="user-avatar-sm">
+                                                <div
+                                                    class="user-avatar-sm"
+                                                    data-talkback-skip
+                                                    aria-hidden="true"
+                                                >
                                                     {{
                                                         getInitials(
                                                             grade.student,
@@ -1138,7 +1157,11 @@
 
                         <div class="grade-clean-body">
                             <div class="grade-detail-header">
-                                <div class="grade-detail-avatar">
+                                <div
+                                    class="grade-detail-avatar"
+                                    data-talkback-skip
+                                    aria-hidden="true"
+                                >
                                     <img
                                         v-if="
                                             selectedGrade?.student
@@ -1384,7 +1407,11 @@
                         >
                             <!-- Profile Header Card -->
                             <div class="student-profile-card">
-                                <div class="profile-avatar-large">
+                                <div
+                                    class="profile-avatar-large"
+                                    data-talkback-skip
+                                    aria-hidden="true"
+                                >
                                     <img
                                         v-if="selectedStudent.profile_photo"
                                         :src="`/storage/${selectedStudent.profile_photo}`"
@@ -1557,6 +1584,10 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from "vue";
 import { router, Head, Link } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
+import TeacherAccountMenu from "@/Components/TeacherAccountMenu.vue";
+import TeacherAssistant from "@/Components/TeacherAssistant.vue";
+import { useTalkBack, useTalkBackHost } from "@/composables/useTalkBack";
+import { registerTeacherSection } from "@/composables/useTeacherAssistant";
 import SchoolFormsHub from "@/Pages/Dashboard/SchoolForms/SchoolFormsHub.vue";
 import {
     LayoutDashboard,
@@ -1925,20 +1956,11 @@ const getPageTitle = computed(() => {
     const titles = {
         dashboard: "Dashboard",
         advisory: "Advisory Class",
+        subjects: "Subjects Handled",
         grades: "Student Grades",
         "school-forms": "School Forms",
     };
     return titles[activeNav.value] || "Dashboard";
-});
-
-const profilePhotoUrl = computed(() => {
-    return props.user?.profile_photo_url || null;
-});
-
-const userInitials = computed(() => {
-    const first = props.user?.first_name?.charAt(0) || "";
-    const last = props.user?.last_name?.charAt(0) || "";
-    return (first + last).toUpperCase();
 });
 
 // Methods
@@ -2078,6 +2100,11 @@ const closeGradeModal = () => {
 //      the post-TTS "edit" utterance, making Groq slow AND the cycle's
 //      generation stamp would go stale if we bumped groqGeneration here.
 let ttsSpeaking = false;
+let speechAbort = null;
+let speechErrorToasted = false;
+let speechAudio = null;
+let speechObjectUrl = null;
+let speechFinish = null;
 
 // Force-cut helper used by speakPrompt to boundary TTS. Stops the current
 // recorder if any — the recorder cycle's own onstop handler will schedule a
@@ -2090,10 +2117,150 @@ const forceCutRecorder = () => {
     } catch (e) {}
 };
 
+const loadBrowserVoices = () =>
+    new Promise((resolve) => {
+        const synth = window.speechSynthesis;
+        const current = synth.getVoices();
+        if (current.length) {
+            resolve(current);
+            return;
+        }
+        const timer = setTimeout(() => resolve(synth.getVoices()), 500);
+        synth.addEventListener(
+            "voiceschanged",
+            () => {
+                clearTimeout(timer);
+                resolve(synth.getVoices());
+            },
+            { once: true },
+        );
+    });
+
+const pickClearEnglishVoice = (voices) => {
+    const english = (voices || []).filter((voice) =>
+        /^en(-|$)/i.test(voice.lang || ""),
+    );
+    const american = english.filter((voice) =>
+        /^en-US$/i.test(voice.lang || ""),
+    );
+    const pool = american.length ? american : english;
+    const preferred = [
+        "aria",
+        "jenny",
+        "ana",
+        "guy",
+        "google us english",
+        "samantha",
+        "zira",
+        "david",
+    ];
+    for (const name of preferred) {
+        const match = pool.find((voice) =>
+            voice.name.toLowerCase().includes(name),
+        );
+        if (match) return match;
+    }
+    return (
+        pool.find((voice) => /natural|neural/i.test(voice.name)) ||
+        pool[0] ||
+        null
+    );
+};
+
+const speakWithBrowser = (text) =>
+    new Promise((resolve) => {
+        if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+            resolve(false);
+            return;
+        }
+        (async () => {
+            try {
+                const synth = window.speechSynthesis;
+                const voices = await loadBrowserVoices();
+                synth.cancel();
+                synth.resume();
+                const utter = new SpeechSynthesisUtterance(text);
+                const voice = pickClearEnglishVoice(voices);
+                if (voice) utter.voice = voice;
+                utter.lang = voice?.lang || "en-US";
+                utter.rate = 1;
+                utter.pitch = 1;
+                let settled = false;
+                const done = (played) => {
+                    if (settled) return;
+                    settled = true;
+                    resolve(played);
+                };
+                utter.onend = () => done(true);
+                utter.onerror = () => done(false);
+                setTimeout(() => done(true), 15000);
+                synth.speak(utter);
+            } catch (e) {
+                resolve(false);
+            }
+        })();
+    });
+
+const stopSpeechPlayback = () => {
+    try {
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+            window.speechSynthesis.cancel();
+        }
+    } catch (e) {}
+    if (speechAbort) {
+        speechAbort.abort();
+        speechAbort = null;
+    }
+    if (speechAudio) {
+        speechAudio.onended = null;
+        speechAudio.onerror = null;
+        try {
+            speechAudio.pause();
+        } catch (e) {}
+        speechAudio.src = "";
+        speechAudio = null;
+    }
+    if (speechObjectUrl) {
+        URL.revokeObjectURL(speechObjectUrl);
+        speechObjectUrl = null;
+    }
+    if (speechFinish) {
+        const finish = speechFinish;
+        speechFinish = null;
+        finish();
+    }
+};
+
+// English voices say Spanish J as H ("Jorge" → "Horhe"). These spellings
+// keep the J sound used for Filipino and Latin names.
+const SPOKEN_NAME_FIXES = [
+    [/\bJorge\b/gi, "George"],
+    [/\bJuanito\b/gi, "Joo ah nee toe"],
+    [/\bJuan\b/gi, "Joo ahn"],
+    [/\bJose\b/gi, "Joe say"],
+    [/\bJavier\b/gi, "Jah vee air"],
+    [/\bJulio\b/gi, "Jool yo"],
+    [/\bJaime\b/gi, "Jay mee"],
+    [/\bJoaquin\b/gi, "Joa keen"],
+    [/\bJimenez\b/gi, "Jee meh nez"],
+    [/\bJuarez\b/gi, "Joo ah rez"],
+];
+
+const pronounceForSpeech = (text) => {
+    let spoken = (text || "").toString();
+    for (const [pattern, replacement] of SPOKEN_NAME_FIXES) {
+        spoken = spoken.replace(pattern, replacement);
+    }
+    return spoken.trim();
+};
+
 const speakPrompt = (text, { wait = true } = {}) => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
+    const spoken = pronounceForSpeech(text);
+    if (!spoken || typeof window === "undefined") {
         return Promise.resolve();
     }
+
+    stopSpeechPlayback();
 
     // Mute mic tracks so Whisper cannot hear the prompt.
     const tracks = groqStream.value ? groqStream.value.getAudioTracks() : [];
@@ -2108,7 +2275,10 @@ const speakPrompt = (text, { wait = true } = {}) => {
         if (cleaned) return;
         cleaned = true;
         ttsSpeaking = false;
-        tracks.forEach((t) => (t.enabled = true));
+        const liveTracks = groqStream.value
+            ? groqStream.value.getAudioTracks()
+            : tracks;
+        liveTracks.forEach((t) => (t.enabled = true));
         // Cut the (TTS-time, mostly-silent) recorder cycle so the very next
         // thing the user says is captured in a fresh cycle. We deliberately
         // do NOT bump groqGeneration here — doing so would invalidate the
@@ -2118,40 +2288,98 @@ const speakPrompt = (text, { wait = true } = {}) => {
     };
 
     const speechDone = new Promise((resolve) => {
-        try {
-            window.speechSynthesis.cancel();
-            const utter = new SpeechSynthesisUtterance(text);
-            utter.lang = "en-US";
-            utter.rate = 1.05;
-            utter.pitch = 1.0;
-            utter.volume = 1.0;
-            let done = false;
-            const finish = () => {
-                if (done) return;
-                done = true;
-                cleanup();
-                resolve();
-            };
-            utter.onend = finish;
-            utter.onerror = finish;
-            // Safety timeout in case onend never fires (some Chrome bug).
-            setTimeout(finish, 8000);
-            window.speechSynthesis.speak(utter);
-        } catch (e) {
+        let done = false;
+        let timeout = null;
+        const finish = (played = false) => {
+            if (done) return;
+            done = true;
+            if (timeout) clearTimeout(timeout);
+            speechFinish = null;
             cleanup();
-            resolve();
-        }
+            resolve(played);
+        };
+        speechFinish = () => finish(false);
+
+        const controller = new AbortController();
+        speechAbort = controller;
+        timeout = setTimeout(() => finish(false), 20000);
+
+        (async () => {
+            try {
+                const res = await fetch("/teacher/speak", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    signal: controller.signal,
+                    headers: {
+                        "X-CSRF-TOKEN": getCsrfToken(),
+                        "X-Requested-With": "XMLHttpRequest",
+                        Accept: "audio/mpeg",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({ text: spoken }),
+                });
+                if (controller.signal.aborted) {
+                    finish(false);
+                    return;
+                }
+                if (!res.ok) {
+                    if (timeout) clearTimeout(timeout);
+                    timeout = setTimeout(() => finish(true), 20000);
+                    const played = await speakWithBrowser(spoken);
+                    if (!played && !speechErrorToasted) {
+                        speechErrorToasted = true;
+                        toast.error(
+                            "Voice could not play. ElevenLabs rejected the API key.",
+                        );
+                    }
+                    finish(played);
+                    return;
+                }
+                const blob = await res.blob();
+                if (controller.signal.aborted) {
+                    finish(false);
+                    return;
+                }
+                if (blob.size < 100) {
+                    finish(await speakWithBrowser(spoken));
+                    return;
+                }
+                const url = URL.createObjectURL(blob);
+                speechObjectUrl = url;
+                const audio = new Audio(url);
+                speechAudio = audio;
+                const armPlaybackTimeout = () => {
+                    if (timeout) clearTimeout(timeout);
+                    const seconds = Number.isFinite(audio.duration)
+                        ? audio.duration
+                        : 12;
+                    timeout = setTimeout(
+                        () => finish(true),
+                        Math.max(8000, seconds * 1000 + 1500),
+                    );
+                };
+                audio.onloadedmetadata = armPlaybackTimeout;
+                audio.onended = () => finish(true);
+                audio.onerror = () => {
+                    speakWithBrowser(spoken).then((played) => finish(played));
+                };
+                await audio.play();
+                armPlaybackTimeout();
+            } catch (e) {
+                if (controller.signal.aborted) {
+                    finish(false);
+                    return;
+                }
+                finish(await speakWithBrowser(spoken));
+            }
+        })();
     });
 
-    return wait ? speechDone : Promise.resolve();
+    return wait ? speechDone : Promise.resolve(true);
 };
 
 const cancelSpeech = () => {
-    try {
-        if (typeof window !== "undefined" && "speechSynthesis" in window) {
-            window.speechSynthesis.cancel();
-        }
-    } catch (e) {}
+    stopSpeechPlayback();
     // If cancel() was called mid-speech, force mic tracks back on so the
     // stream doesn't stay muted.
     if (ttsSpeaking) {
@@ -3411,7 +3639,10 @@ const toggleVoiceModeGlobal = () => {
     voiceModeEnabled.value = !voiceModeEnabled.value;
 
     if (voiceModeEnabled.value) {
-        // Start table voice recognition when enabled from header
+        // Unlock audio during this click. The greeting is fetched right
+        // away, and browsers block playback that starts after the click
+        // gesture has expired.
+        primeSpeechAudio();
         startTableVoiceRecognition();
     } else {
         // Stop all voice recognition (Groq stream is shared)
@@ -4055,15 +4286,29 @@ const buildTeacherGreeting = () => {
     return `${timeOfDayGreeting()}, ${address}! Voice grade entry is on. Say a student name, then say the grade.`;
 };
 
+const primeSpeechAudio = () => {
+    try {
+        const primer = new Audio(
+            "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=",
+        );
+        primer.volume = 0.01;
+        const attempt = primer.play();
+        if (attempt && typeof attempt.catch === "function") {
+            attempt.catch(() => {});
+        }
+    } catch (e) {}
+};
+
 const startTableVoiceRecognition = async (options = {}) => {
     currentVoiceMode = "table";
     const quiet = Boolean(options.quiet);
 
     let prompt = null;
+    let greeting = false;
     if (!quiet) {
         if (!voiceGreetingSpoken) {
-            voiceGreetingSpoken = true;
-            prompt = `${buildTeacherGreeting()} What is the student's name?`;
+            greeting = true;
+            prompt = buildTeacherGreeting();
         } else if (focusedGradeRow.value) {
             const name =
                 studentSpokenName(focusedGradeRow.value.student) ||
@@ -4075,26 +4320,30 @@ const startTableVoiceRecognition = async (options = {}) => {
             prompt = "Next student, please.";
         }
         tablePromptCount++;
-        tableVoiceStatus.value = prompt;
+        tableVoiceStatus.value = greeting ? "Greeting..." : prompt;
     }
 
-    // Start the mic BEFORE TTS so getUserMedia and AudioContext run inside
-    // the user-gesture window (the click that toggled voice mode). If we
-    // speak first, the gesture expires and Chrome leaves AudioContext
-    // suspended — the VAD sees silence forever and nothing gets transcribed.
-    if (prompt) {
-        ttsSpeaking = true;
-    }
+    // Fetch the greeting immediately on the click, and open the mic at the
+    // same time. Waiting for the mic first lets the browser block the voice.
+    const speechTask = prompt ? speakPrompt(prompt) : Promise.resolve(true);
     const ok = await startGroqStream();
     if (!ok) {
-        ttsSpeaking = false;
+        cancelSpeech();
         tableVoiceStatus.value = "Failed to start voice. Try again.";
         return;
     }
     tableVoiceActive.value = true;
 
     if (prompt) {
-        await speakPrompt(prompt);
+        const played = await speechTask;
+        if (greeting) {
+            voiceGreetingSpoken = Boolean(played);
+            if (!played) {
+                tableVoiceStatus.value =
+                    "Greeting could not play. Say a student name.";
+                return;
+            }
+        }
     }
 
     tableVoiceStatus.value = focusedGradeRow.value
@@ -4820,6 +5069,34 @@ const logout = () => {
     router.post("/logout");
 };
 
+const { setPage: setTalkBackPage, setSuspended: setTalkBackSuspended } =
+    useTalkBack();
+useTalkBackHost();
+
+const talkBackGuides = {
+    dashboard:
+        "This is your home page. The menu on the left opens your classes, grades, attendance, and school forms.",
+    advisory:
+        "This is your advisory class. Here are the students in your section.",
+    subjects:
+        "These are the subjects you teach. Open a subject to see its students.",
+    grades:
+        "This is where you enter grades. Choose a class, then type a grade, or press Input grades by voice.",
+    "school-forms": "Choose a form to open or print it.",
+};
+
+watch(
+    activeNav,
+    (nav) => {
+        setTalkBackPage(getPageTitle.value, talkBackGuides[nav] || "");
+    },
+    { immediate: true },
+);
+
+watch(voiceModeEnabled, (on) => {
+    setTalkBackSuspended(on);
+});
+
 // Keyboard shortcut for voice mode (F2)
 const handleKeyDown = (event) => {
     if (event.key === "F2") {
@@ -4830,15 +5107,37 @@ const handleKeyDown = (event) => {
     }
 };
 
+const teacherNavPages = ["dashboard", "advisory", "subjects", "grades"];
+let removeTeacherNavListener = null;
+let removeTeacherSection = null;
+
+function applyTeacherNav(event) {
+    const url = event?.detail?.page?.url || `${window.location.pathname}${window.location.search}`;
+    const query = url.includes("?") ? url.slice(url.indexOf("?")) : "";
+    const nav = new URLSearchParams(query).get("nav");
+    if (teacherNavPages.includes(nav)) {
+        activeNav.value = nav;
+        isMobileMenuOpen.value = false;
+    }
+}
+
 onMounted(() => {
     window.addEventListener("keydown", handleKeyDown);
-    const nav = new URLSearchParams(window.location.search).get("nav");
-    if (nav) {
+    applyTeacherNav();
+    removeTeacherNavListener = router.on("success", applyTeacherNav);
+    removeTeacherSection = registerTeacherSection((nav) => {
+        if (!teacherNavPages.includes(nav)) return;
         activeNav.value = nav;
-    }
+        isMobileMenuOpen.value = false;
+    });
 });
 
 onUnmounted(() => {
+    removeTeacherNavListener?.();
+    removeTeacherNavListener = null;
+    removeTeacherSection?.();
+    removeTeacherSection = null;
+    setTalkBackSuspended(false, { quiet: true });
     window.removeEventListener("keydown", handleKeyDown);
 
     // Clean up all audio resources so they don't leak across Inertia
@@ -4992,6 +5291,8 @@ onUnmounted(() => {
 .header-right {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
     gap: 0.85rem;
 }
 

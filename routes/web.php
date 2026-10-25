@@ -1,12 +1,14 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AssistantController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EnrollmentSummaryController;
 use App\Http\Controllers\PermanentRecordController;
 use App\Http\Controllers\RegistrarController;
 use App\Http\Controllers\SchoolFormController;
+use App\Http\Controllers\SpeechController;
 use App\Http\Controllers\StudentEnrollmentController;
 use App\Http\Controllers\TeacherAttendanceController;
 use App\Http\Controllers\TranscriptionController;
@@ -141,6 +143,27 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/teacher/transcribe', [TranscriptionController::class, 'transcribe'])
         ->middleware('role:teacher')
         ->name('teacher.transcribe');
+
+    Route::post('/transcribe', [TranscriptionController::class, 'transcribe'])
+        ->middleware('role:teacher,administrator,student,registrar')
+        ->name('transcribe');
+
+    Route::post('/teacher/assistant', [AssistantController::class, 'chat'])
+        ->middleware('role:teacher')
+        ->name('teacher.assistant');
+
+    Route::post('/assistant', [AssistantController::class, 'chat'])
+        ->middleware('role:teacher,administrator,student,registrar')
+        ->name('assistant');
+
+    // Teacher voice prompts (ElevenLabs). The API key stays on the server.
+    Route::post('/teacher/speak', [SpeechController::class, 'speak'])
+        ->middleware('role:teacher')
+        ->name('teacher.speak');
+
+    Route::post('/speak', [SpeechController::class, 'speak'])
+        ->middleware('role:teacher,administrator,student,registrar')
+        ->name('speak');
 
     // Profile update routes
     Route::put('/profile/update', [AuthController::class, 'updateProfile']);

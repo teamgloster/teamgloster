@@ -49,7 +49,10 @@
                     </label>
                 </div>
 
-                <div class="summary">
+                <div
+                    class="summary"
+                    :data-talkback="`Present ${countStatus('present')}. Absent ${countStatus('absent')}. Late ${countStatus('late')}. Excused ${countStatus('excused')}.`"
+                >
                     <span>Present {{ countStatus("present") }}</span>
                     <span>Absent {{ countStatus("absent") }}</span>
                     <span>Late {{ countStatus("late") }}</span>

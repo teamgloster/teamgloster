@@ -166,7 +166,9 @@
             <header class="dashboard-header">
                 <div class="header-left">
                     <button
+                        type="button"
                         class="mobile-menu-btn"
+                        :aria-label="isMobileMenuOpen ? 'Close menu' : 'Open menu'"
                         @click="isMobileMenuOpen = !isMobileMenuOpen"
                     >
                         <Menu :size="24" />
@@ -176,26 +178,12 @@
                     </div>
                 </div>
                 <div class="header-right">
-                    <div class="user-info">
-                        <div class="user-meta">
-                            <span class="user-role">Administrator</span>
-                            <span class="user-name"
-                                >{{ user.first_name }} {{ user.last_name }}</span
-                            >
-                        </div>
-                        <div class="user-avatar">
-                            <img
-                                v-if="profilePhotoUrl"
-                                :src="profilePhotoUrl"
-                                alt="Profile"
-                                class="avatar-img"
-                            />
-                            <span v-else>{{ userInitials }}</span>
-                        </div>
-                    </div>
+                    <TeacherAssistant role="administrator" :page-title="pageTitle" />
+                    <TeacherAccountMenu :user="user" role-label="Administrator" />
                     <button
                         type="button"
                         class="header-logout-btn"
+                        aria-label="Log out"
                         @click="logout"
                     >
                         <LogOut :size="16" />
@@ -212,7 +200,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, watch } from "vue";
 import { router, Head, Link } from "@inertiajs/vue3";
 import {
     LayoutDashboard,
@@ -233,6 +221,13 @@ import {
     Shield,
     Waypoints,
 } from "lucide-vue-next";
+import TeacherAccountMenu from "@/Components/TeacherAccountMenu.vue";
+import TeacherAssistant from "@/Components/TeacherAssistant.vue";
+import {
+    talkBackGuide,
+    useTalkBack,
+    useTalkBackHost,
+} from "@/composables/useTalkBack";
 
 const props = defineProps({
     title: {
@@ -255,18 +250,19 @@ const props = defineProps({
 
 const logo = "/images/311494412_220590550318716_333223840059485017_n.jpg";
 const isMobileMenuOpen = ref(false);
+const { setPage } = useTalkBack();
+useTalkBackHost();
 
-const profilePhotoUrl = computed(() => {
-    return props.user?.profile_photo_url || null;
-});
-
-const userInitials = computed(() => {
-    if (!props.user) return "";
-    return (
-        (props.user.first_name?.charAt(0) || "") +
-        (props.user.last_name?.charAt(0) || "")
-    ).toUpperCase();
-});
+watch(
+    () => [props.pageTitle, props.currentPage],
+    () => {
+        setPage(
+            props.pageTitle,
+            talkBackGuide(props.currentPage, props.pageTitle, "administrator"),
+        );
+    },
+    { immediate: true },
+);
 
 const logout = () => {
     router.post("/logout");

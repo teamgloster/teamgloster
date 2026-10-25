@@ -45,6 +45,15 @@ return [
             'whisper-large-v3-turbo',
         ),
         'base_url' => env('GROQ_BASE_URL', 'https://api.groq.com/openai/v1'),
+        'chat_model' => env('GROQ_CHAT_MODEL', 'openai/gpt-oss-20b'),
+    ],
+
+    'elevenlabs' => [
+        'key' => env('ELEVENLABS_API_KEY'),
+        'voice_id' => env('ELEVENLABS_VOICE_ID', '21m00Tcm4TlvDq8ikWAM'),
+        'model_id' => env('ELEVENLABS_MODEL_ID', 'eleven_multilingual_v2'),
+        'flash_model' => env('ELEVENLABS_FLASH_MODEL', 'eleven_flash_v2_5'),
+        'base_url' => env('ELEVENLABS_BASE_URL', 'https://api.elevenlabs.io/v1'),
     ],
 
 ];

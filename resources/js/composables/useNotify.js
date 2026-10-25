@@ -1,4 +1,5 @@
 import { toast } from "vue-sonner";
+import { speakTalkBack } from "@/composables/useTalkBack";
 
 const TIMEOUT_MS = 2000;
 
@@ -26,12 +27,19 @@ const options = {
     duration: TIMEOUT_MS,
 };
 
+function voiced(message, show) {
+    const text = normalizeMessage(message);
+    const id = show(text);
+    speakTalkBack(text);
+    return id;
+}
+
 export function useNotify() {
     return {
-        success: (message) => toast.success(normalizeMessage(message), options),
-        error: (message) => toast.error(normalizeMessage(message), options),
-        warning: (message) => toast.warning(normalizeMessage(message), options),
-        info: (message) => toast.info(normalizeMessage(message), options),
+        success: (message) => voiced(message, (text) => toast.success(text, options)),
+        error: (message) => voiced(message, (text) => toast.error(text, options)),
+        warning: (message) => voiced(message, (text) => toast.warning(text, options)),
+        info: (message) => voiced(message, (text) => toast.info(text, options)),
         dismiss: (id) => toast.dismiss(id),
         clear: () => toast.dismiss(),
     };
