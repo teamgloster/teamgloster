@@ -1586,6 +1586,7 @@ import { router, Head, Link } from "@inertiajs/vue3";
 import { useToast } from "@/composables/useNotify";
 import TeacherAccountMenu from "@/Components/TeacherAccountMenu.vue";
 import TeacherAssistant from "@/Components/TeacherAssistant.vue";
+import { csrfHeaders } from "@/csrf";
 import { useTalkBack, useTalkBackHost } from "@/composables/useTalkBack";
 import { registerTeacherSection } from "@/composables/useTeacherAssistant";
 import SchoolFormsHub from "@/Pages/Dashboard/SchoolForms/SchoolFormsHub.vue";
@@ -2306,18 +2307,23 @@ const speakPrompt = (text, { wait = true } = {}) => {
 
         (async () => {
             try {
-                const res = await fetch("/teacher/speak", {
-                    method: "POST",
-                    credentials: "same-origin",
-                    signal: controller.signal,
-                    headers: {
-                        "X-CSRF-TOKEN": getCsrfToken(),
-                        "X-Requested-With": "XMLHttpRequest",
-                        Accept: "audio/mpeg",
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify({ text: spoken }),
-                });
+                const postSpeak = () =>
+                    fetch("/teacher/speak", {
+                        method: "POST",
+                        credentials: "same-origin",
+                        signal: controller.signal,
+                        headers: {
+                            ...csrfHeaders(),
+                            "X-Requested-With": "XMLHttpRequest",
+                            Accept: "audio/mpeg",
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ text: spoken }),
+                    });
+                let res = await postSpeak();
+                if (res.status === 419 && !controller.signal.aborted) {
+                    res = await postSpeak();
+                }
                 if (controller.signal.aborted) {
                     finish(false);
                     return;
@@ -2404,12 +2410,15 @@ const cancelSpeech = () => {
 
 const MIN_UPLOAD_BYTES = 2000; // skip nearly-empty blobs
 // RMS of int8 samples that counts as speech.
-//   - Command/grade mode: 8 (very sensitive because user is prompted).
-//   - Table-name mode: 14 (stricter — a full name should be spoken clearly;
-//     this cuts down on background hum / air-con / typing tripping Whisper
-//     into hallucinating a random name).
+//   - Grade mode sits above the room's own noise floor. A cough, chair, or
+//     fan must not cross it, or Whisper will turn the clip into a number
+//     and the grade saves itself.
+//   - Name mode stays stricter than a short command, so hum does not pick
+//     a student.
 const VAD_SPEECH_THRESHOLD_CMD = 8;
 const VAD_SPEECH_THRESHOLD_NAME = 14;
+const VAD_SPEECH_THRESHOLD_GRADE = 12;
+const VAD_GRADE_START_FRAMES = 3; // ~120ms of continuous sound before it counts
 // Silence-after-speech timeout. Kept low in grade-entry mode where the
 // teacher is saying a single two-digit number so the recorder cuts almost
 // as soon as the number is finished. Longer in table mode because a full
@@ -2419,14 +2428,22 @@ const VAD_SPEECH_THRESHOLD_NAME = 14;
 const VAD_SILENCE_MS_GRADE = 500;
 const VAD_SILENCE_MS_CMD = 220; // next / save / edit — cut as soon as the word ends
 const VAD_SILENCE_MS_NAME = 650;
-const VAD_MIN_SPEECH_MS_CMD = 90; // grade / focused-command mode
+const VAD_MIN_SPEECH_MS_CMD = 90; // short command when no grade is being entered
 const VAD_MIN_SPEECH_MS_NAME = 320; // full-name utterance in table mode
+const VAD_MIN_SPEECH_MS_GRADE = 220; // long enough to skip pops, short enough for "next"
 const VAD_MAX_UTTERANCE_MS = 5000; // hard cap per utterance
 const VAD_MAX_IDLE_MS = 4000; // recycle recorder every N ms if no speech
 const VAD_TICK_MS = 40;
 
 const isNameListenMode = () =>
     currentVoiceMode === "table" && !focusedGradeRow.value;
+
+const isGradeListenMode = () =>
+    currentVoiceMode === "modal" || !!focusedGradeRow.value;
+
+// Quiet-room level, updated only while nobody is speaking. A fan that
+// sits at a steady level raises this, so the speech line stays above it.
+let vadNoiseFloor = 4;
 
 const currentSilenceMs = () => {
     // After a grade is already in the current term, the next utterance is
@@ -2441,11 +2458,17 @@ const currentSilenceMs = () => {
     return VAD_SILENCE_MS_NAME;
 };
 
-const currentSpeechThreshold = () =>
-    isNameListenMode() ? VAD_SPEECH_THRESHOLD_NAME : VAD_SPEECH_THRESHOLD_CMD;
+const currentSpeechThreshold = () => {
+    if (isGradeListenMode()) {
+        return Math.max(VAD_SPEECH_THRESHOLD_GRADE, vadNoiseFloor + 8);
+    }
+    return isNameListenMode() ? VAD_SPEECH_THRESHOLD_NAME : VAD_SPEECH_THRESHOLD_CMD;
+};
 
-const currentMinSpeechMs = () =>
-    isNameListenMode() ? VAD_MIN_SPEECH_MS_NAME : VAD_MIN_SPEECH_MS_CMD;
+const currentMinSpeechMs = () => {
+    if (isGradeListenMode()) return VAD_MIN_SPEECH_MS_GRADE;
+    return isNameListenMode() ? VAD_MIN_SPEECH_MS_NAME : VAD_MIN_SPEECH_MS_CMD;
+};
 
 // Known Whisper "hallucinations" on silence / breath / music / short pops.
 // Whisper's training data includes lots of YouTube subtitles, so on silence
@@ -2527,11 +2550,6 @@ let vadAudioCtx = null;
 let vadAnalyser = null;
 let vadRafHandle = null;
 
-const getCsrfToken = () => {
-    const el = document.querySelector('meta[name="csrf-token"]');
-    return el ? el.getAttribute("content") || "" : "";
-};
-
 const pickAudioMime = () => {
     const candidates = [
         "audio/webm;codecs=opus",
@@ -2561,7 +2579,8 @@ const PROMPT_MAX_CHARS = 900;
 const buildTranscriptionPrompt = () => {
     // Two very different prompts: numeric grade mode vs. student-name mode.
     if (showGradeModal.value || focusedGradeRow.value) {
-        return "85. 90. 75. 88. 92. 80. 95. 70. 78. 100. next. cancel.";
+        // Words only — a list of digits makes silence come back as "85".
+        return "A spoken grade such as eighty five or ninety two, or a command: next, back, save, cancel, edit.";
     }
 
     const baseNames =
@@ -2614,7 +2633,7 @@ const uploadAudioChunk = async (blob, recordedMode = null) => {
             method: "POST",
             credentials: "same-origin",
             headers: {
-                "X-CSRF-TOKEN": getCsrfToken(),
+                ...csrfHeaders(),
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "application/json",
             },
@@ -2650,7 +2669,10 @@ const startGroqStream = async () => {
             audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
-                autoGainControl: true,
+                // Leave the room quiet. Auto gain lifts fans and chair
+                // scrapes up to the same level as a spoken number, and
+                // those clips were being saved as grades.
+                autoGainControl: false,
             },
         });
         // If TTS is already playing (we start the mic during the prompt so
@@ -2714,6 +2736,7 @@ const startGroqStream = async () => {
     }
 
     groqActive.value = true;
+    vadNoiseFloor = 4;
     const mime = pickAudioMime();
     const analyserBuffer = vadAnalyser
         ? new Uint8Array(vadAnalyser.fftSize)
@@ -2727,6 +2750,8 @@ const startGroqStream = async () => {
     let lastSpeechAt = 0;
     let speechDetected = false;
     let stopping = false;
+    let speechRun = 0;
+    let peakRms = 0;
 
     const startRecorder = () => {
         if (!groqActive.value || !groqStream.value) return;
@@ -2745,12 +2770,15 @@ const startGroqStream = async () => {
         firstSpeechAt = 0;
         lastSpeechAt = 0;
         stopping = false;
+        speechRun = 0;
+        peakRms = 0;
 
         // Snapshot the app state that this recorder cycle "belongs to". When
         // the transcript comes back we make sure both are still current so
         // late results don't leak across mode switches or TTS prompts.
         const myGen = groqGeneration;
         const myMode = currentVoiceMode;
+        const myGradeListen = myMode === "modal" || !!focusedGradeRow.value;
 
         recorder.ondataavailable = (e) => {
             if (e.data && e.data.size > 0) chunks.push(e.data);
@@ -2761,6 +2789,7 @@ const startGroqStream = async () => {
                 firstSpeechAt && lastSpeechAt
                     ? lastSpeechAt - firstSpeechAt
                     : 0;
+            const heardPeak = peakRms;
             const blobType = recorder.mimeType || mime || "audio/webm";
             const blob = new Blob(chunks, { type: blobType });
 
@@ -2769,7 +2798,19 @@ const startGroqStream = async () => {
                 setTimeout(startRecorder, 0);
             }
 
-            if (!hadSpeech || speechDuration < currentMinSpeechMs()) return;
+            const minSpeech = myGradeListen
+                ? VAD_MIN_SPEECH_MS_GRADE
+                : currentMinSpeechMs();
+            if (!hadSpeech || speechDuration < minSpeech) return;
+            // A short bump that only just clears the line is noise, not a
+            // grade. A real number is either longer or clearly louder.
+            if (
+                myGradeListen &&
+                speechDuration < 360 &&
+                heardPeak < Math.max(20, vadNoiseFloor + 14)
+            ) {
+                return;
+            }
             if (blob.size < MIN_UPLOAD_BYTES) return;
 
             // Cheap guard: if the app started speaking / switched modes while
@@ -2813,16 +2854,9 @@ const startGroqStream = async () => {
             }
             const clean = stripPunctuation(text);
             if (!clean || GROQ_NOISE_TRANSCRIPTS.has(clean)) return;
-            // Extra hallucination filter: if the transcript contains a
-            // known Whisper garbage phrase, drop it.
-            //   - In grade mode we only drop if there are also no digits.
-            //   - In table mode we drop unconditionally, because we don't
-            //     want a phrase like "thanks for watching" to fuzzy-match
-            //     a student name on quiet-mic silence.
-            if (
-                GROQ_NOISE_SUBSTRINGS.some((sub) => clean.includes(sub)) &&
-                (myMode !== "modal" || !/\d/.test(clean))
-            ) {
+            // A known garbage phrase is never a grade, even when a digit
+            // is glued onto it ("thanks for watching 85").
+            if (GROQ_NOISE_SUBSTRINGS.some((sub) => clean.includes(sub))) {
                 if (typeof console !== "undefined") {
                     console.log(
                         "[voice] dropped hallucination:",
@@ -2887,6 +2921,8 @@ const startGroqStream = async () => {
                 speechDetected = false;
                 firstSpeechAt = 0;
                 lastSpeechAt = 0;
+                speechRun = 0;
+                peakRms = 0;
                 recordingStartedAt = performance.now();
                 vadRafHandle = setTimeout(tick, VAD_TICK_MS);
                 return;
@@ -2900,14 +2936,25 @@ const startGroqStream = async () => {
             }
             const rms = Math.sqrt(sumSq / analyserBuffer.length);
             const now = performance.now();
-            const isSpeech = rms > currentSpeechThreshold();
+            const threshold = currentSpeechThreshold();
+            const isSpeech = rms > threshold;
 
             if (isSpeech) {
-                if (!speechDetected) {
-                    speechDetected = true;
-                    firstSpeechAt = now;
+                speechRun += 1;
+                if (rms > peakRms) peakRms = rms;
+                const need = isGradeListenMode() ? VAD_GRADE_START_FRAMES : 1;
+                if (speechRun >= need) {
+                    if (!speechDetected) {
+                        speechDetected = true;
+                        firstSpeechAt = now - (need - 1) * VAD_TICK_MS;
+                    }
+                    lastSpeechAt = now;
                 }
-                lastSpeechAt = now;
+            } else {
+                speechRun = 0;
+                if (!speechDetected) {
+                    vadNoiseFloor = vadNoiseFloor * 0.9 + rms * 0.1;
+                }
             }
 
             const elapsed = now - recordingStartedAt;
@@ -3096,6 +3143,52 @@ const extractOnesDigit = (rawText) => {
     return null;
 };
 
+// A grade utterance is only number words or digits ("eighty five", "92").
+// A longer phrase that happens to contain a number is left alone so noise
+// and side talk cannot write a mark.
+const GRADE_FILLER_WORDS = new Set([
+    "the",
+    "a",
+    "an",
+    "uh",
+    "um",
+    "hmm",
+    "so",
+    "ok",
+    "okay",
+    "is",
+    "it",
+    "its",
+    "that",
+    "this",
+    "point",
+    "grade",
+    "percent",
+    "percentage",
+    "please",
+    "po",
+    "lang",
+]);
+
+const isCleanGradeUtterance = (rawText) => {
+    const text = (rawText || "")
+        .toLowerCase()
+        .replace(/[^a-z0-9\s]/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+    if (!text) return false;
+    const tokens = text.split(" ").filter((t) => t && !GRADE_FILLER_WORDS.has(t));
+    if (tokens.length === 0 || tokens.length > 4) return false;
+    const allowed = new Set([
+        ...Object.keys(WORD_ONES),
+        ...Object.keys(WORD_TENS),
+        ...Object.keys(WORD_TEENS),
+        "hundred",
+        "and",
+    ]);
+    return tokens.every((t) => allowed.has(t) || /^\d{1,3}$/.test(t));
+};
+
 // Best-effort extraction of a grade (60-100) from a messy Whisper transcript.
 // Handles cases like "the b-8", "eighty five", "the 85 point", "it's 90",
 // "one hundred", "80.", "e.g. 88", etc.
@@ -3242,35 +3335,38 @@ const processGroqModalTranscript = (text) => {
         }
     }
 
-    // 2) Aggressive grade extraction (handles messy Whisper output)
-    const grade = extractGrade(text);
-    if (grade !== null) {
-        // Bare tens (80) may be the first half of "eighty five". Wait a
-        // beat for a ones digit before committing.
-        if (grade === 60 || grade === 70 || grade === 80 || grade === 90) {
-            clearPendingTens();
-            pendingTens = grade;
-            showStatus(`Heard ${grade}...`);
-            pendingTensTimer = setTimeout(() => {
-                if (pendingTens === grade) {
-                    applyGradeToCurrentTerm(grade);
-                }
-            }, 900);
+    // 2) A grade is saved only when the whole utterance is a number.
+    //    Side talk and noise transcripts are not grades.
+    if (isCleanGradeUtterance(text)) {
+        const grade = extractGrade(text);
+        if (grade !== null) {
+            // Bare tens (80) may be the first half of "eighty five". Wait a
+            // beat for a ones digit before committing.
+            if (grade === 60 || grade === 70 || grade === 80 || grade === 90) {
+                clearPendingTens();
+                pendingTens = grade;
+                showStatus(`Heard ${grade}...`);
+                pendingTensTimer = setTimeout(() => {
+                    if (pendingTens === grade) {
+                        applyGradeToCurrentTerm(grade);
+                    }
+                }, 900);
+                clearTranscriptSoon();
+                return;
+            }
+            applyGradeToCurrentTerm(grade);
             clearTranscriptSoon();
             return;
         }
-        applyGradeToCurrentTerm(grade);
-        clearTranscriptSoon();
-        return;
-    }
 
-    // 2b) Ones digit completing a pending tens ("five" after "eighty")
-    if (pendingTens !== null) {
-        const ones = extractOnesDigit(text);
-        if (ones !== null) {
-            applyGradeToCurrentTerm(pendingTens + ones);
-            clearTranscriptSoon();
-            return;
+        // Ones digit completing a pending tens ("five" after "eighty")
+        if (pendingTens !== null) {
+            const ones = extractOnesDigit(text);
+            if (ones !== null) {
+                applyGradeToCurrentTerm(pendingTens + ones);
+                clearTranscriptSoon();
+                return;
+            }
         }
     }
 
@@ -3802,7 +3898,7 @@ const processTableVoiceCommand = (transcript, isFinal) => {
     // when Whisper misheard (e.g. 95 → 90). Anything that is neither a
     // grade nor a matching name is silently ignored.
 
-    if (focusedGradeRow.value) {
+    if (focusedGradeRow.value && isCleanGradeUtterance(transcript)) {
         const grade = extractGrade(transcript);
         if (grade !== null) {
             if (grade === 60 || grade === 70 || grade === 80 || grade === 90) {

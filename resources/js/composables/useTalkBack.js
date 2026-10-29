@@ -1,4 +1,5 @@
 import { onMounted, onUnmounted, ref } from "vue";
+import { csrfHeaders } from "@/csrf";
 
 const STORAGE_KEY = "tnhs-talkback";
 const LANG_KEY = "tnhs-talkback-lang";
@@ -713,9 +714,9 @@ function stopPcm() {
 
 function userActivated() {
     const activation = navigator.userActivation;
-    return Boolean(
-        gestureUnlocked || activation?.isActive || activation?.hasBeenActive,
-    );
+    // hasBeenActive stays true after login, but the browser will not start
+    // audio from it. A click in this page is what unlocks ElevenLabs.
+    return Boolean(gestureUnlocked || activation?.isActive);
 }
 
 function createAudioContext() {
@@ -822,6 +823,7 @@ function schedulePcm(ctx, bytes, generation, state) {
 async function playPcmBuffer(bytes, generation) {
     const ctx = await runningContext();
     if (!ctx || generation !== speechGeneration) return false;
+    stopOutput();
     return schedulePcm(ctx, bytes, generation, {
         nextTime: ctx.currentTime + 0.02,
     });
@@ -882,14 +884,8 @@ async function playPcmStream(reader, generation, spoken) {
     }
 }
 
-function stopPlayback() {
-    speechGeneration += 1;
-    playbackStarted = false;
+function stopOutput() {
     stopPcm();
-    if (speechAbort) {
-        speechAbort.abort();
-        speechAbort = null;
-    }
     if (speechAudio) {
         speechAudio.onended = null;
         speechAudio.onerror = null;
@@ -903,6 +899,16 @@ function stopPlayback() {
         URL.revokeObjectURL(speechObjectUrl);
         speechObjectUrl = null;
     }
+}
+
+function stopPlayback() {
+    speechGeneration += 1;
+    playbackStarted = false;
+    if (speechAbort) {
+        speechAbort.abort();
+        speechAbort = null;
+    }
+    stopOutput();
     try {
         window.speechSynthesis?.cancel();
     } catch (e) {}
@@ -915,13 +921,6 @@ function stopSpeaking() {
     speakTimer = null;
     lastPointerEl = null;
     stopPlayback();
-}
-
-function csrfToken() {
-    return (
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-        ""
-    );
 }
 
 function speakWithBrowser(text, generation) {
@@ -976,8 +975,15 @@ function speak(text, { force = false } = {}) {
 
     primeAudio();
     clearTimeout(speakTimer);
-    stopPlayback();
-    const generation = ++speechGeneration;
+    // Drop the in-flight request, but keep the clip that is already playing
+    // until the next one is ready. Cutting it mid-word is what stuttered.
+    speechGeneration += 1;
+    playbackStarted = false;
+    if (speechAbort) {
+        speechAbort.abort();
+        speechAbort = null;
+    }
+    const generation = speechGeneration;
     const cached = speechCache.get(spoken);
     if (cached) {
         playPcmBuffer(cached, generation);
@@ -989,24 +995,76 @@ function speak(text, { force = false } = {}) {
     playFromElevenLabs(spoken, generation, controller);
 }
 
-async function playFromElevenLabs(spoken, generation, controller) {
-    try {
-        const res = await fetch("/speak", {
+async function requestSpeech(spoken, controller, fast) {
+    const send = () =>
+        fetch("/speak", {
             method: "POST",
             credentials: "same-origin",
             signal: controller.signal,
             headers: {
-                "X-CSRF-TOKEN": csrfToken(),
+                ...csrfHeaders(),
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "application/octet-stream, audio/mpeg",
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
                 text: spoken,
-                fast: true,
+                fast,
                 language: language.value === "en" ? "en" : "fil",
             }),
         });
+    let res = await send();
+    if (res.status === 419 && !controller.signal.aborted) {
+        res = await send();
+    }
+    return res;
+}
+
+async function playAudioElement(blob, generation) {
+    if (generation !== speechGeneration || !blob || blob.size < 100) return false;
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    audio.preload = "auto";
+    stopOutput();
+    if (generation !== speechGeneration) {
+        URL.revokeObjectURL(url);
+        return false;
+    }
+    speechObjectUrl = url;
+    speechAudio = audio;
+    audio.onended = () => {
+        if (speechObjectUrl === url) {
+            URL.revokeObjectURL(url);
+            speechObjectUrl = null;
+        }
+        if (speechAudio === audio) speechAudio = null;
+    };
+    const start = async () => {
+        if (!userActivated()) {
+            await new Promise((resolve) => audioWaiters.push(resolve));
+        }
+        if (generation !== speechGeneration) return false;
+        await audio.play();
+        return true;
+    };
+    try {
+        return await start();
+    } catch (e) {
+        if (generation !== speechGeneration) return false;
+        await new Promise((resolve) => audioWaiters.push(resolve));
+        if (generation !== speechGeneration) return false;
+        try {
+            await audio.play();
+            return true;
+        } catch (err) {
+            return false;
+        }
+    }
+}
+
+async function playFromElevenLabs(spoken, generation, controller) {
+    try {
+        const res = await requestSpeech(spoken, controller, true);
         if (generation !== speechGeneration || controller.signal.aborted) return;
         if (spokenWanted && spokenWanted !== spoken) {
             speak(spokenWanted, { force: true });
@@ -1023,33 +1081,22 @@ async function playFromElevenLabs(spoken, generation, controller) {
             if (
                 played === false &&
                 generation === speechGeneration &&
-                spokenWanted === spoken
+                (!spokenWanted || spokenWanted === spoken)
             ) {
-                await speakWithBrowser(spoken, generation);
+                const mp3 = await requestSpeech(spoken, controller, false);
+                if (generation !== speechGeneration || controller.signal.aborted) return;
+                if (mp3.ok && (await playAudioElement(await mp3.blob(), generation))) {
+                    return;
+                }
+            } else {
+                return;
             }
+        } else if (await playAudioElement(await res.blob(), generation)) {
             return;
         }
-        const blob = await res.blob();
         if (generation !== speechGeneration || controller.signal.aborted) return;
-        if (blob.size < 100) {
-            await speakWithBrowser(spoken, generation);
-            return;
-        }
-        const url = URL.createObjectURL(blob);
-        speechObjectUrl = url;
-        const audio = new Audio(url);
-        speechAudio = audio;
-        audio.onended = () => {
-            if (speechObjectUrl === url) {
-                URL.revokeObjectURL(url);
-                speechObjectUrl = null;
-            }
-            if (speechAudio === audio) speechAudio = null;
-        };
-        audio.onerror = () => {
-            speakWithBrowser(spoken, generation);
-        };
-        await audio.play();
+        if (spokenWanted && spokenWanted !== spoken) return;
+        await speakWithBrowser(spoken, generation);
     } catch (e) {
         if (controller.signal.aborted || generation !== speechGeneration) return;
         notifySpeechError();
@@ -1248,7 +1295,7 @@ function onPointerOver(event) {
     hovered = mark(part, "talkback-hover", hovered);
     if (part === lastPointerEl || isSkipped(part)) return;
     clearTimeout(hoverTimer);
-    hoverTimer = setTimeout(() => speakElement(part, { fromPointer: true }), 60);
+    hoverTimer = setTimeout(() => speakElement(part, { fromPointer: true }), 180);
 }
 
 function onPointerOut(event) {

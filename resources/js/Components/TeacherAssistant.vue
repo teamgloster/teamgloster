@@ -129,6 +129,7 @@
 <script setup>
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { MessageCircle, Mic, Send, Volume2, VolumeX, X } from "lucide-vue-next";
+import { csrfHeaders } from "@/csrf";
 import { useTalkBack } from "@/composables/useTalkBack";
 import {
     commandAsksSomething,
@@ -183,13 +184,6 @@ let audio = null;
 let audioUrl = "";
 let talkBackHolds = 0;
 let restoreTalkBack = false;
-
-function csrfToken() {
-    return (
-        document.querySelector('meta[name="csrf-token"]')?.getAttribute("content") ||
-        ""
-    );
-}
 
 function holdTalkBack() {
     if (talkBackHolds === 0) restoreTalkBack = paused.value;
@@ -246,7 +240,7 @@ async function speakReply(text) {
             method: "POST",
             credentials: "same-origin",
             headers: {
-                "X-CSRF-TOKEN": csrfToken(),
+                ...csrfHeaders(),
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "audio/mpeg, application/octet-stream",
                 "Content-Type": "application/json",
@@ -341,7 +335,7 @@ async function ask(text) {
             method: "POST",
             credentials: "same-origin",
             headers: {
-                "X-CSRF-TOKEN": csrfToken(),
+                ...csrfHeaders(),
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "application/json",
                 "Content-Type": "application/json",
@@ -447,7 +441,7 @@ async function transcribe(blob) {
             method: "POST",
             credentials: "same-origin",
             headers: {
-                "X-CSRF-TOKEN": csrfToken(),
+                ...csrfHeaders(),
                 "X-Requested-With": "XMLHttpRequest",
                 Accept: "application/json",
             },

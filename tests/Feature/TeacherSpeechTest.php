@@ -42,7 +42,7 @@ test('a teacher can turn a prompt into speech through elevenlabs', function () {
     });
 });
 
-test('talk back asks elevenlabs for a low latency stream', function () {
+test('talk back asks elevenlabs for one clear mp3', function () {
     /** @var \Tests\TestCase $this */
     config([
         'services.elevenlabs.key' => 'test-elevenlabs-key',
@@ -52,8 +52,8 @@ test('talk back asks elevenlabs for a low latency stream', function () {
     ]);
 
     Http::fake([
-        'https://api.elevenlabs.io/*' => Http::response('PCM', 200, [
-            'Content-Type' => 'application/octet-stream',
+        'https://api.elevenlabs.io/*' => Http::response('FAKE-MP3', 200, [
+            'Content-Type' => 'audio/mpeg',
         ]),
     ]);
 
@@ -68,14 +68,16 @@ test('talk back asks elevenlabs for a low latency stream', function () {
     $this->actingAs($teacher)
         ->postJson('/teacher/speak', ['text' => 'Term one.', 'fast' => true])
         ->assertOk()
-        ->assertHeader('x-speech-format', 'pcm_22050');
+        ->assertHeader('content-type', 'audio/mpeg');
 
     Http::assertSent(function ($request) {
-        return str_contains($request->url(), '/text-to-speech/21m00Tcm4TlvDq8ikWAM/stream')
-            && str_contains($request->url(), 'output_format=pcm_22050')
-            && str_contains($request->url(), 'optimize_streaming_latency=4')
+        return str_contains($request->url(), '/text-to-speech/21m00Tcm4TlvDq8ikWAM')
+            && str_contains($request->url(), 'output_format=mp3_44100_128')
+            && ! str_contains($request->url(), 'pcm_22050')
             && $request['text'] === 'Term one.'
-            && $request['model_id'] === 'eleven_flash_v2_5';
+            && $request['model_id'] === 'eleven_flash_v2_5'
+            && ($request['voice_settings']['stability'] ?? null) === 0.62
+            && ($request['voice_settings']['use_speaker_boost'] ?? null) === true;
     });
 });
 
