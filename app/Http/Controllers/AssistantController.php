@@ -45,6 +45,12 @@ class AssistantController extends Controller
             ]);
         }
 
+        if ($this->onlyThanks($message)) {
+            return response()->json([
+                'reply' => $language === 'tl' ? 'Sige.' : 'Okay.',
+            ]);
+        }
+
         $apiKey = config('services.groq.key');
         if (empty($apiKey)) {
             return response()->json([
@@ -93,7 +99,10 @@ class AssistantController extends Controller
             return $answer['error'];
         }
 
-        $reply = $this->keepOnTopic($answer['content'], $language, $teacher->role);
+        $reply = $this->withoutThanks(
+            $this->keepOnTopic($answer['content'], $language, $teacher->role),
+            $language,
+        );
         if ($reply === '') {
             return response()->json([
                 'error' => 'The assistant had no answer. Try asking in a different way.',
@@ -219,6 +228,34 @@ TEXT;
         );
     }
 
+    private function onlyThanks(string $message): bool
+    {
+        $spoken = strtolower($message);
+        $spoken = preg_replace('/[^a-z\s]/', ' ', $spoken) ?? '';
+        $spoken = trim(preg_replace('/\s+/', ' ', $spoken) ?? '');
+
+        return (bool) preg_match(
+            '/^(thanks|thank you|thank you so much|ok thanks|okay thanks|salamat|salamat po|maraming salamat)$/',
+            $spoken,
+        );
+    }
+
+    private function withoutThanks(string $reply, string $language): string
+    {
+        $clean = trim($reply);
+        $thanks = '(?:thank you(?: so much)?|thanks(?: a lot| for asking| for your question)?|salamat(?: po)?|maraming salamat|you(?:\'|’)re welcome|happy to help|glad to help)';
+        $stripped = preg_replace('/^\s*'.$thanks.'[.!,:\s]*/i', '', $clean) ?? $clean;
+        $stripped = preg_replace('/[.!]?\s*'.$thanks.'[.!\s]*$/i', '', (string) $stripped) ?? $stripped;
+        $stripped = trim((string) $stripped);
+        if ($stripped !== '') {
+            return $stripped;
+        }
+
+        return $language === 'tl'
+            ? 'Wala iyan sa records mo.'
+            : 'That is not in your records.';
+    }
+
     private function identityReply(User $teacher, string $language): string
     {
         $name = trim(implode(' ', array_filter([
@@ -334,10 +371,13 @@ When they ask about a count, grade, or attendance mark, answer from the records 
 Earlier chat replies may be wrong. If an earlier reply disagrees with these records, follow the records.
 Say the number in the first sentence.
 {$replyLanguage}
-Use two or three short sentences so the answer can be read aloud.
+Use one or two short sentences. Stop when the fact is said.
+Do not say thank you, thanks, salamat, you're welcome, hello, or hi.
+Do not praise the question or add a closing line.
 Do not tell them to open a page when the records already answer the question.
 If a fact is not in the records, say it is not in their records.
 Do not say you changed a grade, attendance, or any other record.
+Do not answer anything outside the records and the portal.
 
 {$guide}
 If they ask to open a page, the portal opens that page. Confirm it in one short sentence.

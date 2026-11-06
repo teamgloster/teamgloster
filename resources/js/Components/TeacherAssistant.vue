@@ -130,6 +130,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from "vue";
 import { MessageCircle, Mic, Send, Volume2, VolumeX, X } from "lucide-vue-next";
 import { csrfHeaders } from "@/csrf";
+import { isNetworkFailure, LOW_INTERNET_MESSAGE } from "@/voiceConnection";
 import { useTalkBack } from "@/composables/useTalkBack";
 import {
     commandAsksSomething,
@@ -250,7 +251,13 @@ async function speakReply(text) {
                 language: language.value === "tl" ? "fil" : "en",
             }),
         });
-        if (!res.ok) return;
+        if (!res.ok) {
+            if (!navigator.onLine || res.status === 408 || res.status === 504 || res.status === 502) {
+                error.value = LOW_INTERNET_MESSAGE;
+            }
+            releaseTalkBack();
+            return;
+        }
         const blob = await res.blob();
         if (blob.size < 100) return;
         audioUrl = URL.createObjectURL(blob);
@@ -263,6 +270,7 @@ async function speakReply(text) {
         return;
     } catch (e) {
         stopAudio();
+        if (isNetworkFailure(e)) error.value = LOW_INTERNET_MESSAGE;
     }
     releaseTalkBack();
 }
@@ -357,7 +365,9 @@ async function ask(text) {
         await scrollLog();
         speakReply(reply);
     } catch (e) {
-        error.value = "The assistant could not be reached. Try again.";
+        error.value = isNetworkFailure(e)
+            ? LOW_INTERNET_MESSAGE
+            : "The assistant could not be reached. Try again.";
     } finally {
         busy.value = false;
         await scrollLog();
@@ -449,7 +459,10 @@ async function transcribe(blob) {
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
-            error.value = data.error || "I could not hear that. Try again.";
+            error.value =
+                !navigator.onLine || res.status === 408 || res.status === 504
+                    ? LOW_INTERNET_MESSAGE
+                    : data.error || "I could not hear that. Try again.";
             releaseTalkBack();
             return;
         }
@@ -463,7 +476,9 @@ async function transcribe(blob) {
         releaseTalkBack();
         await ask(text);
     } catch (e) {
-        error.value = "I could not hear that. Try again.";
+        error.value = isNetworkFailure(e)
+            ? LOW_INTERNET_MESSAGE
+            : "I could not hear that. Try again.";
         releaseTalkBack();
     } finally {
         busy.value = false;

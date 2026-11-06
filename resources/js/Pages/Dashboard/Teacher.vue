@@ -1587,6 +1587,7 @@ import { useToast } from "@/composables/useNotify";
 import TeacherAccountMenu from "@/Components/TeacherAccountMenu.vue";
 import TeacherAssistant from "@/Components/TeacherAssistant.vue";
 import { csrfHeaders } from "@/csrf";
+import { isNetworkFailure, LOW_INTERNET_MESSAGE } from "@/voiceConnection";
 import { useTalkBack, useTalkBackHost } from "@/composables/useTalkBack";
 import { registerTeacherSection } from "@/composables/useTeacherAssistant";
 import SchoolFormsHub from "@/Pages/Dashboard/SchoolForms/SchoolFormsHub.vue";
@@ -2329,10 +2330,16 @@ const speakPrompt = (text, { wait = true } = {}) => {
                     return;
                 }
                 if (!res.ok) {
+                    const offline =
+                        !navigator.onLine ||
+                        res.status === 408 ||
+                        res.status === 502 ||
+                        res.status === 504;
+                    if (offline) showVoiceConnectionError();
                     if (timeout) clearTimeout(timeout);
                     timeout = setTimeout(() => finish(true), 20000);
                     const played = await speakWithBrowser(spoken);
-                    if (!played && !speechErrorToasted) {
+                    if (!played && !offline && !speechErrorToasted) {
                         speechErrorToasted = true;
                         toast.error(
                             "Voice could not play. ElevenLabs rejected the API key.",
@@ -2376,6 +2383,7 @@ const speakPrompt = (text, { wait = true } = {}) => {
                     finish(false);
                     return;
                 }
+                if (isNetworkFailure(e)) showVoiceConnectionError();
                 finish(await speakWithBrowser(spoken));
             }
         })();
@@ -2431,6 +2439,9 @@ const VAD_SILENCE_MS_NAME = 650;
 const VAD_MIN_SPEECH_MS_CMD = 90; // short command when no grade is being entered
 const VAD_MIN_SPEECH_MS_NAME = 320; // full-name utterance in table mode
 const VAD_MIN_SPEECH_MS_GRADE = 220; // long enough to skip pops, short enough for "next"
+// A spoken grade is a short word or two. A song or sound effect keeps going,
+// so anything longer than this is ignored and is not saved as a mark.
+const VAD_MAX_GRADE_SPEECH_MS = 1800;
 const VAD_MAX_UTTERANCE_MS = 5000; // hard cap per utterance
 const VAD_MAX_IDLE_MS = 4000; // recycle recorder every N ms if no speech
 const VAD_TICK_MS = 40;
@@ -2543,6 +2554,15 @@ const GROQ_NOISE_SUBSTRINGS = [
     "subscribe",
     "thanks for watching",
     "thank you for watching",
+    "music",
+    "song",
+    "singing",
+    "melody",
+    "lyrics",
+    "instrumental",
+    "na na",
+    "oh oh",
+    "yeah yeah",
 ];
 
 // Internal VAD state (module-scoped so multiple invocations reuse)
@@ -2580,7 +2600,7 @@ const buildTranscriptionPrompt = () => {
     // Two very different prompts: numeric grade mode vs. student-name mode.
     if (showGradeModal.value || focusedGradeRow.value) {
         // Words only — a list of digits makes silence come back as "85".
-        return "A spoken grade such as eighty five or ninety two, or a command: next, back, save, cancel, edit.";
+        return "One short spoken grade, such as eighty five, or one command: next, back, save, cancel. Music, singing, and noise are blank.";
     }
 
     const baseNames =
@@ -2639,13 +2659,32 @@ const uploadAudioChunk = async (blob, recordedMode = null) => {
             },
             body: fd,
         });
-        if (!res.ok) return null;
+        if (!res.ok) {
+            if (!navigator.onLine || res.status === 408 || res.status === 504) {
+                showVoiceConnectionError();
+            }
+            return null;
+        }
         const data = await res.json();
         return data && typeof data.text === "string" ? data.text : null;
     } catch (e) {
         console.error("Groq transcription request failed", e);
+        if (isNetworkFailure(e)) showVoiceConnectionError();
         return null;
     }
+};
+
+let voiceNetToasted = false;
+const showVoiceConnectionError = () => {
+    const message = LOW_INTERNET_MESSAGE;
+    if (showGradeModal.value) {
+        voiceStatus.value = message;
+    } else {
+        tableVoiceStatus.value = message;
+    }
+    if (voiceNetToasted) return;
+    voiceNetToasted = true;
+    toast.error(message);
 };
 
 const startGroqStream = async () => {
@@ -2752,6 +2791,7 @@ const startGroqStream = async () => {
     let stopping = false;
     let speechRun = 0;
     let peakRms = 0;
+    let discardClip = false;
 
     const startRecorder = () => {
         if (!groqActive.value || !groqStream.value) return;
@@ -2772,6 +2812,7 @@ const startGroqStream = async () => {
         stopping = false;
         speechRun = 0;
         peakRms = 0;
+        discardClip = false;
 
         // Snapshot the app state that this recorder cycle "belongs to". When
         // the transcript comes back we make sure both are still current so
@@ -2790,6 +2831,7 @@ const startGroqStream = async () => {
                     ? lastSpeechAt - firstSpeechAt
                     : 0;
             const heardPeak = peakRms;
+            const dropClip = discardClip;
             const blobType = recorder.mimeType || mime || "audio/webm";
             const blob = new Blob(chunks, { type: blobType });
 
@@ -2802,6 +2844,14 @@ const startGroqStream = async () => {
                 ? VAD_MIN_SPEECH_MS_GRADE
                 : currentMinSpeechMs();
             if (!hadSpeech || speechDuration < minSpeech) return;
+            // A song or sound effect keeps going. A real grade is one short
+            // phrase, so a long clip is never saved as a mark.
+            if (
+                dropClip ||
+                (myGradeListen && speechDuration > VAD_MAX_GRADE_SPEECH_MS)
+            ) {
+                return;
+            }
             // A short bump that only just clears the line is noise, not a
             // grade. A real number is either longer or clearly louder.
             if (
@@ -2854,6 +2904,11 @@ const startGroqStream = async () => {
             }
             const clean = stripPunctuation(text);
             if (!clean || GROQ_NOISE_TRANSCRIPTS.has(clean)) return;
+            // A long clip that comes back as only digits is a song or a
+            // sound, not a teacher saying a mark.
+            if (myGradeListen && speechDuration > 1100 && /^\d{1,3}$/.test(clean)) {
+                return;
+            }
             // A known garbage phrase is never a grade, even when a digit
             // is glued onto it ("thanks for watching 85").
             if (GROQ_NOISE_SUBSTRINGS.some((sub) => clean.includes(sub))) {
@@ -2967,7 +3022,16 @@ const startGroqStream = async () => {
                 elapsed - silenceDur >= currentMinSpeechMs()
             ) {
                 cutHere();
+            } else if (
+                isGradeListenMode() &&
+                speechDetected &&
+                firstSpeechAt &&
+                now - firstSpeechAt > VAD_MAX_GRADE_SPEECH_MS
+            ) {
+                discardClip = true;
+                cutHere();
             } else if (elapsed >= VAD_MAX_UTTERANCE_MS) {
+                if (speechDetected) discardClip = true;
                 cutHere();
             } else if (!speechDetected && elapsed >= VAD_MAX_IDLE_MS) {
                 // No speech captured; recycle recorder to keep it healthy

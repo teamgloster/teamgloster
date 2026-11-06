@@ -1,5 +1,6 @@
 import { onMounted, onUnmounted, ref } from "vue";
 import { csrfHeaders } from "@/csrf";
+import { isNetworkFailure, LOW_INTERNET_MESSAGE } from "@/voiceConnection";
 
 const STORAGE_KEY = "tnhs-talkback";
 const LANG_KEY = "tnhs-talkback-lang";
@@ -129,6 +130,7 @@ const ROLE_GUIDES = {
 
 const TAGALOG_PHRASES = [
     ["The reading voice is not available right now. Try again in a moment.", "Hindi magamit yung boses ngayon. Subukan mo ulit mamaya."],
+    ["Low internet connection. The voice cannot listen or speak right now. Try again when the connection is steady.", "Mahina ang internet. Hindi makikinig o magsasalita ang boses ngayon. Subukan mo ulit pag bumilis ang koneksyon."],
     ["Talk back is on. Point at a button or a box, and I will read it.", "Naka-on ang tok bak. Ituro mo yung pindutan o kahon, babasahin ko."],
     ["Talk back is on. Click to turn the reading voice off.", "Naka-on ang tok bak. Pindutin mo para patayin yung boses."],
     ["Talk back is off. Click to hear this page read aloud.", "Naka-off ang tok bak. Pindutin mo para marinig yung pahina."],
@@ -949,13 +951,21 @@ function speakWithBrowser(text, generation) {
     })();
 }
 
-async function notifySpeechError() {
+async function notifySpeechError(reason) {
     if (speechErrorToasted) return;
     speechErrorToasted = true;
+    const offline =
+        isNetworkFailure(reason) ||
+        reason === 408 ||
+        reason === 502 ||
+        reason === 504 ||
+        (typeof navigator !== "undefined" && navigator.onLine === false);
     try {
         const { useToast } = await import("@/composables/useNotify");
         useToast().error(
-            "The reading voice is not available right now. Try again in a moment.",
+            offline
+                ? LOW_INTERNET_MESSAGE
+                : "The reading voice is not available right now. Try again in a moment.",
         );
     } catch (e) {}
 }
@@ -1072,7 +1082,7 @@ async function playFromElevenLabs(spoken, generation, controller) {
         }
         playbackStarted = true;
         if (!res.ok) {
-            notifySpeechError();
+            notifySpeechError(res.status);
             await speakWithBrowser(spoken, generation);
             return;
         }
@@ -1099,7 +1109,7 @@ async function playFromElevenLabs(spoken, generation, controller) {
         await speakWithBrowser(spoken, generation);
     } catch (e) {
         if (controller.signal.aborted || generation !== speechGeneration) return;
-        notifySpeechError();
+        notifySpeechError(e);
         await speakWithBrowser(spoken, generation);
     }
 }
